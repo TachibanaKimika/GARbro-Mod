@@ -78,6 +78,7 @@ namespace GARbro.GUI
             public IEnumerable<string> Path { get; set; }
             public string Name { get; set; }
             public Entry Entry { get; set; }
+            public BitmapSource OriginalBitmap { get; set; }
 
             public bool IsEqual (IEnumerable<string> path, Entry entry)
             {
@@ -252,6 +253,14 @@ namespace GARbro.GUI
 
         void SetPreviewImage (PreviewFile preview, BitmapSource bitmap, ImageFormat format)
         {
+            // Save the original bitmap before any processing
+            var originalBitmap = bitmap;
+            if (!originalBitmap.IsFrozen)
+            {
+                originalBitmap = originalBitmap.Clone();
+                originalBitmap.Freeze();
+            }
+            
             if (bitmap.DpiX != Desktop.DpiX || bitmap.DpiY != Desktop.DpiY)
             {
                 int stride = bitmap.PixelWidth * ((bitmap.Format.BitsPerPixel + 7) / 8); 
@@ -269,6 +278,7 @@ namespace GARbro.GUI
                 {
                     ActiveViewer = ImageView;
                     ImageCanvas.Source = bitmap;
+                    preview.OriginalBitmap = originalBitmap; // Store original for copying
                     ApplyDownScaleSetting();
                     SetStatusText (string.Format (guiStrings.MsgImageSize, bitmap.PixelWidth,
                                                   bitmap.PixelHeight, bitmap.Format.BitsPerPixel, format?.Tag ?? "?"));
@@ -345,13 +355,33 @@ namespace GARbro.GUI
         {
             try
             {
-                var bitmap = ImageCanvas.Source as BitmapSource;
+                // Use the original bitmap stored in preview to avoid DPI conversion artifacts
+                var bitmap = m_current_preview.OriginalBitmap ?? ImageCanvas.Source as BitmapSource;
                 if (null == bitmap)
                     return;
 
-                // Copy the image to clipboard in a format that can be pasted into web pages, chat apps, etc.
+                // Copy the image to clipboard preserving alpha channel
                 Clipboard.Clear();
-                Clipboard.SetImage(bitmap);
+                
+                // Create PNG byte array to preserve transparency
+                byte[] pngData;
+                using (var stream = new MemoryStream())
+                {
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                    encoder.Save(stream);
+                    pngData = stream.ToArray();
+                }
+                
+                // Use DataObject to set multiple formats
+                var dataObject = new DataObject();
+                
+                // Set PNG data (preserves transparency)
+                dataObject.SetData("PNG", new MemoryStream(pngData), false);
+                var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+                dataObject.SetImage(convertedBitmap);
+                
+                Clipboard.SetDataObject(dataObject, true);
             }
             catch (Exception X)
             {
