@@ -356,36 +356,67 @@ namespace GARbro.GUI
             try
             {
                 // Use the original bitmap stored in preview to avoid DPI conversion artifacts
-                var bitmap = m_current_preview.OriginalBitmap ?? ImageCanvas.Source as BitmapSource;
+                var bitmap = m_current_preview.OriginalBitmap as BitmapSource;
                 if (null == bitmap)
                     return;
 
-                // Copy the image to clipboard preserving alpha channel
-                Clipboard.Clear();
-                
-                // Create PNG byte array to preserve transparency
-                byte[] pngData;
-                using (var stream = new MemoryStream())
+                // Ensure bitmap is frozen and accessible from any thread
+                if (!bitmap.IsFrozen)
                 {
-                    var encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                    encoder.Save(stream);
-                    pngData = stream.ToArray();
+                    bitmap = bitmap.Clone();
+                    bitmap.Freeze();
                 }
-                
-                // Use DataObject to set multiple formats
-                var dataObject = new DataObject();
-                
-                // Set PNG data (preserves transparency)
-                dataObject.SetData("PNG", new MemoryStream(pngData), false);
-                var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
-                dataObject.SetImage(convertedBitmap);
-                
-                Clipboard.SetDataObject(dataObject, true);
+
+                // Copy pixel data to avoid threading issues with BitmapFrame.Create
+                int stride = bitmap.PixelWidth * ((bitmap.Format.BitsPerPixel + 7) / 8);
+                byte[] pixels = new byte[stride * bitmap.PixelHeight];
+                bitmap.CopyPixels(pixels, stride, 0);
+
+                Dispatcher.Invoke (() => 
+                {
+                    // Recreate bitmap from pixel data in UI thread
+                    var newBitmap = BitmapSource.Create(
+                        bitmap.PixelWidth, 
+                        bitmap.PixelHeight,
+                        bitmap.DpiX, 
+                        bitmap.DpiY, 
+                        bitmap.Format, 
+                        bitmap.Palette, 
+                        pixels, 
+                        stride);
+                    newBitmap.Freeze();
+
+                    // Copy the image to clipboard preserving alpha channel
+                    Clipboard.Clear();
+                    
+                    // Create PNG byte array to preserve transparency
+                    byte[] pngData;
+                    using (var stream = new MemoryStream())
+                    {
+                        var encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(newBitmap));
+                        encoder.Save(stream);
+                        pngData = stream.ToArray();
+                    }
+                    
+                    // Use DataObject to set multiple formats
+                    var dataObject = new DataObject();
+                    
+                    // Set PNG data (preserves transparency)
+                    dataObject.SetData("PNG", new MemoryStream(pngData), false);
+                    
+                    // Create a new frozen bitmap for format conversion
+                    var convertedBitmap = new FormatConvertedBitmap(newBitmap, PixelFormats.Bgra32, null, 0);
+                    convertedBitmap.Freeze();
+                    dataObject.SetImage(convertedBitmap);
+                    
+                    Clipboard.SetDataObject(dataObject, true);
+                });
+
             }
             catch (Exception X)
             {
-                SetStatusText (X.Message);
+                SetStatusText ("CopyImage Failed: " + X.Message);
             }
         }
 
