@@ -1,0 +1,10 @@
+<Project>
+  <!-- 修复 .NET SDK 9.0 与旧式项目格式的兼容性问题 -->
+  <PropertyGroup>
+    <!-- 禁用卫星程序集生成，避免 AL 任务错误 -->
+    <GenerateSatelliteAssembliesForCore>false</GenerateSatelliteAssembliesForCore>
+    
+    <!-- 使用传统的资源嵌入方式 -->
+    <EmbedAllSources>false</EmbedAllSources>
+  </PropertyGroup>
+</Project>
