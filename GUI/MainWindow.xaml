@@ -110,6 +110,13 @@
                       Visibility="{Binding Path=IsEnabled, RelativeSource={RelativeSource Self}, Mode=OneWay, Converter={StaticResource booleanToCollapsedVisibilityConverter}}"
                       Command="{x:Static local:Commands.ConvertMedia}" />
         </ContextMenu>
+        
+        <!-- Image preview context menu -->
+        <ContextMenu x:Key="imagePreviewContextMenu">
+            <MenuItem Header="{x:Static s:guiStrings.CtxMenuCopyImage}" InputGestureText="Ctrl+C"
+                      Style="{StaticResource DefaultMenuItemStyle}"
+                      Command="{x:Static local:Commands.CopyImage}" />
+        </ContextMenu>
 
     </Window.Resources>
     <DockPanel LastChildFill="True">
@@ -362,7 +369,11 @@
             </local:ListViewEx>
             <Grid Grid.Column="2" Name="PreviewPane" SnapsToDevicePixels="True">
                 <ScrollViewer Name="ImageView" Background="LightGray" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                              SizeChanged="PreviewSizeChanged">
+                              SizeChanged="PreviewSizeChanged"
+                              ContextMenu="{StaticResource imagePreviewContextMenu}">
+                    <ScrollViewer.InputBindings>
+                        <KeyBinding Key="C" Modifiers="Ctrl" Command="{x:Static local:Commands.CopyImage}"/>
+                    </ScrollViewer.InputBindings>
                     <Image Name="ImageCanvas" Stretch="None" UseLayoutRounding="True" SnapsToDevicePixels="True"
                            local:TouchScrolling.IsEnabled="True" RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Cursor="Images/Cursors/grab.cur" local:TouchScrolling.DraggingCursor="Images/Cursors/grabbing.cur" />
@@ -427,6 +438,7 @@
         <CommandBinding Command="{x:Static local:Commands.TroubleShooting}" Executed="TroubleShootingExec" CanExecute="CanExecuteAlways"/>
         <CommandBinding Command="{x:Static local:Commands.Descend}"     Executed="DescendExec" CanExecute="CanExecuteAlways"/>
         <CommandBinding Command="{x:Static local:Commands.Ascend}"      Executed="AscendExec" CanExecute="CanExecuteAlways"/>
+        <CommandBinding Command="{x:Static local:Commands.CopyImage}"   Executed="CopyImageExec" CanExecute="CanExecuteCopyImage"/>
         <CommandBinding Command="{x:Static local:Commands.Exit}"       Executed="ExitExec"       CanExecute="CanExecuteAlways"/>
     </Window.CommandBindings>
 </Window>

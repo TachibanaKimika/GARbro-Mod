@@ -1564,5 +1564,6 @@ namespace GARbro.GUI
         public static readonly RoutedCommand Descend = new RoutedCommand();
         public static readonly RoutedCommand Ascend = new RoutedCommand();
         public static readonly RoutedCommand ScaleImage = new RoutedCommand();
+        public static readonly RoutedCommand CopyImage = new RoutedCommand();
     }
 }

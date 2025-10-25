@@ -223,6 +223,15 @@ namespace GARbro.GUI.Strings {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Copy Image.
+        /// </summary>
+        public static string CtxMenuCopyImage {
+            get {
+                return ResourceManager.GetString("CtxMenuCopyImage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Extract.
         /// </summary>
         public static string CtxMenuExtract {

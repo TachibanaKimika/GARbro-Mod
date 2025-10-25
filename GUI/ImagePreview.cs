@@ -337,5 +337,31 @@ namespace GARbro.GUI
                 return;
             SetImageScaleMode (image.Width > e.NewSize.Width || image.Height > e.NewSize.Height);
         }
+
+        /// <summary>
+        /// Copy image to clipboard (like browser's "Copy Image")
+        /// </summary>
+        private void CopyImageExec (object sender, ExecutedRoutedEventArgs e)
+        {
+            try
+            {
+                var bitmap = ImageCanvas.Source as BitmapSource;
+                if (null == bitmap)
+                    return;
+
+                // Copy the image to clipboard in a format that can be pasted into web pages, chat apps, etc.
+                Clipboard.Clear();
+                Clipboard.SetImage(bitmap);
+            }
+            catch (Exception X)
+            {
+                SetStatusText (X.Message);
+            }
+        }
+
+        private void CanExecuteCopyImage (object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = ImageCanvas.Source != null && m_current_preview.Entry != null;
+        }
     }
 }

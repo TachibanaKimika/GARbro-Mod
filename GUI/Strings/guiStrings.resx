@@ -144,6 +144,9 @@
   <data name="CtxMenuExplorer" xml:space="preserve">
     <value>Browse in _Explorer</value>
   </data>
+  <data name="CtxMenuCopyImage" xml:space="preserve">
+    <value>Copy Image</value>
+  </data>
   <data name="CtxMenuExtract" xml:space="preserve">
     <value>Extract</value>
   </data>
