@@ -84,6 +84,8 @@
             <MenuItem Header="{x:Static s:guiStrings.CtxMenuSelectByMask}"
                       Command="{x:Static local:Commands.AddSelection}"/>
             <MenuItem Header="{x:Static s:guiStrings.CtxMenuFileType}">
+                <MenuItem DataContext="archive" Header="{Binding Converter={StaticResource entryTypeConverter}}"
+                          Command="{x:Static local:Commands.SetFileType}" CommandParameter="{Binding}"/>
                 <MenuItem DataContext="image" Header="{Binding Converter={StaticResource entryTypeConverter}}"
                           Command="{x:Static local:Commands.SetFileType}" CommandParameter="{Binding}"/>
                 <MenuItem DataContext="audio" Header="{Binding Converter={StaticResource entryTypeConverter}}"
