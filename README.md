@@ -23,6 +23,10 @@ Files could be extracted from archives by pressing 'F4', with all images and
 audio converted to common formats in the process, of course if game format
 itself is recognized.
 
+When multiple archive files are selected in the file system, 'F4' extracts
+them sequentially in the current list order using the same destination and
+conversion options.
+
 Supported script text extractors can output filtered text, raw text, or both.
 When a script supports this choice, the preview panel shows a Script selector
 for switching between filtered and raw text.

@@ -1389,14 +1389,10 @@ namespace GARbro.GUI
                 e.CanExecute = true;
                 return;
             }
-            else if (CurrentDirectory.SelectedIndex != -1)
+            else if (CurrentDirectory.SelectedItems.Cast<EntryViewModel>().Any (x => !x.IsDirectory))
             {
-                var entry = CurrentDirectory.SelectedItem as EntryViewModel;
-                if (entry != null && !entry.IsDirectory)
-                {
-                    e.CanExecute = true;
-                    return;
-                }
+                e.CanExecute = true;
+                return;
             }
             e.CanExecute = false;
         }
