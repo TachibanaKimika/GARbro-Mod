@@ -917,6 +917,7 @@
     <Compile Include="Tactics\ArcLST.cs" />
     <Compile Include="MAI\ArcMAI.cs" />
     <Compile Include="Majiro\ArcMajiro.cs" />
+    <Compile Include="Majiro\ScriptMJO.cs" />
     <Compile Include="Marble\ArcMBL.cs" />
     <Compile Include="Silky\ArcMFG.cs" />
     <Compile Include="Masys\ArcMGD.cs" />

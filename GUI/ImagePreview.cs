@@ -325,7 +325,7 @@ namespace GARbro.GUI
         static bool ShouldConvertScript (ScriptFormat format)
         {
             return null != format
-                && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag);
+                && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag || "MJO/Majiro" == format.Tag);
         }
 
         void LoadPreviewImage (PreviewFile preview)
