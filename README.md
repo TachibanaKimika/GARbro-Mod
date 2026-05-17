@@ -23,6 +23,10 @@ Files could be extracted from archives by pressing 'F4', with all images and
 audio converted to common formats in the process, of course if game format
 itself is recognized.
 
+Supported script text extractors can output filtered text, raw text, or both.
+When a script supports this choice, the preview panel shows a Script selector
+for switching between filtered and raw text.
+
 Preferences -> Experimental -> Auto-select extraction path makes the extract
 dialog default to the last extraction parent directory plus the nearest parent
 directory name that contains an `.exe` file.

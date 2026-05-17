@@ -1,4 +1,4 @@
-﻿//! \file       TextViewer.cs
+//! \file       TextViewer.cs
 //! \date       Mon May 11 23:24:33 2015
 //! \brief      Text file viewer widget.
 //
@@ -24,12 +24,11 @@
 //
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Media;
 
 namespace JustView
@@ -37,9 +36,17 @@ namespace JustView
     /// <summary>
     /// Interaction logic for TextViewer.xaml
     /// </summary>
-    public partial class TextViewer : FlowDocumentScrollViewer
+    public partial class TextViewer : Border
     {
+        const int VirtualLineThreshold = 4096;
+        const int VirtualCharThreshold = 0x100000;
+
         Lazy<double>        m_default_width;
+        bool                m_using_virtual_view;
+
+        public static readonly DependencyProperty VirtualTextWrappingProperty =
+            DependencyProperty.Register ("VirtualTextWrapping", typeof(TextWrapping), typeof(TextViewer),
+                                         new PropertyMetadata (TextWrapping.NoWrap));
 
         public TextViewer ()
         {
@@ -50,15 +57,33 @@ namespace JustView
 
         public void Clear ()
         {
-            this.Document.Blocks.Clear();
+            TextBoxView.Clear();
+            VirtualTextView.ItemsSource = null;
+            VirtualTextView.Visibility = Visibility.Collapsed;
+            TextBoxView.Visibility = Visibility.Visible;
+            m_using_virtual_view = false;
             Input = null;
         }
 
-        public ScrollViewer ScrollViewer { get { return FindScrollViewer(); } }
+        public ScrollViewer ScrollViewer
+        {
+            get
+            {
+                return FindVisualChild<ScrollViewer> (m_using_virtual_view
+                    ? (DependencyObject)VirtualTextView : TextBoxView);
+            }
+        }
+
         public double       DefaultWidth { get { return m_default_width.Value; } }
         public double        DefaultZoom { get; private set; }
         public Stream              Input { get; set; }
         public double       MaxLineWidth { get; set; }
+
+        public TextWrapping VirtualTextWrapping
+        {
+            get { return (TextWrapping)GetValue (VirtualTextWrappingProperty); }
+            set { SetValue (VirtualTextWrappingProperty, value); }
+        }
 
         private bool m_word_wrap;
         public bool IsWordWrapEnabled
@@ -67,8 +92,7 @@ namespace JustView
             set
             {
                 m_word_wrap = value;
-                if (Input != null)
-                    ApplyWordWrap (value);
+                ApplyWordWrap (value);
             }
         }
 
@@ -91,9 +115,7 @@ namespace JustView
             if (file.Length > 0xffffff)
                 throw new ApplicationException ("File is too long");
             ReadStream (file, enc);
-            var sv = FindScrollViewer();
-            if (sv != null)
-                sv.ScrollToHome();
+            ScrollToHome();
             Input = file;
             m_current_encoding = enc;
         }
@@ -160,9 +182,9 @@ namespace JustView
         double GetFixedWidth (int char_width)
         {
             var block = new TextBlock();
-            block.FontFamily = this.Document.FontFamily;
-            block.FontSize = this.Document.FontSize;
-            block.Padding = this.Document.PagePadding;
+            block.FontFamily = TextBoxView.FontFamily;
+            block.FontSize = TextBoxView.FontSize;
+            block.Padding = TextBoxView.Padding;
             block.Text = new string ('M', char_width);
             block.Measure (new Size (double.PositiveInfinity, double.PositiveInfinity));
             return block.DesiredSize.Width;
@@ -172,70 +194,97 @@ namespace JustView
         {
             using (var reader = new StreamReader (file, enc, false, 0x400, true))
             {
-                this.Document.Blocks.Clear();
-                var para = new Paragraph();
-                var block = new TextBlock();
-                block.FontFamily = this.Document.FontFamily;
-                block.FontSize = this.Document.FontSize;
-                block.Padding = this.Document.PagePadding;
-                double max_width = 0;
-                var max_size = new Size (double.PositiveInfinity, double.PositiveInfinity);
-                for (;;)
-                {
-                    var line = reader.ReadLine();
-                    if (null == line)
-                        break;
-                    if (line.Length > 0)
-                    {
-                        block.Text = line;
-                        block.Measure (max_size);
-                        var width = block.DesiredSize.Width;
-                        if (width > max_width)
-                            max_width = width;
-                        para.Inlines.Add (new Run (line));
-                    }
-                    para.Inlines.Add (new LineBreak());
-                }
-                this.Document.Blocks.Add (para);
-                MaxLineWidth = max_width;
-                ApplyWordWrap (IsWordWrapEnabled);
+                string text = reader.ReadToEnd();
+                if (ShouldUseVirtualView (text))
+                    DisplayVirtualText (text);
+                else
+                    DisplayTextBox (text);
             }
+        }
+
+        bool ShouldUseVirtualView (string text)
+        {
+            if (text.Length >= VirtualCharThreshold)
+                return true;
+            int line_count = 1;
+            foreach (var c in text)
+            {
+                if ('\n' == c && ++line_count >= VirtualLineThreshold)
+                    return true;
+            }
+            return false;
+        }
+
+        void DisplayTextBox (string text)
+        {
+            VirtualTextView.ItemsSource = null;
+            VirtualTextView.Visibility = Visibility.Collapsed;
+            TextBoxView.Visibility = Visibility.Visible;
+            TextBoxView.Text = text;
+            m_using_virtual_view = false;
+            MaxLineWidth = DefaultWidth;
+            ApplyWordWrap (IsWordWrapEnabled);
+        }
+
+        void DisplayVirtualText (string text)
+        {
+            var lines = new List<string>();
+            using (var reader = new StringReader (text))
+            {
+                string line;
+                while (null != (line = reader.ReadLine()))
+                    lines.Add (line);
+            }
+            TextBoxView.Clear();
+            TextBoxView.Visibility = Visibility.Collapsed;
+            VirtualTextView.ItemsSource = lines;
+            VirtualTextView.Visibility = Visibility.Visible;
+            m_using_virtual_view = true;
+            MaxLineWidth = DefaultWidth;
+            ApplyWordWrap (IsWordWrapEnabled);
+        }
+
+        void ScrollToHome ()
+        {
+            if (m_using_virtual_view)
+            {
+                if (VirtualTextView.Items.Count > 0)
+                    VirtualTextView.ScrollIntoView (VirtualTextView.Items[0]);
+            }
+            else
+            {
+                TextBoxView.CaretIndex = 0;
+                TextBoxView.ScrollToHome();
+            }
+            var scroll = ScrollViewer;
+            if (null != scroll)
+                scroll.ScrollToHome();
         }
 
         public void ApplyWordWrap (bool word_wrap)
         {
-            var scroll = this.ScrollViewer;
-            if (word_wrap && scroll != null)
-            {
-                this.Document.PageWidth = scroll.ViewportWidth;
-                var width_binding = new Binding ("ViewportWidth");
-                width_binding.Source = scroll;
-                width_binding.Mode = BindingMode.OneWay;
-                width_binding.UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged;
-                BindingOperations.SetBinding (this.Document, FlowDocument.PageWidthProperty, width_binding);
-            }
-            else
-            {
-                BindingOperations.ClearBinding (this.Document, FlowDocument.PageWidthProperty);
-                this.Document.PageWidth = MaxLineWidth;
-            }
+            var wrapping = word_wrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
+            TextBoxView.TextWrapping = wrapping;
+            TextBoxView.HorizontalScrollBarVisibility = word_wrap
+                ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+            VirtualTextWrapping = wrapping;
+            VirtualTextView.SetValue (ScrollViewer.HorizontalScrollBarVisibilityProperty,
+                word_wrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto);
         }
 
-        private ScrollViewer FindScrollViewer ()
+        static T FindVisualChild<T> (DependencyObject parent) where T : DependencyObject
         {
-            if (VisualTreeHelper.GetChildrenCount (this) == 0)
+            if (null == parent)
                 return null;
-
-            // Border is the first child of first child of a ScrolldocumentViewer
-            var firstChild = VisualTreeHelper.GetChild (this, 0);
-            if (firstChild == null)
-                return null;
-
-            var border = VisualTreeHelper.GetChild (firstChild, 0) as Decorator;
-            if (border == null)
-                return null;
-
-            return border.Child as ScrollViewer;
+            int count = VisualTreeHelper.GetChildrenCount (parent);
+            for (int i = 0; i < count; ++i)
+            {
+                var child = VisualTreeHelper.GetChild (parent, i);
+                var result = child as T ?? FindVisualChild<T> (child);
+                if (null != result)
+                    return result;
+            }
+            return null;
         }
     }
 }

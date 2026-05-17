@@ -49,10 +49,8 @@ namespace GARbro.GUI
             Destination = destination;
             DestinationDir.EnterKeyDown += acb_OnEnterKeyDown;
 
-            ExtractText.IsEnabled = false;
-            TextEncoding.IsEnabled = false;
-
             InitImageFormats (ImageConversionFormat);
+            InitScriptTextModes (ScriptTextModeChoice, true);
         }
 
         private void BrowseExec (object sender, ExecutedRoutedEventArgs e)
@@ -66,6 +64,7 @@ namespace GARbro.GUI
         {
             this.DialogResult = true;
             ExportImageFormat (ImageConversionFormat);
+            ExportScriptTextMode (ScriptTextModeChoice);
         }
     }
 }

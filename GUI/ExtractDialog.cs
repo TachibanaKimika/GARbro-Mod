@@ -39,7 +39,22 @@ namespace GARbro.GUI
 {
     public partial class ExtractDialog : Window
     {
+        public const string ScriptTextBoth = "both";
+
         public string Destination { get; set; }
+        public string ScriptTextOutputMode { get; protected set; }
+
+        static readonly ScriptTextModeModel[] ScriptTextModes = {
+            new ScriptTextModeModel (ScriptTextMode.Filtered, "Filtered"),
+            new ScriptTextModeModel (ScriptTextMode.Raw, "Raw"),
+            new ScriptTextModeModel (ScriptTextMode.Dump, "Dump"),
+            new ScriptTextModeModel (ScriptTextBoth, "Both"),
+        };
+
+        public ExtractDialog ()
+        {
+            ScriptTextOutputMode = ScriptTextMode.Filtered;
+        }
 
         public void InitImageFormats (ComboBox image_format)
         {
@@ -74,6 +89,21 @@ namespace GARbro.GUI
                 Settings.Default.appImageFormat = "";
         }
 
+        public void InitScriptTextModes (ComboBox script_text_mode, bool include_both)
+        {
+            var modes = include_both ? ScriptTextModes : ScriptTextModes.Where (m => m.Value != ScriptTextBoth).ToArray();
+            script_text_mode.ItemsSource = modes;
+            script_text_mode.DisplayMemberPath = "Label";
+            script_text_mode.SelectedIndex = 0;
+            ScriptTextOutputMode = ScriptTextMode.Filtered;
+        }
+
+        public void ExportScriptTextMode (ComboBox script_text_mode)
+        {
+            var mode = script_text_mode.SelectedItem as ScriptTextModeModel;
+            ScriptTextOutputMode = null != mode ? mode.Value : ScriptTextMode.Filtered;
+        }
+
         public string ChooseFolder (string title, string initial)
         {
             var dlg = new CommonOpenFileDialog();
@@ -106,6 +136,18 @@ namespace GARbro.GUI
         public void CanExecuteAlways (object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = true;
+        }
+    }
+
+    internal class ScriptTextModeModel
+    {
+        public string Value { get; private set; }
+        public string Label { get; private set; }
+
+        public ScriptTextModeModel (string value, string label)
+        {
+            Value = value;
+            Label = label;
         }
     }
 }

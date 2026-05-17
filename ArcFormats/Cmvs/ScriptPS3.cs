@@ -13,13 +13,17 @@ using GameRes.Utility;
 namespace GameRes.Formats.Purple
 {
     [Export(typeof(ScriptFormat))]
-    public class Ps3ScriptFormat : GenericScriptFormat
+    public class Ps3ScriptFormat : GenericScriptFormat, IConfigurableScriptFormat
     {
         public override string         Tag { get { return "PS3/CMVS"; } }
         public override string Description { get { return "CMVS engine script"; } }
         public override uint     Signature { get { return 0x41325350; } } // 'PS2A'
 
         const int MinHeaderSize = 0x30;
+        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw };
+
+        public IEnumerable<string> TextModes { get { return s_text_modes; } }
+        public string DefaultTextMode { get { return ScriptTextMode.Filtered; } }
 
         public Ps3ScriptFormat ()
         {
@@ -40,8 +44,14 @@ namespace GameRes.Formats.Purple
 
         public override Stream ConvertFrom (IBinaryStream file)
         {
+            return ConvertFrom (file, ScriptTextMode.Filtered);
+        }
+
+        public Stream ConvertFrom (IBinaryStream file, string text_mode)
+        {
             var data = ReadScriptData (file);
-            var lines = ExtractText (data);
+            bool filter = !string.Equals (text_mode, ScriptTextMode.Raw, StringComparison.OrdinalIgnoreCase);
+            var lines = ExtractText (data, filter);
             var output = new MemoryStream();
             using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
             {
@@ -62,7 +72,7 @@ namespace GameRes.Formats.Purple
             {
                 var data = ReadScriptData (input);
                 var script = new ScriptData();
-                foreach (var line in ExtractText (data))
+                foreach (var line in ExtractText (data, true))
                     script.TextLines.Add (line);
                 return script;
             }
@@ -122,7 +132,7 @@ namespace GameRes.Formats.Purple
             return packed_size > 0 && packed_length == file_size;
         }
 
-        static IEnumerable<ScriptLine> ExtractText (byte[] data)
+        static IEnumerable<ScriptLine> ExtractText (byte[] data, bool filter)
         {
             var header = new Ps3Header (data);
             var lines = new List<ScriptLine>();
@@ -146,7 +156,7 @@ namespace GameRes.Formats.Purple
                 if (eos <= text_pos)
                     continue;
                 var text = Encodings.cp932.GetString (data, text_pos, eos - text_pos);
-                if (IsFilteredString (text))
+                if (filter && IsFilteredString (text))
                     continue;
                 lines.Add (new ScriptLine { Id = (uint)lines.Count, Text = text });
             }
@@ -163,7 +173,35 @@ namespace GameRes.Formats.Purple
                 if (text.IndexOf (ext, StringComparison.OrdinalIgnoreCase) >= 0)
                     return true;
             }
+            if (IsEngineToken (text))
+                return true;
+            if (IsPunctuationOnly (text))
+                return true;
             return false;
+        }
+
+        static bool IsEngineToken (string text)
+        {
+            bool has_letter = false;
+            foreach (var c in text)
+            {
+                if (c < 0x20 || c > 0x7E || char.IsWhiteSpace (c))
+                    return false;
+                has_letter = has_letter || char.IsLetter (c);
+            }
+            if (!has_letter)
+                return false;
+            return text.IndexOfAny (new[] { '_', '/', '\\', ':', '.', '@', '$', '%' }) >= 0;
+        }
+
+        static bool IsPunctuationOnly (string text)
+        {
+            foreach (var c in text)
+            {
+                if (char.IsLetterOrDigit (c) && c != 'ー')
+                    return false;
+            }
+            return true;
         }
 
         struct Ps3Header

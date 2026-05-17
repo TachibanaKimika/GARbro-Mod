@@ -227,6 +227,7 @@ namespace GARbro.GUI
         private bool                m_adjust_image_offset = false;
         private bool                m_convert_audio;
         private ImageFormat         m_image_format;
+        private string              m_script_text_output_mode = ScriptTextMode.Filtered;
         private int                 m_extract_count;
         private int                 m_skip_count;
         private bool                m_extract_in_progress = false;
@@ -289,6 +290,7 @@ namespace GARbro.GUI
             var result = extractDialog.ShowDialog();
             if (!result.Value)
                 return;
+            m_script_text_output_mode = extractDialog.ScriptTextOutputMode;
 
             destination = extractDialog.Destination;
             if (!string.IsNullOrEmpty (destination))
@@ -335,6 +337,7 @@ namespace GARbro.GUI
             var result = extractDialog.ShowDialog();
             if (!result.Value)
                 return;
+            m_script_text_output_mode = extractDialog.ScriptTextOutputMode;
             if (multiple_files)
             {
                 m_skip_images = !Settings.Default.appExtractImages;
@@ -449,7 +452,7 @@ namespace GARbro.GUI
             using (var input = arc.OpenBinaryEntry (entry))
             {
                 var script_format = ScriptFormat.FindFormat (input);
-                if (null == script_format || "PS3/CMVS" != script_format.Tag)
+                if (!ShouldConvertScript (script_format))
                 {
                     input.Position = 0;
                     using (var output = CreateNewFile (entry.Name, true))
@@ -458,11 +461,70 @@ namespace GARbro.GUI
                 }
 
                 input.Position = 0;
-                var output_name = Path.ChangeExtension (entry.Name, "txt");
-                using (var script = script_format.ConvertFrom (input))
-                using (var output = CreateNewFile (output_name, true))
-                    script.CopyTo (output);
+                var configurable = script_format as IConfigurableScriptFormat;
+                if (null == configurable)
+                {
+                    var output_name = Path.ChangeExtension (entry.Name, "txt");
+                    using (var script = script_format.ConvertFrom (input))
+                    using (var output = CreateNewFile (output_name, true))
+                        script.CopyTo (output);
+                    return;
+                }
+
+                if (ExtractDialog.ScriptTextBoth == m_script_text_output_mode)
+                {
+                    ExtractScriptText (input, configurable, entry, ScriptTextMode.Filtered, true);
+                    input.Position = 0;
+                    ExtractScriptText (input, configurable, entry, ScriptTextMode.Raw, true);
+                }
+                else
+                {
+                    var mode = ResolveScriptTextMode (configurable, m_script_text_output_mode);
+                    ExtractScriptText (input, configurable, entry, mode, mode != ScriptTextMode.Filtered);
+                }
             }
+        }
+
+        void ExtractScriptText (IBinaryStream input, IConfigurableScriptFormat format, Entry entry, string mode, bool use_suffix)
+        {
+            var output_name = GetScriptTextOutputName (entry.Name, mode, use_suffix);
+            using (var script = format.ConvertFrom (input, mode))
+            using (var output = CreateNewFile (output_name, true))
+                script.CopyTo (output);
+        }
+
+        static string NormalizeScriptTextMode (string mode)
+        {
+            if (string.Equals (mode, ScriptTextMode.Raw, StringComparison.OrdinalIgnoreCase))
+                return ScriptTextMode.Raw;
+            if (string.Equals (mode, ScriptTextMode.Dump, StringComparison.OrdinalIgnoreCase))
+                return ScriptTextMode.Dump;
+            return ScriptTextMode.Filtered;
+        }
+
+        static string ResolveScriptTextMode (IConfigurableScriptFormat format, string mode)
+        {
+            mode = NormalizeScriptTextMode (mode);
+            if (format.TextModes.Any (m => string.Equals (m, mode, StringComparison.OrdinalIgnoreCase)))
+                return mode;
+            if (format.TextModes.Any (m => string.Equals (m, format.DefaultTextMode, StringComparison.OrdinalIgnoreCase)))
+                return format.DefaultTextMode;
+            return ScriptTextMode.Filtered;
+        }
+
+        static string GetScriptTextOutputName (string name, string mode, bool use_suffix)
+        {
+            if (!use_suffix)
+                return Path.ChangeExtension (name, "txt");
+            string ext = ScriptTextMode.Raw == mode ? "raw.txt"
+                : ScriptTextMode.Dump == mode ? "dump.txt" : "filtered.txt";
+            return Path.ChangeExtension (name, ext);
+        }
+
+        static bool ShouldConvertScript (ScriptFormat format)
+        {
+            return null != format
+                && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag);
         }
 
         void ExtractImage (ArcFile arc, Entry entry, ImageFormat target_format)

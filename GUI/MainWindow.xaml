@@ -251,6 +251,12 @@
                           SelectedValuePath="CodePage" SelectionChanged="OnEncodingSelect"/>
                 <Separator/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" x:Name="ScriptTextModeWidget" Visibility="Collapsed">
+                <TextBlock Text="{x:Static s:guiStrings.Type_script}" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                <ComboBox x:Name="ScriptTextModeChoice" IsEditable="False" Height="22" Width="96"
+                          SelectionChanged="OnScriptTextModeSelect"/>
+                <Separator/>
+            </StackPanel>
             <Button ToolTip="{x:Static s:guiStrings.MenuAbout}" DockPanel.Dock="Right" Margin="0,2,10,2"
                     Command="{x:Static local:Commands.About}">
                 <Image Source="{StaticResource Icon32x32Help}"/>

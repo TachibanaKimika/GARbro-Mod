@@ -894,6 +894,7 @@
     <Compile Include="Pajamas\ArcGameDat.cs" />
     <Compile Include="G2\ArcGCEX.cs" />
     <Compile Include="BlackCyc\ArcGPK.cs" />
+    <Compile Include="BlackCyc\ScriptSPT.cs" />
     <Compile Include="BlackRainbow\ArcGSP.cs" />
     <Compile Include="GsPack\ArcGsPack.cs" />
     <Compile Include="elf\ArcHED.cs" />

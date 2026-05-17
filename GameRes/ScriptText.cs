@@ -58,6 +58,20 @@ namespace GameRes
         }
     }
 
+    public static class ScriptTextMode
+    {
+        public const string Filtered = "filtered";
+        public const string Raw = "raw";
+        public const string Dump = "dump";
+    }
+
+    public interface IConfigurableScriptFormat
+    {
+        IEnumerable<string> TextModes { get; }
+        string DefaultTextMode { get; }
+        Stream ConvertFrom (IBinaryStream file, string text_mode);
+    }
+
     public abstract class GenericScriptFormat : ScriptFormat
     {
         public override bool IsScript (IBinaryStream file)

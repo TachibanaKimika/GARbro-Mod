@@ -27,8 +27,8 @@
                           IsChecked="{Binding Source={x:Static p:Settings.Default}, Path=appConvertAudio, Mode=TwoWay}"/>
             </StackPanel>
             <StackPanel x:Name="TextConversionOptions" Visibility="Collapsed" Orientation="Horizontal">
-                <TextBlock Text="{x:Static s:guiStrings.TextEncoding}" Margin="0,0,7,0" TextAlignment="Right"  VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <ComboBox x:Name="TextEncoding" Margin="0" VerticalAlignment="Center" Height="21" HorizontalAlignment="Right" Width="76"/>
+                <TextBlock Text="{x:Static s:guiStrings.Type_script}" Margin="0,0,7,0" TextAlignment="Right"  VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                <ComboBox x:Name="ScriptTextModeChoice" Margin="0" VerticalAlignment="Center" Height="21" HorizontalAlignment="Right" Width="96"/>
             </StackPanel>
         </Grid>
         <Button Content="{x:Static s:guiStrings.ButtonExtract}" Click="ExtractButton_Click" HorizontalAlignment="Right" Margin="0,0,102.157,10" Width="75" IsDefault="True" Height="25" VerticalAlignment="Bottom" VerticalContentAlignment="Center"/>

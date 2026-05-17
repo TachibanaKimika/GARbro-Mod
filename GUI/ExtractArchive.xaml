@@ -44,12 +44,13 @@
                           IsEnabled="{Binding ElementName=ExtractImages, Path=IsChecked}"/>
             </StackPanel>
             <CheckBox Grid.Row="2" Grid.Column="0" x:Name="ExtractText" Content="{x:Static s:guiStrings.TextExtractText}" HorizontalAlignment="Left" VerticalAlignment="Top"
-                      Margin="10,6,0,0" Visibility="Collapsed"
+                      Margin="10,6,0,0"
                       IsChecked="{Binding Source={x:Static p:Settings.Default}, Path=appExtractText, Mode=TwoWay}"/>
 <!--               IsChecked="True"/>-->
-            <StackPanel Grid.Row="2" Grid.Column="1" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
-                <TextBlock Text="{x:Static s:guiStrings.TextEncoding}" TextAlignment="Right"  VerticalAlignment="Top" Height="15" HorizontalAlignment="Right"/>
-                <ComboBox x:Name="TextEncoding" VerticalAlignment="Top" Margin="10,3,0,0" Height="21" HorizontalAlignment="Right" Width="76"/>
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
+                <TextBlock Text="{x:Static s:guiStrings.Type_script}" TextAlignment="Right"  VerticalAlignment="Center" Height="15" HorizontalAlignment="Right"/>
+                <ComboBox x:Name="ScriptTextModeChoice" VerticalAlignment="Top" Margin="10,3,0,0" Height="21" HorizontalAlignment="Right" Width="96"
+                          IsEnabled="{Binding ElementName=ExtractText, Path=IsChecked}"/>
             </StackPanel>
             <CheckBox x:Name="ExtractAudio" Content="{x:Static s:guiStrings.TextExtractAudio}" HorizontalAlignment="Left" VerticalAlignment="Top"
                       Grid.Row="1" Grid.Column="0" Margin="10,6,10,0"

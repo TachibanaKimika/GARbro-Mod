@@ -54,7 +54,7 @@ namespace GARbro.GUI
             else if ("script" == entry.Type)
             {
                 ActiveOption = TextConversionOptions;
-                TextEncoding.IsEnabled = false;
+                InitScriptTextModes (ScriptTextModeChoice, true);
             }
             else if ("audio" == entry.Type)
             {
@@ -96,6 +96,10 @@ namespace GARbro.GUI
             if (ImageConversionOptions == ActiveOption)
             {
                 ExportImageFormat (ImageConversionFormat);
+            }
+            else if (TextConversionOptions == ActiveOption)
+            {
+                ExportScriptTextMode (ScriptTextModeChoice);
             }
         }
     }

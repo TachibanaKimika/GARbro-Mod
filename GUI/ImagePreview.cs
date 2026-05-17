@@ -49,6 +49,8 @@ namespace GARbro.GUI
         private readonly BackgroundWorker   m_preview_worker = new BackgroundWorker();
         private PreviewFile                 m_current_preview = new PreviewFile();
         private bool                        m_preview_pending = false;
+        private bool                        m_script_text_modes_updating = false;
+        private string                      m_preview_script_text_mode = ScriptTextMode.Filtered;
 
         private UIElement m_active_viewer;
         public UIElement ActiveViewer
@@ -135,6 +137,18 @@ namespace GARbro.GUI
             TextView.CurrentEncoding = enc;
         }
 
+        private void OnScriptTextModeSelect (object sender, SelectionChangedEventArgs e)
+        {
+            if (m_script_text_modes_updating)
+                return;
+            var mode = ScriptTextModeChoice.SelectedItem as ScriptTextModeModel;
+            if (null == mode || mode.Value == m_preview_script_text_mode)
+                return;
+            m_preview_script_text_mode = mode.Value;
+            if (null != m_current_preview.Entry && "script" == m_current_preview.Entry.Type)
+                LoadPreviewText (m_current_preview);
+        }
+
         /// <summary>
         /// Display entry in preview panel
         /// </summary>
@@ -160,6 +174,7 @@ namespace GARbro.GUI
             ActiveViewer = ImageView;
             ImageCanvas.Source = null;
             TextView.Clear();
+            ScriptTextModeWidget.Visibility = Visibility.Collapsed;
             CurrentTextInput = null;
         }
 
@@ -241,11 +256,15 @@ namespace GARbro.GUI
             if ("script" == entry.Type)
             {
                 var script_format = ScriptFormat.FindFormat (input);
+                UpdateScriptTextModeWidget (script_format);
                 if (ShouldConvertScript (script_format))
                 {
                     input.Position = 0;
                     try
                     {
+                        var configurable = script_format as IConfigurableScriptFormat;
+                        if (null != configurable)
+                            return configurable.ConvertFrom (input, m_preview_script_text_mode);
                         return script_format.ConvertFrom (input);
                     }
                     finally
@@ -254,13 +273,59 @@ namespace GARbro.GUI
                     }
                 }
             }
+            else
+            {
+                ScriptTextModeWidget.Visibility = Visibility.Collapsed;
+            }
             input.Position = 0;
             return input.AsStream;
         }
 
+        void UpdateScriptTextModeWidget (ScriptFormat format)
+        {
+            var configurable = format as IConfigurableScriptFormat;
+            if (null == configurable)
+            {
+                ScriptTextModeWidget.Visibility = Visibility.Collapsed;
+                return;
+            }
+            var modes = configurable.TextModes.Select (m => new ScriptTextModeModel (m, GetScriptTextModeLabel (m))).ToList();
+            if (!modes.Any())
+            {
+                ScriptTextModeWidget.Visibility = Visibility.Collapsed;
+                return;
+            }
+            var selected = modes.FirstOrDefault (m => m.Value == m_preview_script_text_mode)
+                ?? modes.FirstOrDefault (m => m.Value == configurable.DefaultTextMode)
+                ?? modes.First();
+            m_script_text_modes_updating = true;
+            try
+            {
+                ScriptTextModeChoice.ItemsSource = modes;
+                ScriptTextModeChoice.DisplayMemberPath = "Label";
+                ScriptTextModeChoice.SelectedItem = selected;
+                m_preview_script_text_mode = selected.Value;
+                ScriptTextModeWidget.Visibility = Visibility.Visible;
+            }
+            finally
+            {
+                m_script_text_modes_updating = false;
+            }
+        }
+
+        static string GetScriptTextModeLabel (string mode)
+        {
+            if (string.Equals (mode, ScriptTextMode.Raw, StringComparison.OrdinalIgnoreCase))
+                return "Raw";
+            if (string.Equals (mode, ScriptTextMode.Dump, StringComparison.OrdinalIgnoreCase))
+                return "Dump";
+            return "Filtered";
+        }
+
         static bool ShouldConvertScript (ScriptFormat format)
         {
-            return null != format && "PS3/CMVS" == format.Tag;
+            return null != format
+                && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag);
         }
 
         void LoadPreviewImage (PreviewFile preview)
