@@ -100,12 +100,12 @@ namespace GARbro.GUI
             }
         }
 
-        private string GetDefaultExtractDestination (string source, string fallback_name)
+        internal string GetDefaultExtractDestination (string source, string fallback_name, string fallback_destination = "")
         {
             if (!Settings.Default.appAutoSelectExtractPath)
             {
                 string destination = Settings.Default.appLastDestination;
-                return Directory.Exists (destination) ? destination : "";
+                return Directory.Exists (destination) ? destination : fallback_destination;
             }
 
             string parent = GetLastExtractParent();
@@ -113,7 +113,7 @@ namespace GARbro.GUI
             if (string.IsNullOrEmpty (game_name))
                 game_name = GetFallbackExtractName (fallback_name, source);
             if (string.IsNullOrEmpty (parent) || string.IsNullOrEmpty (game_name))
-                return "";
+                return fallback_destination;
             return Path.Combine (parent, game_name);
         }
 
@@ -219,6 +219,7 @@ namespace GARbro.GUI
     sealed internal class GarExtract : GarOperation, IDisposable
     {
         private string              m_arc_name;
+        private string              m_arc_source;
         private ArchiveFileSystem   m_fs;
         private readonly bool       m_should_ascend;
         private bool                m_skip_images = false;
@@ -236,6 +237,7 @@ namespace GARbro.GUI
 
         public GarExtract (MainWindow parent, string source) : base (parent, guiStrings.TextExtractionError)
         {
+            m_arc_source = source;
             m_arc_name = Path.GetFileName (source);
             try
             {
@@ -254,6 +256,7 @@ namespace GARbro.GUI
             if (null == fs)
                 throw new UnknownFormatException();
             m_fs = fs;
+            m_arc_source = parent.ViewModel.Path.First();
             m_arc_name = Path.GetFileName (source);
             m_should_ascend = false;
         }
@@ -285,6 +288,7 @@ namespace GARbro.GUI
                 m_main.SetStatusText (string.Format ("{1}: {0}", guiStrings.MsgEmptyArchive, m_arc_name));
                 return;
             }
+            destination = GetArchiveDialogDestination (destination);
             var extractDialog = new ExtractArchiveDialog (m_arc_name, destination);
             extractDialog.Owner = m_main;
             var result = extractDialog.ShowDialog();
@@ -330,9 +334,9 @@ namespace GARbro.GUI
             ExtractDialog extractDialog;
             bool multiple_files = file_list.Skip (1).Any();
             if (multiple_files)
-                extractDialog = new ExtractArchiveDialog (m_arc_name, destination);
+                extractDialog = new ExtractArchiveDialog (m_arc_name, GetArchiveDialogDestination (destination));
             else
-                extractDialog = new ExtractFile (entry, destination);
+                extractDialog = new ExtractFile (entry, GetArchiveDialogDestination (destination));
             extractDialog.Owner = m_main;
             var result = extractDialog.ShowDialog();
             if (!result.Value)
@@ -354,6 +358,11 @@ namespace GARbro.GUI
                 m_image_format = FormatCatalog.Instance.ImageFormats.FirstOrDefault (f => f.Tag.Equals (Settings.Default.appImageFormat));
 
             ExtractFilesFromArchive (string.Format (guiStrings.MsgExtractingFile, m_arc_name), file_list);
+        }
+
+        string GetArchiveDialogDestination (string destination)
+        {
+            return m_main.GetDefaultExtractDestination (m_arc_source, m_arc_name, destination);
         }
 
         private void ExtractFilesFromArchive (string text, IEnumerable<Entry> file_list)
