@@ -1200,7 +1200,16 @@ namespace GARbro.GUI.Strings {
                 return ResourceManager.GetString("TextFormats", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Experimental.
+        /// </summary>
+        public static string TextExperimental {
+            get {
+                return ResourceManager.GetString("TextExperimental", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Multimedia conversion error.
         /// </summary>
@@ -1405,6 +1414,15 @@ namespace GARbro.GUI.Strings {
         public static string winDownScaleImage {
             get {
                 return ResourceManager.GetString("winDownScaleImage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Auto-select extraction path.
+        /// </summary>
+        public static string appAutoSelectExtractPath {
+            get {
+                return ResourceManager.GetString("appAutoSelectExtractPath", resourceCulture);
             }
         }
     }

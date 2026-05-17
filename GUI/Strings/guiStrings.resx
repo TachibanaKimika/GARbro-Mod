@@ -545,6 +545,9 @@ Overwrite?</value>
   <data name="TextFormats" xml:space="preserve">
     <value>Formats</value>
   </data>
+  <data name="TextExperimental" xml:space="preserve">
+    <value>Experimental</value>
+  </data>
   <data name="TextPreferences" xml:space="preserve">
     <value>Preferences</value>
   </data>
@@ -553,6 +556,9 @@ Overwrite?</value>
   </data>
   <data name="winDownScaleImage" xml:space="preserve">
     <value>Scale large images to fit window</value>
+  </data>
+  <data name="appAutoSelectExtractPath" xml:space="preserve">
+    <value>Auto-select extraction path</value>
   </data>
   <data name="Type_archive" xml:space="preserve">
     <value>Archive</value>

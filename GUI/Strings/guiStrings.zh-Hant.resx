@@ -541,6 +541,9 @@
   <data name="TextFormats" xml:space="preserve">
     <value>格式</value>
   </data>
+  <data name="TextExperimental" xml:space="preserve">
+    <value>實驗性</value>
+  </data>
   <data name="TextPreferences" xml:space="preserve">
     <value>偏好設置</value>
   </data>
@@ -549,6 +552,9 @@
   </data>
   <data name="winDownScaleImage" xml:space="preserve">
     <value>縮放大圖以適應視窗</value>
+  </data>
+  <data name="appAutoSelectExtractPath" xml:space="preserve">
+    <value>自動選擇路徑</value>
   </data>
   <data name="Type_archive" xml:space="preserve">
     <value>檔案</value>

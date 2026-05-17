@@ -357,6 +357,30 @@ namespace GARbro.GUI.Properties {
                 this["appLastDestination"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string appLastExtractParent {
+            get {
+                return ((string)(this["appLastExtractParent"]));
+            }
+            set {
+                this["appLastExtractParent"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool appAutoSelectExtractPath {
+            get {
+                return ((bool)(this["appAutoSelectExtractPath"]));
+            }
+            set {
+                this["appAutoSelectExtractPath"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

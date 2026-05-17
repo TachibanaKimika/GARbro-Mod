@@ -57,6 +57,7 @@ namespace GARbro.GUI
         public App App { get { return m_app; } }
 
         internal static readonly GuiResourceSetting DownScaleImage = new GuiResourceSetting ("winDownScaleImage");
+        internal static readonly GuiResourceSetting AutoSelectExtractPath = new GuiResourceSetting ("appAutoSelectExtractPath");
 
         const StringComparison StringIgnoreCase = StringComparison.CurrentCultureIgnoreCase;
 

@@ -55,15 +55,13 @@ namespace GARbro.GUI
             GarExtract extractor = null;
             try
             {
-                string destination = Settings.Default.appLastDestination;
-                if (!Directory.Exists (destination))
-                    destination = "";
                 var vm = ViewModel;
                 if (vm.IsArchive)
                 {
+                    var archive_name = vm.Path[vm.Path.Count-2];
+                    string destination = GetDefaultExtractDestination (vm.Path.First(), archive_name);
                     if (string.IsNullOrEmpty (destination))
                         destination = Path.GetDirectoryName (vm.Path.First());
-                    var archive_name = vm.Path[vm.Path.Count-2];
                     extractor = new GarExtract (this, archive_name, VFS.Top as ArchiveFileSystem);
                     if (null == entry || (entry.Name == ".." && string.IsNullOrEmpty (vm.Path.Last()))) // root entry
                         extractor.ExtractAll (destination);
@@ -73,6 +71,7 @@ namespace GARbro.GUI
                 else if (!entry.IsDirectory)
                 {
                     var source = entry.Source.Name;
+                    string destination = GetDefaultExtractDestination (source, source);
                     SetBusyState();
                     if (string.IsNullOrEmpty (destination))
                     {
@@ -98,6 +97,121 @@ namespace GARbro.GUI
             {
                 if (null != extractor && !extractor.IsActive)
                     extractor.Dispose();
+            }
+        }
+
+        private string GetDefaultExtractDestination (string source, string fallback_name)
+        {
+            if (!Settings.Default.appAutoSelectExtractPath)
+            {
+                string destination = Settings.Default.appLastDestination;
+                return Directory.Exists (destination) ? destination : "";
+            }
+
+            string parent = GetLastExtractParent();
+            string game_name = FindGameDirectoryName (source);
+            if (string.IsNullOrEmpty (game_name))
+                game_name = GetFallbackExtractName (fallback_name, source);
+            if (string.IsNullOrEmpty (parent) || string.IsNullOrEmpty (game_name))
+                return "";
+            return Path.Combine (parent, game_name);
+        }
+
+        private static string GetLastExtractParent ()
+        {
+            string parent = GetFullPathOrEmpty (Settings.Default.appLastExtractParent);
+            if (!string.IsNullOrEmpty (parent))
+                return parent;
+            return GetParentDirectory (Settings.Default.appLastDestination);
+        }
+
+        private static string GetSourceDirectory (string source)
+        {
+            string path = GetFullPathOrEmpty (source);
+            if (string.IsNullOrEmpty (path))
+                return "";
+            if (Directory.Exists (path))
+                return path;
+            return Path.GetDirectoryName (path) ?? "";
+        }
+
+        private static string FindGameDirectoryName (string source)
+        {
+            string dir = GetSourceDirectory (source);
+            while (!string.IsNullOrEmpty (dir))
+            {
+                try
+                {
+                    if (Directory.EnumerateFiles (dir, "*.exe").Any())
+                    {
+                        string name = new DirectoryInfo (dir).Name;
+                        if (!string.IsNullOrEmpty (name))
+                            return name;
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+                catch (IOException)
+                {
+                }
+                catch (System.Security.SecurityException)
+                {
+                }
+                var parent = Directory.GetParent (dir);
+                if (null == parent || parent.FullName == dir)
+                    break;
+                dir = parent.FullName;
+            }
+            return "";
+        }
+
+        private static string GetFallbackExtractName (string fallback_name, string source)
+        {
+            string name = "";
+            try
+            {
+                name = Path.GetFileNameWithoutExtension (fallback_name);
+            }
+            catch (ArgumentException)
+            {
+            }
+            if (!string.IsNullOrEmpty (name))
+                return name;
+            string dir = GetSourceDirectory (source);
+            return string.IsNullOrEmpty (dir) ? "" : new DirectoryInfo (dir).Name;
+        }
+
+        internal static string GetParentDirectory (string path)
+        {
+            path = GetFullPathOrEmpty (path);
+            if (string.IsNullOrEmpty (path))
+                return "";
+            var info = new DirectoryInfo (path);
+            if (null != info.Parent)
+                return info.Parent.FullName;
+            return Path.GetPathRoot (path) ?? "";
+        }
+
+        private static string GetFullPathOrEmpty (string path)
+        {
+            if (string.IsNullOrEmpty (path))
+                return "";
+            try
+            {
+                return Path.GetFullPath (path);
+            }
+            catch (ArgumentException)
+            {
+                return "";
+            }
+            catch (NotSupportedException)
+            {
+                return "";
+            }
+            catch (PathTooLongException)
+            {
+                return "";
             }
         }
     }
@@ -153,6 +267,7 @@ namespace GARbro.GUI
                 Directory.CreateDirectory (destination);
                 Directory.SetCurrentDirectory (destination);
                 Settings.Default.appLastDestination = destination;
+                Settings.Default.appLastExtractParent = MainWindow.GetParentDirectory (destination);
             }
             finally
             {

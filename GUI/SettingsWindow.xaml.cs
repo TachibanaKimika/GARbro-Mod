@@ -60,6 +60,10 @@ namespace GARbro.GUI
             MainWindow.DownScaleImage,
         };
 
+        static readonly IEnumerable<IResourceSetting> ExperimentalSettings = new [] {
+            MainWindow.AutoSelectExtractPath,
+        };
+
         SettingsViewModel ViewModel;
 
         static string LastSelectedSection = null;
@@ -98,6 +102,10 @@ namespace GARbro.GUI
                 new SettingsSectionView {
                     Label = guiStrings.TextViewer,
                     Panel = CreateSectionPanel (ViewerSettings)
+                },
+                new SettingsSectionView {
+                    Label = guiStrings.TextExperimental,
+                    Panel = CreateSectionPanel (ExperimentalSettings)
                 },
                 new SettingsSectionView {
                     Label = guiStrings.TextFormats,

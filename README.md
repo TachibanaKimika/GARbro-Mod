@@ -23,6 +23,10 @@ Files could be extracted from archives by pressing 'F4', with all images and
 audio converted to common formats in the process, of course if game format
 itself is recognized.
 
+Preferences -> Experimental -> Auto-select extraction path makes the extract
+dialog default to the last extraction parent directory plus the nearest parent
+directory name that contains an `.exe` file.
+
 When displaying file system contents GARbro assigns types to files based on
 their names extension (so it's not always correct).  If types are misapplied,
 it could be changed by selecting files and assigning type manually via context
