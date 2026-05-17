@@ -132,6 +132,24 @@ msbuild GUI\GARbro.GUI.csproj /p:Configuration=Debug /p:Platform="Any CPU"
 Use `Prerelease` or `Release` only when the task specifically requires packaging
 or release behavior.
 
+## Packaging
+
+Build `Release` before generating a distributable installer:
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  GARbro.sln /m /p:Configuration=Release /p:Platform="Any CPU" /v:minimal
+```
+
+The repository includes `GARbro.nsi` for NSIS installer generation. Install NSIS
+so `makensis.exe` is available, then run:
+
+```powershell
+& 'C:\Program Files (x86)\NSIS\makensis.exe' GARbro.nsi
+```
+
+The installer is written to `bin\Package\Onachi-GARbro-setup.exe`.
+
 ## Known Environment Failure Signatures
 
 These usually indicate local toolchain setup, not source regressions:
