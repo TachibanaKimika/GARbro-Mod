@@ -31,6 +31,11 @@ Supported script text extractors can output filtered text, raw text, or both.
 When a script supports this choice, the preview panel shows a Script selector
 for switching between filtered and raw text.
 
+KiriKiri/XP3 script preview and extraction recognize `.ks`, scrambled `.txt`,
+and PSB-backed `.scn` scenario entries.  Filtered mode extracts readable
+dialogue/choice text; raw mode keeps the decoded script text, or all strings
+under `.scn` scenes.
+
 Preferences -> Experimental -> Auto-select extraction path makes the extract
 dialog default to the last extraction parent directory plus the nearest parent
 directory name that contains an `.exe` file.

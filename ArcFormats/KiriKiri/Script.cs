@@ -1,0 +1,708 @@
+//! \file       Script.cs
+//! \date       Mon May 18 2026
+//! \brief      KiriKiri/KAG script text extractor.
+//
+// KiriKiri text descrambling is adapted from VNTranslationTools.
+// Copyright (c) 2021 arcusmaximus
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.IO;
+using System.IO.Compression;
+using System.Text;
+using System.Text.RegularExpressions;
+using GameRes.Formats.Emote;
+using GameRes.Utility;
+
+namespace GameRes.Formats.KiriKiri
+{
+    [Export(typeof(ScriptFormat))]
+    public class KiriKiriScriptFormat : GenericScriptFormat, IConfigurableScriptFormat
+    {
+        public const string FormatTag = "KiriKiri/Script";
+
+        public override string         Tag { get { return FormatTag; } }
+        public override string Description { get { return "KiriKiri/KAG script"; } }
+        public override uint     Signature { get { return 0; } }
+
+        const uint PsbSignature = 0x00425350; // 'PSB'
+        const uint ScrambledMode0Signature = 0xFF00FEFE;
+        const uint ScrambledMode1Signature = 0xFF01FEFE;
+        const uint ScrambledMode2Signature = 0xFF02FEFE;
+
+        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw };
+
+        static readonly Regex LineCommandRegex = new Regex (
+            @"^\s*@(?<command>[^ ]+)(?: +(?<attrname>[^= ]+)(?: *= *(?<attrvalue>""(?:\\""|[^""])*""|'(?:\\'|[^'])*'|[^""' ]*))?)*",
+            RegexOptions.Compiled);
+        static readonly Regex InlineCommandRegex = new Regex (
+            @"\[(?<command>[^\]' ]+)(?: +(?<attrname>[^\]= ]+)(?: *= *(?<attrvalue>""(?:\\""|[^""])*""|'(?:\\'|[^'])*'|[^\]""' ]*))?)* *\]",
+            RegexOptions.Compiled);
+
+        static readonly string[] NameCommands = { "nm", "set_title", "speaker", "Talk", "talk", "cn", "name", "名前" };
+        static readonly string[] EnterNameCommands = { "ns" };
+        static readonly string[] ExitNameCommands = { "nse" };
+        static readonly string[] MessageCommands = { "sel01", "sel02", "sel03", "sel04", "AddSelect", "ruby" };
+        static readonly string[] AllowedInlineCommands = { "r", "ruby", "ruby_c", "heart", "mruby", "・", "★" };
+
+        public IEnumerable<string> TextModes { get { return s_text_modes; } }
+        public string DefaultTextMode { get { return ScriptTextMode.Filtered; } }
+
+        public KiriKiriScriptFormat ()
+        {
+            Extensions = new[] { "ks", "txt", "scn" };
+            Signatures = new[] {
+                0u,
+                ScrambledMode0Signature,
+                ScrambledMode1Signature,
+                ScrambledMode2Signature,
+                PsbSignature,
+            };
+        }
+
+        public override bool IsScript (IBinaryStream file)
+        {
+            long position = file.Position;
+            try
+            {
+                if (file.Name.HasExtension (".ks"))
+                    return file.Length <= int.MaxValue;
+                if (file.Name.HasExtension (".txt"))
+                    return HasScrambledHeader (file);
+                if (file.Name.HasExtension (".scn"))
+                    return IsPsbScenario (file);
+                return false;
+            }
+            finally
+            {
+                if (file.CanSeek)
+                    file.Position = position;
+            }
+        }
+
+        public override Stream ConvertFrom (IBinaryStream file)
+        {
+            return ConvertFrom (file, ScriptTextMode.Filtered);
+        }
+
+        public Stream ConvertFrom (IBinaryStream file, string text_mode)
+        {
+            bool raw = string.Equals (text_mode, ScriptTextMode.Raw, StringComparison.OrdinalIgnoreCase);
+            if (file.Name.HasExtension (".scn"))
+                return ConvertScenario (file, !raw);
+            var script = ReadTextScript (file);
+            return CreateTextStream (raw ? script : ExtractKagText (script), file.Name);
+        }
+
+        public override Stream ConvertBack (IBinaryStream file)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override ScriptData Read (string name, Stream file)
+        {
+            using (var input = BinaryStream.FromStream (file, name))
+            {
+                var script = new ScriptData();
+                uint id = 0;
+                if (name.HasExtension (".scn"))
+                {
+                    foreach (var line in ReadScenarioLines (input, true))
+                        script.TextLines.Add (new ScriptLine { Id = id++, Text = line });
+                }
+                else
+                {
+                    foreach (var line in ExtractKagLines (ReadTextScript (input)))
+                        script.TextLines.Add (new ScriptLine { Id = id++, Text = line });
+                }
+                return script;
+            }
+        }
+
+        static bool HasScrambledHeader (IBinaryStream file)
+        {
+            if (file.Length < 5)
+                return false;
+            var header = file.ReadHeader (5);
+            return header[0] == 0xFE && header[1] == 0xFE
+                && header[2] <= 2 && header[3] == 0xFF && header[4] == 0xFE;
+        }
+
+        static bool IsPsbScenario (IBinaryStream file)
+        {
+            if (file.Signature != PsbSignature || file.Length > int.MaxValue)
+                return false;
+            try
+            {
+                using (var reader = new PsbReader (file))
+                {
+                    if (!reader.ParseNonEncrypted())
+                        return false;
+                    return null != reader.GetRootKey<IList> ("scenes");
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        static Stream ConvertScenario (IBinaryStream file, bool filter)
+        {
+            var output = new MemoryStream();
+            using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
+            {
+                foreach (var line in ReadScenarioLines (file, filter))
+                    writer.WriteLine (line);
+            }
+            output.Position = 0;
+            return output;
+        }
+
+        static IEnumerable<string> ReadScenarioLines (IBinaryStream file, bool filter)
+        {
+            file.Position = 0;
+            using (var reader = new PsbReader (file))
+            {
+                if (!reader.ParseNonEncrypted())
+                    throw new InvalidFormatException();
+                var scenes = reader.GetRootKey<IList> ("scenes");
+                if (null == scenes)
+                    throw new InvalidFormatException();
+
+                foreach (var scene_obj in scenes)
+                {
+                    var scene = scene_obj as IDictionary;
+                    if (filter)
+                    {
+                        if (null == scene)
+                            continue;
+                        foreach (var line in GetTextStrings (scene))
+                            yield return line;
+                        foreach (var line in GetSelectStrings (scene))
+                            yield return line;
+                    }
+                    else
+                    {
+                        foreach (var line in EnumerateStrings (scene_obj))
+                            yield return line;
+                    }
+                }
+            }
+        }
+
+        static IEnumerable<string> EnumerateStrings (object obj)
+        {
+            var text = obj as string;
+            if (null != text)
+            {
+                text = NormalizeScenarioText (text);
+                if (!string.IsNullOrWhiteSpace (text))
+                    yield return text;
+                yield break;
+            }
+            var list = obj as IList;
+            if (null != list)
+            {
+                foreach (var item in list)
+                {
+                    foreach (var line in EnumerateStrings (item))
+                        yield return line;
+                }
+                yield break;
+            }
+            var dict = obj as IDictionary;
+            if (null != dict)
+            {
+                foreach (DictionaryEntry item in dict)
+                {
+                    foreach (var line in EnumerateStrings (item.Value))
+                        yield return line;
+                }
+            }
+        }
+
+        static IEnumerable<string> GetTextStrings (IDictionary scene)
+        {
+            var texts = GetValue<IList> (scene, "texts");
+            if (null == texts)
+                yield break;
+
+            foreach (var text_obj in texts)
+            {
+                var text = text_obj as IList;
+                if (null == text || text.Count < 3)
+                    continue;
+
+                string real_name = GetString (text, 0);
+                string display_name;
+                object message;
+                if (text[1] is IList)
+                {
+                    display_name = null;
+                    message = text[1];
+                }
+                else
+                {
+                    display_name = GetString (text, 1);
+                    if (null == display_name && !string.IsNullOrEmpty (real_name) && real_name != "＠")
+                        display_name = real_name;
+                    message = GetString (text, 2);
+                    if (null == message)
+                        message = text[2];
+                }
+
+                var languages = message as IList;
+                if (null != languages && languages.Count > 0)
+                {
+                    var language_text = languages[0] as IList;
+                    if (null != language_text && language_text.Count >= 2)
+                    {
+                        display_name = GetString (language_text, 0);
+                        message = GetString (language_text, 1);
+                    }
+                }
+
+                var message_text = message as string;
+                if (null != message_text)
+                {
+                    if (!string.IsNullOrEmpty (real_name))
+                        yield return NormalizeScenarioText (display_name ?? real_name);
+                    yield return NormalizeScenarioText (message_text);
+                }
+            }
+        }
+
+        static IEnumerable<string> GetSelectStrings (IDictionary scene)
+        {
+            var selects = GetValue<IList> (scene, "selects");
+            if (null == selects)
+                yield break;
+
+            foreach (var select_obj in selects)
+            {
+                var select = select_obj as IDictionary;
+                if (null == select)
+                    continue;
+
+                string text = null;
+                var languages = GetValue<IList> (select, "language");
+                if (null != languages && languages.Count > 0)
+                {
+                    var language_select = languages[0] as IDictionary;
+                    if (null != language_select)
+                        text = GetValue<string> (language_select, "text");
+                }
+                if (null == text)
+                    text = GetValue<string> (select, "text");
+                if (null != text)
+                    yield return NormalizeScenarioText (text);
+            }
+        }
+
+        static T GetValue<T> (IDictionary dict, string key) where T : class
+        {
+            if (!dict.Contains (key))
+                return null;
+            return dict[key] as T;
+        }
+
+        static string GetString (IList list, int index)
+        {
+            if (index < 0 || index >= list.Count)
+                return null;
+            return list[index] as string;
+        }
+
+        static string NormalizeScenarioText (string text)
+        {
+            return text.Replace ("\\n", "\r\n");
+        }
+
+        static string ExtractKagText (string script)
+        {
+            var output = new MemoryStream();
+            using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
+            {
+                foreach (var line in ExtractKagLines (script))
+                    writer.WriteLine (line);
+            }
+            return Encoding.UTF8.GetString (output.ToArray()).TrimStart ('\uFEFF');
+        }
+
+        static IEnumerable<string> ExtractKagLines (string script)
+        {
+            bool in_script = false;
+            using (var reader = new StringReader (script))
+            {
+                string line;
+                while (null != (line = reader.ReadLine()))
+                {
+                    var trimmed = line.TrimStart();
+                    if (trimmed == "[iscript]" || trimmed == "@iscript"
+                        || trimmed.StartsWith ("[macro", StringComparison.Ordinal)
+                        || trimmed.StartsWith ("@macro", StringComparison.Ordinal))
+                    {
+                        in_script = true;
+                        continue;
+                    }
+                    if (trimmed == "[endscript]" || trimmed == "@endscript"
+                        || trimmed == "[endmacro]" || trimmed == "@endmacro")
+                    {
+                        in_script = false;
+                        continue;
+                    }
+                    if (in_script || trimmed.StartsWith (";", StringComparison.Ordinal))
+                        continue;
+
+                    foreach (var text in ExtractKagLine (line, trimmed))
+                    {
+                        var normalized = NormalizeKagText (text);
+                        if (!string.IsNullOrWhiteSpace (normalized))
+                            yield return normalized;
+                    }
+                }
+            }
+        }
+
+        static IEnumerable<string> ExtractKagLine (string line, string trimmed)
+        {
+            if (trimmed.StartsWith ("@", StringComparison.Ordinal))
+            {
+                foreach (var text in ExtractLineCommandText (line))
+                    yield return text;
+                yield break;
+            }
+            if (trimmed.StartsWith ("*", StringComparison.Ordinal))
+            {
+                int pipe = line.IndexOf ('|');
+                if (pipe >= 0 && pipe + 1 < line.Length)
+                    yield return line.Substring (pipe + 1);
+                yield break;
+            }
+            if (trimmed.StartsWith ("#", StringComparison.Ordinal))
+            {
+                int name_pos = line.IndexOf ('#') + 1;
+                if (name_pos > 0 && name_pos < line.Length)
+                    yield return line.Substring (name_pos);
+                yield break;
+            }
+            foreach (var text in ExtractMessageText (line))
+                yield return text;
+        }
+
+        static IEnumerable<string> ExtractLineCommandText (string line)
+        {
+            if (line == "@r")
+            {
+                yield return "\r\n";
+                yield break;
+            }
+
+            var command = LineCommandRegex.Match (line);
+            if (!command.Success)
+                yield break;
+
+            var name = command.Groups["command"].Value;
+            if (ContainsString (NameCommands, name) || ContainsString (MessageCommands, name))
+            {
+                foreach (var value in GetJapaneseAttributeValues (command))
+                    yield return value;
+            }
+        }
+
+        static IEnumerable<string> ExtractMessageText (string line)
+        {
+            int segment_start = 0;
+            foreach (Match command in InlineCommandRegex.Matches (line))
+            {
+                string name = command.Groups["command"].Value;
+                if (ContainsString (AllowedInlineCommands, name))
+                    continue;
+
+                if (command.Index > segment_start)
+                    yield return line.Substring (segment_start, command.Index - segment_start);
+
+                if (name.StartsWith ("【", StringComparison.Ordinal) && name.EndsWith ("】", StringComparison.Ordinal)
+                    && name.Length > 2)
+                    yield return name.Substring (1, name.Length - 2);
+
+                if (ContainsString (NameCommands, name) || ContainsString (MessageCommands, name)
+                    || name.StartsWith ("【", StringComparison.Ordinal) && name.EndsWith ("】", StringComparison.Ordinal))
+                {
+                    foreach (var value in GetJapaneseAttributeValues (command))
+                        yield return value;
+                }
+                else if (ContainsString (EnterNameCommands, name) || ContainsString (ExitNameCommands, name))
+                {
+                    // State affects replacement in translation tooling, but extraction only needs text.
+                }
+
+                segment_start = command.Index + command.Length;
+            }
+
+            if (segment_start < line.Length)
+                yield return line.Substring (segment_start);
+        }
+
+        static IEnumerable<string> GetJapaneseAttributeValues (Match command)
+        {
+            foreach (Capture capture in command.Groups["attrvalue"].Captures)
+            {
+                string value = UnquoteAttributeValue (capture.Value);
+                if (ContainsJapaneseText (value))
+                    yield return value;
+            }
+        }
+
+        static string NormalizeKagText (string text)
+        {
+            text = ConvertKirikiriRubyToPlain (text);
+            text = text.Replace ("@r", "\r\n");
+            text = text.Replace ("[l]", "|");
+            text = text.Replace ("[r]", "\r\n");
+            return text;
+        }
+
+        static string ConvertKirikiriRubyToPlain (string text)
+        {
+            var commands = InlineCommandRegex.Matches (text);
+            for (int i = commands.Count - 1; i >= 0; --i)
+            {
+                var command = commands[i];
+                if (command.Groups["command"].Value != "ruby")
+                    continue;
+                string ruby = GetAttributeValue (command, "text");
+                if (null == ruby)
+                    continue;
+                string chars = GetAttributeValue (command, "char");
+                int text_length;
+                string base_text = null;
+                if (null == chars)
+                    text_length = 1;
+                else if (!int.TryParse (chars, out text_length))
+                    base_text = chars;
+
+                if (text_length > 0)
+                {
+                    if (command.Index + command.Length + text_length > text.Length)
+                        continue;
+                    base_text = text.Substring (command.Index + command.Length, text_length);
+                }
+                if (null != base_text)
+                    text = text.Substring (0, command.Index) + "[" + base_text + "/" + ruby + "]"
+                         + text.Substring (command.Index + command.Length + text_length);
+            }
+            return text;
+        }
+
+        static string GetAttributeValue (Match command, string name)
+        {
+            var names = command.Groups["attrname"].Captures;
+            var values = command.Groups["attrvalue"].Captures;
+            for (int i = 0; i < names.Count && i < values.Count; ++i)
+            {
+                if (names[i].Value == name)
+                    return UnquoteAttributeValue (values[i].Value);
+            }
+            return null;
+        }
+
+        static string UnquoteAttributeValue (string value)
+        {
+            if (value.Length >= 2 && value[0] == '"' && value[value.Length-1] == '"')
+                return value.Substring (1, value.Length - 2).Replace ("\\\"", "\"");
+            if (value.Length >= 2 && value[0] == '\'' && value[value.Length-1] == '\'')
+                return value.Substring (1, value.Length - 2).Replace ("\\'", "'");
+            return value;
+        }
+
+        static bool ContainsString (string[] list, string value)
+        {
+            for (int i = 0; i < list.Length; ++i)
+            {
+                if (list[i] == value)
+                    return true;
+            }
+            return false;
+        }
+
+        static bool ContainsJapaneseText (string text)
+        {
+            if (string.IsNullOrEmpty (text))
+                return false;
+            foreach (char c in text)
+            {
+                if ((c >= '\u3040' && c <= '\u30FF')
+                    || (c >= '\u3400' && c <= '\u9FFF')
+                    || (c >= '\uF900' && c <= '\uFAFF')
+                    || (c >= '\uFF66' && c <= '\uFF9F'))
+                    return true;
+            }
+            return false;
+        }
+
+        static string ReadTextScript (IBinaryStream file)
+        {
+            var data = ReadAllBytes (file);
+            int offset = 0;
+            int count = data.Length;
+            if (IsScrambled (data, offset, count))
+            {
+                data = Descramble (data, offset, count);
+                offset = 0;
+                count = data.Length;
+            }
+            var encoding = GuessEncoding (data, offset, count);
+            int preamble = GetPreambleLength (data, offset, count, encoding);
+            return encoding.GetString (data, offset + preamble, count - preamble);
+        }
+
+        static byte[] ReadAllBytes (IBinaryStream file)
+        {
+            if (file.Length > int.MaxValue)
+                throw new FileSizeException();
+            file.Position = 0;
+            var data = file.ReadBytes ((int)file.Length);
+            if (data.Length != file.Length)
+                throw new EndOfStreamException();
+            return data;
+        }
+
+        static bool IsScrambled (byte[] data, int offset, int count)
+        {
+            return count >= 5
+                && data[offset] == 0xFE && data[offset+1] == 0xFE
+                && data[offset+2] <= 2 && data[offset+3] == 0xFF && data[offset+4] == 0xFE;
+        }
+
+        static byte[] Descramble (byte[] data, int offset, int count)
+        {
+            switch (data[offset+2])
+            {
+            case 0:
+                return DescrambleMode0 (data, offset, count);
+            case 1:
+                return DescrambleMode1 (data, offset, count);
+            case 2:
+                return Decompress (data, offset, count);
+            default:
+                throw new NotSupportedException();
+            }
+        }
+
+        static byte[] DescrambleMode0 (byte[] data, int offset, int count)
+        {
+            var output = new byte[count - 3];
+            Buffer.BlockCopy (data, offset + 3, output, 0, output.Length);
+            for (int i = 2; i + 1 < output.Length; i += 2)
+            {
+                if (output[i+1] == 0 && output[i] < 0x20)
+                    continue;
+                output[i+1] ^= (byte)(output[i] & 0xFE);
+                output[i] ^= 1;
+            }
+            return output;
+        }
+
+        static byte[] DescrambleMode1 (byte[] data, int offset, int count)
+        {
+            var output = new byte[count - 3];
+            Buffer.BlockCopy (data, offset + 3, output, 0, output.Length);
+            for (int i = 2; i + 1 < output.Length; i += 2)
+            {
+                int c = output[i] | (output[i+1] << 8);
+                c = ((c & 0xAAAA) >> 1) | ((c & 0x5555) << 1);
+                output[i] = (byte)c;
+                output[i+1] = (byte)(c >> 8);
+            }
+            return output;
+        }
+
+        static byte[] Decompress (byte[] data, int offset, int count)
+        {
+            const int header_size = 5 + 8 + 8 + 2;
+            if (count < header_size)
+                throw new InvalidFormatException();
+
+            long compressed_length = LittleEndian.ToInt64 (data, offset + 5);
+            long unpacked_length = LittleEndian.ToInt64 (data, offset + 13);
+            if (compressed_length < 2 || unpacked_length < 0 || unpacked_length > int.MaxValue - 2)
+                throw new InvalidFormatException();
+
+            int packed_offset = offset + header_size;
+            int packed_count = count - header_size;
+            if (compressed_length - 2 > packed_count)
+                throw new InvalidFormatException();
+
+            var output = new byte[2 + (int)unpacked_length];
+            output[0] = 0xFF;
+            output[1] = 0xFE;
+            using (var input = new MemoryStream (data, packed_offset, packed_count))
+            using (var deflate = new DeflateStream (input, CompressionMode.Decompress))
+            {
+                int dst = 2;
+                while (dst < output.Length)
+                {
+                    int read = deflate.Read (output, dst, output.Length - dst);
+                    if (0 == read)
+                        throw new EndOfStreamException();
+                    dst += read;
+                }
+            }
+            return output;
+        }
+
+        static Encoding GuessEncoding (byte[] data, int offset, int count)
+        {
+            if (count >= 3 && data[offset] == 0xEF && data[offset+1] == 0xBB && data[offset+2] == 0xBF)
+                return Encoding.UTF8;
+            if (count >= 2 && data[offset] == 0xFF && data[offset+1] == 0xFE)
+                return Encoding.Unicode;
+            if (count >= 2 && data[offset] == 0xFE && data[offset+1] == 0xFF)
+                return Encoding.BigEndianUnicode;
+            return Encodings.cp932;
+        }
+
+        static int GetPreambleLength (byte[] data, int offset, int count, Encoding encoding)
+        {
+            var preamble = encoding.GetPreamble();
+            if (preamble.Length == 0 || count < preamble.Length)
+                return 0;
+            for (int i = 0; i < preamble.Length; ++i)
+            {
+                if (data[offset+i] != preamble[i])
+                    return 0;
+            }
+            return preamble.Length;
+        }
+
+        static Stream CreateTextStream (string text, string name)
+        {
+            var output = new MemoryStream();
+            using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
+                writer.Write (text);
+            return new BinMemoryStream (output, name);
+        }
+    }
+}

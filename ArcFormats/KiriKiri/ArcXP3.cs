@@ -91,7 +91,7 @@ namespace GameRes.Formats.KiriKiri
         {
             Signatures = new uint[] { 0x0d335058, 0x00905A4D, 0 };
             Extensions = new[] { "xp3", "exe" };
-            ContainedFormats = new[] { "TLG", "BMP", "PNG", "JPEG", "OGG", "WAV", "TXT" };
+            ContainedFormats = new[] { "TLG", "BMP", "PNG", "JPEG", "OGG", "WAV", "TXT", KiriKiriScriptFormat.FormatTag };
         }
         
         static readonly byte[] s_xp3_header = {
