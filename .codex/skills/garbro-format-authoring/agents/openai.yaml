@@ -1,0 +1,3 @@
+interface:
+  display_name: "Garbro Format Authoring"
+  short_description: "Add or modify GARbro resource format handlers"

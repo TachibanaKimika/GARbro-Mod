@@ -1,0 +1,3 @@
+interface:
+  display_name: "Commit with Reflection"
+  short_description: "Verify, commit, or push GARbro changes with targeted checks"

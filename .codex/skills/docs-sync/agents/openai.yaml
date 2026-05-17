@@ -1,0 +1,3 @@
+interface:
+  display_name: "Docs Sync"
+  short_description: "Audit GARbro docs and harness drift for current changes"

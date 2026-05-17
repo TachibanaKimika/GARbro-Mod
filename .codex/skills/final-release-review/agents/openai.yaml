@@ -1,0 +1,3 @@
+interface:
+  display_name: "Final Release Review"
+  short_description: "Review GARbro changes before mainline submission"
