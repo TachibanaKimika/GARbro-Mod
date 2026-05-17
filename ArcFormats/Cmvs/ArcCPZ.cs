@@ -472,7 +472,7 @@ namespace GameRes.Formats.Purple
             }
         }
 
-        byte[] UnpackPs2 (byte[] data)
+        internal static byte[] UnpackPs2 (byte[] data)
         {
             DecryptPs2 (data);
             return UnpackLzss (data);
@@ -518,7 +518,7 @@ namespace GameRes.Formats.Purple
             return output;
         }
         
-        void DecryptPs2 (byte[] data)
+        internal static void DecryptPs2 (byte[] data)
         {
             uint key = LittleEndian.ToUInt32 (data, 12);
             int shift = (int)(key >> 20) % 5 + 1;

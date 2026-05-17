@@ -292,6 +292,8 @@ namespace GARbro.GUI
                         ExtractImage (arc, entry, m_image_format);
                     else if (m_convert_audio && entry.Type == "audio")
                         ExtractAudio (arc, entry);
+                    else if (entry.Type == "script")
+                        ExtractScript (arc, entry);
                     else
                         ExtractEntryAsIs (arc, entry);
                     ++m_extract_count;
@@ -325,6 +327,27 @@ namespace GARbro.GUI
             using (var input = arc.OpenEntry (entry))
             using (var output = CreateNewFile (entry.Name, true))
                 input.CopyTo (output);
+        }
+
+        void ExtractScript (ArcFile arc, Entry entry)
+        {
+            using (var input = arc.OpenBinaryEntry (entry))
+            {
+                var script_format = ScriptFormat.FindFormat (input);
+                if (null == script_format || "PS3/CMVS" != script_format.Tag)
+                {
+                    input.Position = 0;
+                    using (var output = CreateNewFile (entry.Name, true))
+                        input.AsStream.CopyTo (output);
+                    return;
+                }
+
+                input.Position = 0;
+                var output_name = Path.ChangeExtension (entry.Name, "txt");
+                using (var script = script_format.ConvertFrom (input))
+                using (var output = CreateNewFile (output_name, true))
+                    script.CopyTo (output);
+            }
         }
 
         void ExtractImage (ArcFile arc, Entry entry, ImageFormat target_format)

@@ -206,7 +206,7 @@ namespace GARbro.GUI
             Stream file = null;
             try
             {
-                file = VFS.OpenBinaryStream (preview.Entry).AsStream;
+                file = OpenPreviewText (preview.Entry);
                 if (!TextView.IsTextFile (file))
                 {
                     ResetPreviewPane();
@@ -233,6 +233,34 @@ namespace GARbro.GUI
                 if (file != null)
                     file.Dispose();
             }
+        }
+
+        Stream OpenPreviewText (Entry entry)
+        {
+            var input = VFS.OpenBinaryStream (entry);
+            if ("script" == entry.Type)
+            {
+                var script_format = ScriptFormat.FindFormat (input);
+                if (ShouldConvertScript (script_format))
+                {
+                    input.Position = 0;
+                    try
+                    {
+                        return script_format.ConvertFrom (input);
+                    }
+                    finally
+                    {
+                        input.Dispose();
+                    }
+                }
+            }
+            input.Position = 0;
+            return input.AsStream;
+        }
+
+        static bool ShouldConvertScript (ScriptFormat format)
+        {
+            return null != format && "PS3/CMVS" == format.Tag;
         }
 
         void LoadPreviewImage (PreviewFile preview)
