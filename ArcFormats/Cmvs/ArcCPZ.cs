@@ -132,19 +132,33 @@ namespace GameRes.Formats.Purple
             if (null == arc_key)
                 arc_key = new ArchiveKey();
 
-            var index_copy = new CowArray<byte> (index, 0, file_table_size).ToArray();
+            var index_copy = index.Clone() as byte[];
             var cmvs_md5 = cpz.CmvsMd5.Clone() as uint[];
-            var scheme = CreateCpz5Scheme(Md5Variant.Mirai);
-//            foreach (var scheme in KnownSchemes.Values.Where (s => s.Version == cpz.Version))
+            foreach (var scheme in EnumerateSchemes (cpz.Version))
             {
-                var arc = ReadIndex (file, scheme, cpz, index, arc_key);
-                if (null != arc)
-                    return arc;
+                try
+                {
+                    var arc = ReadIndex (file, scheme, cpz, index, arc_key);
+                    if (null != arc)
+                        return arc;
+                }
+                catch { /* ignore parse errors */ }
                 // both CmvsMd5 and index was altered by ReadIndex in decryption attempt
                 Array.Copy (cmvs_md5, cpz.CmvsMd5, 4);
-                Array.Copy (index_copy, index, file_table_size);
+                Array.Copy (index_copy, index, index.Length);
             }
             throw new UnknownEncryptionScheme();
+        }
+
+        IEnumerable<CmvsScheme> EnumerateSchemes (int version)
+        {
+            if (KnownSchemes != null)
+            {
+                foreach (var scheme in KnownSchemes.Values.Where (s => s.Version == version))
+                    yield return scheme;
+            }
+            if (5 == version)
+                yield return CreateCpz5Scheme (Md5Variant.Mirai);
         }
 
         static uint[] DefaultCpz5Secret = {

@@ -49,6 +49,27 @@ On 2026-05-17 this resolved to:
 C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe
 ```
 
+## Dev Launcher
+
+For day-to-day local startup from the repository root, use:
+
+```powershell
+.\dev.ps1
+```
+
+The script locates Visual Studio MSBuild, builds `GARbro.sln` in `Debug`, and
+launches `bin\Debug\Onachi-GARbro.exe`. It restores NuGet packages only when
+`packages/` is missing or when `-Restore` is passed.
+
+Useful variants:
+
+```powershell
+.\dev.ps1 -NoLaunch
+.\dev.ps1 -NoBuild
+.\dev.ps1 -App Console
+.\dev.ps1 -App ImageConvert
+```
+
 ## Restore
 
 Preferred restore:
