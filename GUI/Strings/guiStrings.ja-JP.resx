@@ -226,8 +226,8 @@
     <comment>Extract {0} to</comment>
   </data>
   <data name="MenuAbout" xml:space="preserve">
-    <value>GARbroについて</value>
-    <comment>About Game Resource browser</comment>
+    <value>Onachi-GARbroについて</value>
+    <comment>About Onachi-GARbro</comment>
   </data>
   <data name="MsgDeletedItem" xml:space="preserve">
     <value>{0} を削除しました。</value>
@@ -302,8 +302,8 @@
     <comment>Images</comment>
   </data>
   <data name="TextAboutTitle" xml:space="preserve">
-    <value>GARbroについて</value>
-    <comment>About Game Resource browser</comment>
+    <value>Onachi-GARbroについて</value>
+    <comment>About Onachi-GARbro</comment>
   </data>
   <data name="TextAllFiles" xml:space="preserve">
     <value>全てのファイル</value>
@@ -362,8 +362,8 @@
     <comment>Save images as</comment>
   </data>
   <data name="TextTitle" xml:space="preserve">
-    <value>GARbro</value>
-    <comment>Game Resource browser</comment>
+    <value>Onachi-GARbro</value>
+    <comment>Onachi-GARbro</comment>
   </data>
   <data name="TooltipBack" xml:space="preserve">
     <value>戻る</value>
@@ -656,7 +656,7 @@ Overwrite?</comment>
     <comment>Update check failed.</comment>
   </data>
   <data name="MsgUpToDate" xml:space="preserve">
-    <value>現在のGARbroは最新versionです。</value>
+    <value>現在のOnachi-GARbroは最新versionです。</value>
     <comment>GARbro version is up to date.</comment>
   </data>
   <data name="TextNewVersion" xml:space="preserve">

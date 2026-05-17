@@ -2,7 +2,7 @@
 <GARbro>
     <Release>
         <Version>1.5.44</Version>
-        <Url>https://github.com/morkt/GARbro/releases/latest</Url>
+        <Url>https://github.com/TachibanaKimika/GARbro-Mod/releases/latest</Url>
         <Notes>New formats:
 - UMPK archives and GRC images
 - 'CsPack2' archives
@@ -20,7 +20,7 @@ Updated KiriKiri encryption schemes.
     </Release>
     <FormatsData>
         <FileVersion>148</FileVersion>
-        <Url>https://github.com/morkt/GARbro/raw/master/ArcFormats/Resources/Formats.dat</Url>
+        <Url>https://github.com/TachibanaKimika/GARbro-Mod/raw/master/ArcFormats/Resources/Formats.dat</Url>
         <Requires>
             <Assembly Name="ArcFormats" Version="1.2.47.2146"/>
             <Assembly Name="GameRes" Version="1.4.26.238"/>
@@ -28,7 +28,7 @@ Updated KiriKiri encryption schemes.
     </FormatsData>
     <FormatsData>
         <FileVersion>145</FileVersion>
-        <Url>https://github.com/morkt/GARbro/raw/c35ca8ec1f15edb9a32823014a3d532d9b4f5941/ArcFormats/Resources/Formats.dat</Url>
+        <Url>https://github.com/TachibanaKimika/GARbro-Mod/raw/c35ca8ec1f15edb9a32823014a3d532d9b4f5941/ArcFormats/Resources/Formats.dat</Url>
         <Requires>
             <Assembly Name="ArcFormats" Version="1.2.46.2120"/>
             <Assembly Name="GameRes" Version="1.4.26.238"/>

@@ -256,7 +256,7 @@
     <value>Изображения</value>
   </data>
   <data name="TextAboutTitle" xml:space="preserve">
-    <value>Об обозревателе игровых ресурсов</value>
+    <value>Об Onachi-GARbro</value>
   </data>
   <data name="TextAllFiles" xml:space="preserve">
     <value>Все файлы</value>
@@ -301,7 +301,7 @@
     <value>Сохранить в формате</value>
   </data>
   <data name="TextTitle" xml:space="preserve">
-    <value>Обозреватель игровых ресурсов</value>
+    <value>Onachi-GARbro</value>
   </data>
   <data name="TooltipBack" xml:space="preserve">
     <value>Назад</value>
@@ -519,7 +519,7 @@
     <value>Сбой проверки обновлений.</value>
   </data>
   <data name="MsgUpToDate" xml:space="preserve">
-    <value>Установлена актуальная версия GARbro.</value>
+    <value>Установлена актуальная версия Onachi-GARbro.</value>
   </data>
   <data name="TextNewVersion" xml:space="preserve">
     <value>Доступна новая версия:</value>

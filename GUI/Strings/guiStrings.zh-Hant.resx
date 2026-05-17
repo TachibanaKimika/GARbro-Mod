@@ -199,7 +199,7 @@
     <value>將{0}解壓到</value>
   </data>
   <data name="MenuAbout" xml:space="preserve">
-    <value>關於遊戲資源瀏覽器（GARbro）</value>
+    <value>關於 Onachi-GARbro</value>
   </data>
   <data name="MsgDeletedItem" xml:space="preserve">
     <value>已刪除{0}</value>
@@ -256,7 +256,7 @@
     <value>圖像</value>
   </data>
   <data name="TextAboutTitle" xml:space="preserve">
-    <value>關於遊戲資源瀏覽器（GARbro）</value>
+    <value>關於 Onachi-GARbro</value>
   </data>
   <data name="TextAllFiles" xml:space="preserve">
     <value>全部檔案</value>
@@ -301,7 +301,7 @@
     <value>將圖像另存為</value>
   </data>
   <data name="TextTitle" xml:space="preserve">
-    <value>遊戲資源瀏覽器（GARbro）</value>
+    <value>Onachi-GARbro</value>
   </data>
   <data name="TooltipBack" xml:space="preserve">
     <value>後退</value>
@@ -518,7 +518,7 @@
     <value>更新檢查失敗。</value>
   </data>
   <data name="MsgUpToDate" xml:space="preserve">
-    <value>GARbro 已是最新版本。</value>
+    <value>Onachi-GARbro 已是最新版本。</value>
   </data>
   <data name="TextNewVersion" xml:space="preserve">
     <value>新版本已可用：</value>

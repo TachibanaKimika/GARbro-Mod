@@ -7,12 +7,12 @@ using System.Windows;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Game Resource browser")]
-[assembly: AssemblyDescription("Game Resource browser")]
+[assembly: AssemblyTitle("Onachi-GARbro")]
+[assembly: AssemblyDescription("Onachi-GARbro game resource browser")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany ("mørkt")]
-[assembly: AssemblyProduct("GARbro.GUI")]
-[assembly: AssemblyCopyright ("Copyright © 2014-2019 mørkt")]
+[assembly: AssemblyCompany ("Onachi")]
+[assembly: AssemblyProduct("Onachi-GARbro")]
+[assembly: AssemblyCopyright ("Copyright © 2014-2019 mørkt; Onachi-GARbro contributors")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,6 +20,7 @@ using System.Windows;
 // to COM components.  If you need to access a type in this assembly from 
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
+[assembly: Guid("10edb95c-c8fb-49d3-a57d-0b323a36ac09")]
 
 //In order to begin building localizable applications, set 
 //<UICulture>CultureYouAreCodingWith</UICulture> in your .csproj file

@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("GARbro.Console")]
-[assembly: AssemblyDescription("Game Archive browser")]
+[assembly: AssemblyTitle("Onachi-GARbro.Console")]
+[assembly: AssemblyDescription("Onachi-GARbro console archive browser")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("GARbro")]
-[assembly: AssemblyCopyright("Copyright ©  2014 mørkt")]
+[assembly: AssemblyCompany("Onachi")]
+[assembly: AssemblyProduct("Onachi-GARbro")]
+[assembly: AssemblyCopyright("Copyright © 2014 mørkt; Onachi-GARbro contributors")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("a0e89f40-24ea-4958-a80c-d4f7b1386c91")]
+[assembly: Guid("e2af09ef-9d36-495c-914a-37ba06963c40")]
 
 // Version information for an assembly consists of the following four values:
 //

@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Image.Convert")]
-[assembly: AssemblyDescription("Image Conversion utility")]
+[assembly: AssemblyTitle("Onachi-GARbro.Image.Convert")]
+[assembly: AssemblyDescription("Onachi-GARbro image conversion utility")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Image.Convert")]
-[assembly: AssemblyCopyright("Copyright ©  2014 mørkt")]
+[assembly: AssemblyCompany("Onachi")]
+[assembly: AssemblyProduct("Onachi-GARbro")]
+[assembly: AssemblyCopyright("Copyright © 2014 mørkt; Onachi-GARbro contributors")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("5becba95-6a61-452a-8075-9b523494cc09")]
+[assembly: Guid("24bd0cdc-1bb6-4e58-a211-f31e7102c97d")]
 
 // Version information for an assembly consists of the following four values:
 //

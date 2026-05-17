@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SchemeTool")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Onachi-GARbro.SchemeTool")]
+[assembly: AssemblyDescription("Onachi-GARbro scheme tool")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SchemeTool")]
-[assembly: AssemblyCopyright("Copyright ©  2021")]
+[assembly: AssemblyCompany("Onachi")]
+[assembly: AssemblyProduct("Onachi-GARbro")]
+[assembly: AssemblyCopyright("Copyright © 2021; Onachi-GARbro contributors")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("cf0d6842-d071-49af-a6b7-d5c5799ce582")]
+[assembly: Guid("f4eb9091-5165-4046-80f7-050d944f8405")]
 
 // Version information for an assembly consists of the following four values:
 //

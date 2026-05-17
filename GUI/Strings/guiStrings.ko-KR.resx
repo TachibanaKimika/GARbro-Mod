@@ -199,7 +199,7 @@
     <value>다음으로 {0}을 추출</value>
   </data>
   <data name="MenuAbout" xml:space="preserve">
-    <value>게임 리소스 탐색기에 대해서</value>
+    <value>Onachi-GARbro에 대해서</value>
   </data>
   <data name="MsgDeletedItem" xml:space="preserve">
     <value>{0} 제거됨</value>
@@ -256,7 +256,7 @@
     <value>이미지</value>
   </data>
   <data name="TextAboutTitle" xml:space="preserve">
-    <value>게임 리소스 탐색기에 대해서</value>
+    <value>Onachi-GARbro에 대해서</value>
   </data>
   <data name="TextAllFiles" xml:space="preserve">
     <value>모든 파일</value>
@@ -301,7 +301,7 @@
     <value>이미지를 다른이름으로 저장</value>
   </data>
   <data name="TextTitle" xml:space="preserve">
-    <value>게임 리소스 탐색기</value>
+    <value>Onachi-GARbro</value>
   </data>
   <data name="TooltipBack" xml:space="preserve">
     <value>뒤로</value>
@@ -519,7 +519,7 @@
     <value>업데이트 확인에 실패했습니다.</value>
   </data>
   <data name="MsgUpToDate" xml:space="preserve">
-    <value>GARbro이 최신버전입니다.</value>
+    <value>Onachi-GARbro이 최신버전입니다.</value>
   </data>
   <data name="TextNewVersion" xml:space="preserve">
     <value>새로운 버전을 사용하실 수 있습니다:</value>

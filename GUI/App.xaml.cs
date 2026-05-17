@@ -26,6 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using GARbro.GUI.Properties;
 using GameRes;
 using GameRes.Compression;
@@ -38,8 +39,13 @@ namespace GARbro.GUI
     /// </summary>
     public partial class App : Application
     {
-        public static string       Name { get { return "GARbro"; } }
+        const string AppUserModelId = "Onachi.Onachi-GARbro";
+
+        public static string       Name { get { return "Onachi-GARbro"; } }
         public static string FormatsDat { get { return "Formats.dat"; } }
+
+        [DllImport ("shell32.dll", CharSet = CharSet.Unicode)]
+        static extern int SetCurrentProcessExplicitAppUserModelID (string appID);
 
         /// <summary>
         /// Initial browsing directory.
@@ -48,16 +54,17 @@ namespace GARbro.GUI
 
         void ApplicationStartup (object sender, StartupEventArgs e)
         {
+            SetProcessIdentity();
             string exe_dir = Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly().Location);
 #if DEBUG
             Trace.Listeners.Add (new TextWriterTraceListener (Path.Combine (exe_dir, "trace.log")));
             Trace.AutoFlush = true;
 #endif
-            Trace.WriteLine ("ApplicationStartup --------------------------------", "GARbro.GUI.App");
+            Trace.WriteLine ("ApplicationStartup --------------------------------", "Onachi-GARbro.App");
             this.DispatcherUnhandledException += (s, args) =>
             {
                 Trace.WriteLine (string.Format ("Unhandled exception caught: {0}", args.Exception.Message),
-                                 "GARbro.GUI.App");
+                                 "Onachi-GARbro.App");
                 Trace.WriteLine (args.Exception.StackTrace, "Stack trace");
             };
             UpgradeSettings();
@@ -83,6 +90,17 @@ namespace GARbro.GUI
             DeserializeScheme (Path.Combine (GetLocalAppDataFolder(), FormatsDat));
         }
 
+        static void SetProcessIdentity ()
+        {
+            try
+            {
+                SetCurrentProcessExplicitAppUserModelID (AppUserModelId);
+            }
+            catch
+            {
+            }
+        }
+
         public string GetLocalAppDataFolder ()
         {
             string local_app_data = Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData);
@@ -102,7 +120,7 @@ namespace GARbro.GUI
             }
             catch (Exception X)
             {
-                Trace.WriteLine (string.Format ("Scheme deserialization failed: {0}", X.Message), "[GARbro.GUI.App]");
+                Trace.WriteLine (string.Format ("Scheme deserialization failed: {0}", X.Message), "[Onachi-GARbro.App]");
             }
         }
 
@@ -133,7 +151,7 @@ namespace GARbro.GUI
             }
             catch (System.Exception X)
             {
-                Trace.WriteLine (string.Format ("Settings upgrade failed: {0}", X.Message), "[GARbro.GUI.App]");
+                Trace.WriteLine (string.Format ("Settings upgrade failed: {0}", X.Message), "[Onachi-GARbro.App]");
             }
  
             // do not restore in minimized state

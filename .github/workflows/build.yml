@@ -21,5 +21,5 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: GARbro-Mod-ci-build
+          name: Onachi-GARbro-ci-build
           path: bin/Release

@@ -202,7 +202,7 @@
     <value>Extract {0} to</value>
   </data>
   <data name="MenuAbout" xml:space="preserve">
-    <value>About Game Resource browser</value>
+    <value>About Onachi-GARbro</value>
   </data>
   <data name="MsgDeletedItem" xml:space="preserve">
     <value>Deleted {0}</value>
@@ -259,7 +259,7 @@
     <value>Images</value>
   </data>
   <data name="TextAboutTitle" xml:space="preserve">
-    <value>About Game Resource browser</value>
+    <value>About Onachi-GARbro</value>
   </data>
   <data name="TextAllFiles" xml:space="preserve">
     <value>All Files</value>
@@ -304,7 +304,7 @@
     <value>Save images as</value>
   </data>
   <data name="TextTitle" xml:space="preserve">
-    <value>Game Resource browser</value>
+    <value>Onachi-GARbro</value>
   </data>
   <data name="TooltipBack" xml:space="preserve">
     <value>Back</value>
@@ -522,7 +522,7 @@ Overwrite?</value>
     <value>Update check failed.</value>
   </data>
   <data name="MsgUpToDate" xml:space="preserve">
-    <value>GARbro version is up to date.</value>
+    <value>Onachi-GARbro version is up to date.</value>
   </data>
   <data name="TextNewVersion" xml:space="preserve">
     <value>New version available:</value>
