@@ -719,7 +719,8 @@ namespace GARbro.GUI
         {
             return null != format
                 && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag
-                    || "MJO/Majiro" == format.Tag || "KiriKiri/Script" == format.Tag);
+                    || "MJO/Majiro" == format.Tag || "KiriKiri/Script" == format.Tag
+                    || "BGI/Script" == format.Tag);
         }
 
         void ExtractImage (ArcFile arc, Entry entry, ImageFormat target_format)

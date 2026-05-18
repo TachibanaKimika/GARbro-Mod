@@ -44,7 +44,7 @@ namespace GameRes.Formats.BGI
         public ArcOpener ()
         {
             Extensions = new string[] { "arc" };
-            ContainedFormats = new[] { "BGI", "CompressedBG", "BW", "SCR" };
+            ContainedFormats = new[] { "BGI", "CompressedBG", "BW", BgiScriptFormat.FormatTag, "SCR" };
         }
 
         public override ArcFile TryOpen (ArcView file)
@@ -70,6 +70,11 @@ namespace GameRes.Formats.BGI
                     return null;
                 dir.Add (entry);
                 index_offset += 0x20;
+            }
+            foreach (var entry in dir)
+            {
+                if (BgiScriptFormat.HasV1Signature (file.View, entry.Offset, entry.Size))
+                    entry.Type = "script";
             }
             foreach (var entry in dir.Where (e => string.IsNullOrEmpty (e.Type)))
             {
@@ -142,7 +147,8 @@ namespace GameRes.Formats.BGI
             {
                 string name = file.View.ReadString (index_offset, 0x60);
                 var offset = base_offset + file.View.ReadUInt32 (index_offset+0x60);
-                var entry = new PackedEntry { Name = name, Offset = offset };
+                var entry = Create<PackedEntry> (name);
+                entry.Offset = offset;
                 entry.Size = file.View.ReadUInt32 (index_offset+0x64);
                 if (!entry.CheckPlacement (file.MaxOffset))
                     return null;
@@ -151,16 +157,21 @@ namespace GameRes.Formats.BGI
             }
             foreach (var entry in dir)
             {
-                uint signature = file.View.ReadUInt32 (entry.Offset);
-                var res = AutoEntry.DetectFileType (signature);
-                if (res != null)
-                    entry.Type = res.Type;
-                else if (file.View.AsciiEqual (entry.Offset, "BSE 1."))
-                    entry.Type = "image";
-                else if (file.View.AsciiEqual (entry.Offset, "CompressedBG"))
-                    entry.Type = "image";
-                else if (file.View.AsciiEqual (entry.Offset+5, "w  "))
-                    entry.Type = "audio";
+                if (BgiScriptFormat.HasV1Signature (file.View, entry.Offset, entry.Size))
+                    entry.Type = "script";
+                else
+                {
+                    uint signature = file.View.ReadUInt32 (entry.Offset);
+                    var res = AutoEntry.DetectFileType (signature);
+                    if (res != null)
+                        entry.Type = res.Type;
+                    else if (file.View.AsciiEqual (entry.Offset, "BSE 1."))
+                        entry.Type = "image";
+                    else if (file.View.AsciiEqual (entry.Offset, "CompressedBG"))
+                        entry.Type = "image";
+                    else if (file.View.AsciiEqual (entry.Offset+5, "w  "))
+                        entry.Type = "audio";
+                }
             }
             return new ArcFile (file, this, dir);
         }

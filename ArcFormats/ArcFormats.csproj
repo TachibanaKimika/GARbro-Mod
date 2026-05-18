@@ -875,6 +875,7 @@
     <Compile Include="ArcAVC.cs" />
     <Compile Include="AZSys\ArcAZSys.cs" />
     <Compile Include="Ethornell\ArcBGI.cs" />
+    <Compile Include="Ethornell\ScriptBGI.cs" />
     <Compile Include="Ffa\ArcBlackPackage.cs" />
     <Compile Include="Cherry\ArcCherry.cs" />
     <Compile Include="Circus\ArcCircus.cs" />

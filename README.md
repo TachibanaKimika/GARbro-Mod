@@ -36,6 +36,11 @@ and PSB-backed `.scn` scenario entries.  Filtered mode extracts readable
 dialogue/choice text; raw mode keeps the decoded script text, or all strings
 under `.scn` scenes.
 
+BGI/Ethornell archive script entries recognize `._bp` scripts and v1 bytecode
+with the `BurikoCompiledScriptVer1.00` header.  Filtered mode extracts
+character names, messages, and choices; raw mode also includes referenced
+internal strings.
+
 Preferences -> Experimental -> Auto-select extraction path makes the extract
 dialog default to the last extraction parent directory plus the nearest parent
 directory name that contains an `.exe` file.
