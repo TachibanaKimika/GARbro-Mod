@@ -693,6 +693,8 @@ namespace GARbro.GUI
                 return ScriptTextMode.Raw;
             if (string.Equals (mode, ScriptTextMode.Dump, StringComparison.OrdinalIgnoreCase))
                 return ScriptTextMode.Dump;
+            if (string.Equals (mode, ScriptTextMode.JsonLines, StringComparison.OrdinalIgnoreCase))
+                return ScriptTextMode.JsonLines;
             return ScriptTextMode.Filtered;
         }
 
@@ -711,7 +713,8 @@ namespace GARbro.GUI
             if (!use_suffix)
                 return Path.ChangeExtension (name, "txt");
             string ext = ScriptTextMode.Raw == mode ? "raw.txt"
-                : ScriptTextMode.Dump == mode ? "dump.txt" : "filtered.txt";
+                : ScriptTextMode.Dump == mode ? "dump.txt"
+                : ScriptTextMode.JsonLines == mode ? "jsonl" : "filtered.txt";
             return Path.ChangeExtension (name, ext);
         }
 
@@ -720,7 +723,7 @@ namespace GARbro.GUI
             return null != format
                 && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag
                     || "MJO/Majiro" == format.Tag || "KiriKiri/Script" == format.Tag
-                    || "BGI/Script" == format.Tag);
+                    || "BGI/Script" == format.Tag || "TXT/Whale" == format.Tag);
         }
 
         void ExtractImage (ArcFile arc, Entry entry, ImageFormat target_format)

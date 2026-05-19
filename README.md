@@ -27,9 +27,12 @@ When multiple archive files are selected in the file system, 'F4' extracts
 them sequentially in the current list order using the same destination and
 conversion options.
 
-Supported script text extractors can output filtered text, raw text, or both.
+Supported script text extractors can output filtered text, raw text, JSONL,
+or both.
 When a script supports this choice, the preview panel shows a Script selector
-for switching between filtered and raw text.
+for switching between supported text modes.
+Extractor behavior and JSONL field conventions are documented in
+`docs/reference/script-text-extraction.md`.
 
 KiriKiri/XP3 script preview and extraction recognize `.ks`, scrambled `.txt`,
 and PSB-backed `.scn` scenario entries.  Filtered mode extracts readable

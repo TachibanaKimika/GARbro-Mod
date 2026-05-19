@@ -110,7 +110,7 @@ namespace GameRes.Formats.NonColor
 
         public DatOpener ()
         {
-            Extensions = new string[] { "dat" };
+            Extensions = new string[] { "dat", "pak" };
         }
 
         internal const int SignatureKey = 0x26ACA46E;
@@ -119,7 +119,7 @@ namespace GameRes.Formats.NonColor
 
         public override ArcFile TryOpen (ArcView file)
         {
-            if (!file.Name.HasExtension (".dat"))
+            if (!file.Name.HasExtension (".dat") && !file.Name.HasExtension (".pak"))
                 return null;
             int count = file.View.ReadInt32 (0) ^ SignatureKey;
             if (!IsSaneCount (count))
@@ -353,7 +353,17 @@ namespace GameRes.Formats.NonColor
                     continue;
                 }
                 if (string.IsNullOrEmpty (entry.Name))
-                    entry.Name = string.Format ("{0:D5}#{1:X8}", i, entry.Hash);
+                {
+                    if (entry.IsPacked)
+                    {
+                        entry.Name = string.Format ("{0:D5}#{1:X16}.txt", i, entry.Hash);
+                        entry.Type = "script";
+                    }
+                    else
+                    {
+                        entry.Name = string.Format ("{0:D5}#{1:X8}", i, entry.Hash);
+                    }
+                }
                 m_dir.Add (entry);
             }
             if (skipped != 0)

@@ -67,6 +67,8 @@ Use these repo-local skills when the task matches their trigger:
 - `docs/architecture/project-structure.md`: stable module and dependency map.
 - `docs/reference/build-and-verify.md`: local toolchain, build, and smoke
   verification procedures.
+- `docs/reference/script-text-extraction.md`: script extractor text modes,
+  JSONL schema, and authoring rules.
 - `docs/exec-plan/README.md`: storage convention for active and completed plans.
 
 ## Verification Baseline

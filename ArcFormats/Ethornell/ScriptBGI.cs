@@ -38,7 +38,7 @@ namespace GameRes.Formats.BGI
         public const string V1Magic = "BurikoCompiledScriptVer1.00\0";
 
         const uint V1Signature = 0x69727542; // 'Buri'
-        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw, ScriptTextMode.Dump };
+        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw, ScriptTextMode.Dump, ScriptTextMode.JsonLines };
 
         public override string         Tag { get { return FormatTag; } }
         public override string Description { get { return "BGI/Ethornell bytecode script"; } }
@@ -66,6 +66,9 @@ namespace GameRes.Formats.BGI
         public Stream ConvertFrom (IBinaryStream file, string text_mode)
         {
             var script = BgiScript.Read (file);
+            if (string.Equals (text_mode, ScriptTextMode.JsonLines, StringComparison.OrdinalIgnoreCase))
+                return ScriptJsonLines.CreateStream (script.ExtractJsonEntries(), file.Name);
+
             var output = new MemoryStream();
             using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
             {
@@ -230,6 +233,29 @@ namespace GameRes.Formats.BGI
                 if (!TryReadString (item.TextOffset, out text) || string.IsNullOrEmpty (text))
                     continue;
                 yield return new ScriptLine { Id = id++, Text = text };
+            }
+        }
+
+        public IEnumerable<ScriptTextEntry> ExtractJsonEntries ()
+        {
+            var pending_names = new List<string>();
+            foreach (var item in m_strings)
+            {
+                if (item.Type == BgiStringType.Internal)
+                    continue;
+                string text;
+                if (!TryReadString (item.TextOffset, out text) || string.IsNullOrEmpty (text))
+                    continue;
+                if (item.Type == BgiStringType.CharacterName)
+                {
+                    pending_names.Add (text);
+                    continue;
+                }
+
+                var entry = new ScriptTextEntry (text);
+                entry.Names.AddRange (pending_names);
+                pending_names.Clear();
+                yield return entry;
             }
         }
 

@@ -48,6 +48,7 @@ namespace GARbro.GUI
             new ScriptTextModeModel (ScriptTextMode.Filtered, "Filtered"),
             new ScriptTextModeModel (ScriptTextMode.Raw, "Raw"),
             new ScriptTextModeModel (ScriptTextMode.Dump, "Dump"),
+            new ScriptTextModeModel (ScriptTextMode.JsonLines, "JSONL"),
             new ScriptTextModeModel (ScriptTextBoth, "Both"),
         };
 

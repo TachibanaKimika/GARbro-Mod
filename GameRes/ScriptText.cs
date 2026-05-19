@@ -6,6 +6,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Text;
 
 namespace GameRes
 {
@@ -24,6 +25,108 @@ namespace GameRes
         public abstract void Serialize (Stream output);
         public abstract void Deserialize (Stream input);
 */
+    }
+
+    public class ScriptTextEntry
+    {
+        public readonly List<string> Names = new List<string>();
+        public string Voice;
+        public string Message;
+
+        public ScriptTextEntry ()
+        {
+        }
+
+        public ScriptTextEntry (string message)
+        {
+            Message = message;
+        }
+
+        public ScriptTextEntry (string name, string message)
+        {
+            if (!string.IsNullOrEmpty (name))
+                Names.Add (name);
+            Message = message;
+        }
+    }
+
+    public static class ScriptJsonLines
+    {
+        public static Stream CreateStream (IEnumerable<ScriptTextEntry> entries, string name)
+        {
+            var output = new MemoryStream();
+            using (var writer = new StreamWriter (output, new UTF8Encoding (false), 0x400, true))
+                Write (writer, entries);
+            return new BinMemoryStream (output, name);
+        }
+
+        public static void Write (TextWriter writer, IEnumerable<ScriptTextEntry> entries)
+        {
+            foreach (var entry in entries)
+            {
+                if (null == entry || string.IsNullOrWhiteSpace (entry.Message))
+                    continue;
+
+                writer.Write ('{');
+                if (1 == entry.Names.Count)
+                {
+                    writer.Write ("\"name\":");
+                    WriteJsonString (writer, entry.Names[0]);
+                    writer.Write (',');
+                }
+                else if (entry.Names.Count > 1)
+                {
+                    writer.Write ("\"names\":[");
+                    for (int i = 0; i < entry.Names.Count; ++i)
+                    {
+                        if (i > 0)
+                            writer.Write (',');
+                        WriteJsonString (writer, entry.Names[i]);
+                    }
+                    writer.Write ("],");
+                }
+                if (!string.IsNullOrEmpty (entry.Voice))
+                {
+                    writer.Write ("\"voice\":");
+                    WriteJsonString (writer, entry.Voice);
+                    writer.Write (',');
+                }
+                writer.Write ("\"message\":");
+                WriteJsonString (writer, entry.Message);
+                writer.WriteLine ('}');
+            }
+        }
+
+        public static void WriteJsonString (TextWriter writer, string text)
+        {
+            writer.Write ('"');
+            for (int i = 0; i < text.Length; ++i)
+            {
+                char c = text[i];
+                switch (c)
+                {
+                case '"':  writer.Write ("\\\""); break;
+                case '\\': writer.Write ("\\\\"); break;
+                case '\b': writer.Write ("\\b");  break;
+                case '\f': writer.Write ("\\f");  break;
+                case '\n': writer.Write ("\\n");  break;
+                case '\r': writer.Write ("\\r");  break;
+                case '\t': writer.Write ("\\t");  break;
+                default:
+                    if (c < ' ')
+                    {
+                        writer.Write ("\\u");
+                        writer.Write (((int)c).ToString ("X4"));
+                    }
+                    else
+                    {
+                        writer.Write (c);
+                    }
+                    break;
+                }
+            }
+            writer.Write ('"');
+        }
     }
 
     public abstract class ScriptFormat : IResource
@@ -63,6 +166,7 @@ namespace GameRes
         public const string Filtered = "filtered";
         public const string Raw = "raw";
         public const string Dump = "dump";
+        public const string JsonLines = "jsonl";
     }
 
     public interface IConfigurableScriptFormat

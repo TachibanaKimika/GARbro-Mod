@@ -319,6 +319,8 @@ namespace GARbro.GUI
                 return "Raw";
             if (string.Equals (mode, ScriptTextMode.Dump, StringComparison.OrdinalIgnoreCase))
                 return "Dump";
+            if (string.Equals (mode, ScriptTextMode.JsonLines, StringComparison.OrdinalIgnoreCase))
+                return "JSONL";
             return "Filtered";
         }
 
@@ -327,7 +329,7 @@ namespace GARbro.GUI
             return null != format
                 && ("PS3/CMVS" == format.Tag || "SPT/SystemNNN" == format.Tag
                     || "MJO/Majiro" == format.Tag || "KiriKiri/Script" == format.Tag
-                    || "BGI/Script" == format.Tag);
+                    || "BGI/Script" == format.Tag || "TXT/Whale" == format.Tag);
         }
 
         void LoadPreviewImage (PreviewFile preview)

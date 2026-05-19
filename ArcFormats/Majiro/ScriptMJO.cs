@@ -44,7 +44,7 @@ namespace GameRes.Formats.Majiro
         public override uint     Signature { get { return 0x696A614D; } } // 'Maji'
 
         const uint PlainBytecodeSignature = 0x6C506A4D; // 'MjPl'
-        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw, ScriptTextMode.Dump };
+        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw, ScriptTextMode.Dump, ScriptTextMode.JsonLines };
 
         public IEnumerable<string> TextModes { get { return s_text_modes; } }
         public string DefaultTextMode { get { return ScriptTextMode.Filtered; } }
@@ -79,6 +79,9 @@ namespace GameRes.Formats.Majiro
         public Stream ConvertFrom (IBinaryStream file, string text_mode)
         {
             var script = MjoScript.Read (file);
+            if (string.Equals (text_mode, ScriptTextMode.JsonLines, StringComparison.OrdinalIgnoreCase))
+                return ScriptJsonLines.CreateStream (script.ExtractJsonEntries(), file.Name);
+
             var output = new MemoryStream();
             using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
             {
@@ -220,6 +223,15 @@ namespace GameRes.Formats.Majiro
             }
         }
 
+        public IEnumerable<ScriptTextEntry> ExtractJsonEntries ()
+        {
+            foreach (var range in m_text_ranges)
+            {
+                foreach (var entry in GetFilteredEntries (range))
+                    yield return entry;
+            }
+        }
+
         public void WriteDump (TextWriter writer)
         {
             writer.WriteLine ("# Majiro MJO decoded dump");
@@ -310,6 +322,33 @@ namespace GameRes.Formats.Majiro
             {
                 yield return match.Groups["name"].Captures[i].Value;
                 yield return match.Groups["message"].Captures[i].Value;
+            }
+        }
+
+        static IEnumerable<ScriptTextEntry> GetFilteredEntries (MjoTextCodeRange range)
+        {
+            if (range.Type == MjoTextCodeType.Ldstr)
+            {
+                if (!string.IsNullOrEmpty (range.Text))
+                    yield return new ScriptTextEntry (range.Text);
+                yield break;
+            }
+
+            var match = Regex.Match (range.Text,
+                @"^(?:(?<name>[^\u300c\u300d\r\n]+)\u300c(?<message>.+?)\u300d?(?:\r\n|$))+$",
+                RegexOptions.Singleline);
+            if (!match.Success)
+            {
+                if (!string.IsNullOrEmpty (range.Text))
+                    yield return new ScriptTextEntry (range.Text);
+                yield break;
+            }
+
+            for (int i = 0; i < match.Groups["name"].Captures.Count; ++i)
+            {
+                var entry = new ScriptTextEntry (match.Groups["message"].Captures[i].Value);
+                entry.Names.Add (match.Groups["name"].Captures[i].Value);
+                yield return entry;
             }
         }
 

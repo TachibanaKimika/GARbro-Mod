@@ -50,7 +50,7 @@ namespace GameRes.Formats.KiriKiri
         const uint ScrambledMode1Signature = 0xFF01FEFE;
         const uint ScrambledMode2Signature = 0xFF02FEFE;
 
-        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw };
+        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw, ScriptTextMode.JsonLines };
 
         static readonly Regex LineCommandRegex = new Regex (
             @"^\s*@(?<command>[^ ]+)(?: +(?<attrname>[^= ]+)(?: *= *(?<attrvalue>""(?:\\""|[^""])*""|'(?:\\'|[^'])*'|[^""' ]*))?)*",
@@ -64,6 +64,24 @@ namespace GameRes.Formats.KiriKiri
         static readonly string[] ExitNameCommands = { "nse" };
         static readonly string[] MessageCommands = { "sel01", "sel02", "sel03", "sel04", "AddSelect", "ruby" };
         static readonly string[] AllowedInlineCommands = { "r", "ruby", "ruby_c", "heart", "mruby", "・", "★" };
+
+        enum KagStringType
+        {
+            CharacterName,
+            Message,
+        }
+
+        struct KagString
+        {
+            public readonly string Text;
+            public readonly KagStringType Type;
+
+            public KagString (string text, KagStringType type)
+            {
+                Text = text;
+                Type = type;
+            }
+        }
 
         public IEnumerable<string> TextModes { get { return s_text_modes; } }
         public string DefaultTextMode { get { return ScriptTextMode.Filtered; } }
@@ -107,6 +125,14 @@ namespace GameRes.Formats.KiriKiri
 
         public Stream ConvertFrom (IBinaryStream file, string text_mode)
         {
+            bool jsonl = string.Equals (text_mode, ScriptTextMode.JsonLines, StringComparison.OrdinalIgnoreCase);
+            if (jsonl)
+            {
+                if (file.Name.HasExtension (".scn"))
+                    return ScriptJsonLines.CreateStream (ReadScenarioEntries (file), file.Name);
+                return ScriptJsonLines.CreateStream (ExtractKagEntries (ReadTextScript (file)), file.Name);
+            }
+
             bool raw = string.Equals (text_mode, ScriptTextMode.Raw, StringComparison.OrdinalIgnoreCase);
             if (file.Name.HasExtension (".scn"))
                 return ConvertScenario (file, !raw);
@@ -320,6 +346,82 @@ namespace GameRes.Formats.KiriKiri
             }
         }
 
+        static IEnumerable<ScriptTextEntry> ReadScenarioEntries (IBinaryStream file)
+        {
+            file.Position = 0;
+            using (var reader = new PsbReader (file))
+            {
+                if (!reader.ParseNonEncrypted())
+                    throw new InvalidFormatException();
+                var scenes = reader.GetRootKey<IList> ("scenes");
+                if (null == scenes)
+                    throw new InvalidFormatException();
+
+                foreach (var scene_obj in scenes)
+                {
+                    var scene = scene_obj as IDictionary;
+                    if (null == scene)
+                        continue;
+                    foreach (var entry in GetTextEntries (scene))
+                        yield return entry;
+                    foreach (var line in GetSelectStrings (scene))
+                        yield return new ScriptTextEntry (line);
+                }
+            }
+        }
+
+        static IEnumerable<ScriptTextEntry> GetTextEntries (IDictionary scene)
+        {
+            var texts = GetValue<IList> (scene, "texts");
+            if (null == texts)
+                yield break;
+
+            foreach (var text_obj in texts)
+            {
+                var text = text_obj as IList;
+                if (null == text || text.Count < 3)
+                    continue;
+
+                string real_name = GetString (text, 0);
+                string display_name;
+                object message;
+                if (text[1] is IList)
+                {
+                    display_name = null;
+                    message = text[1];
+                }
+                else
+                {
+                    display_name = GetString (text, 1);
+                    if (null == display_name && !string.IsNullOrEmpty (real_name) && real_name != "＠")
+                        display_name = real_name;
+                    message = GetString (text, 2);
+                    if (null == message)
+                        message = text[2];
+                }
+
+                var languages = message as IList;
+                if (null != languages && languages.Count > 0)
+                {
+                    var language_text = languages[0] as IList;
+                    if (null != language_text && language_text.Count >= 2)
+                    {
+                        display_name = GetString (language_text, 0);
+                        message = GetString (language_text, 1);
+                    }
+                }
+
+                var message_text = message as string;
+                if (null == message_text)
+                    continue;
+
+                var entry = new ScriptTextEntry (NormalizeScenarioText (message_text));
+                if (!string.IsNullOrEmpty (real_name))
+                    entry.Names.Add (NormalizeScenarioText (display_name ?? real_name));
+                yield return entry;
+            }
+        }
+
         static T GetValue<T> (IDictionary dict, string key) where T : class
         {
             if (!dict.Contains (key))
@@ -375,9 +477,9 @@ namespace GameRes.Formats.KiriKiri
                     if (in_script || trimmed.StartsWith (";", StringComparison.Ordinal))
                         continue;
 
-                    foreach (var text in ExtractKagLine (line, trimmed))
+                    foreach (var text in ExtractKagLineStrings (line, trimmed))
                     {
-                        var normalized = NormalizeKagText (text);
+                        var normalized = NormalizeKagText (text.Text);
                         if (!string.IsNullOrWhiteSpace (normalized))
                             yield return normalized;
                     }
@@ -385,11 +487,57 @@ namespace GameRes.Formats.KiriKiri
             }
         }
 
-        static IEnumerable<string> ExtractKagLine (string line, string trimmed)
+        static IEnumerable<ScriptTextEntry> ExtractKagEntries (string script)
+        {
+            bool in_script = false;
+            var pending_names = new List<string>();
+            using (var reader = new StringReader (script))
+            {
+                string line;
+                while (null != (line = reader.ReadLine()))
+                {
+                    var trimmed = line.TrimStart();
+                    if (trimmed == "[iscript]" || trimmed == "@iscript"
+                        || trimmed.StartsWith ("[macro", StringComparison.Ordinal)
+                        || trimmed.StartsWith ("@macro", StringComparison.Ordinal))
+                    {
+                        in_script = true;
+                        continue;
+                    }
+                    if (trimmed == "[endscript]" || trimmed == "@endscript"
+                        || trimmed == "[endmacro]" || trimmed == "@endmacro")
+                    {
+                        in_script = false;
+                        continue;
+                    }
+                    if (in_script || trimmed.StartsWith (";", StringComparison.Ordinal))
+                        continue;
+
+                    foreach (var text in ExtractKagLineStrings (line, trimmed))
+                    {
+                        var normalized = NormalizeKagText (text.Text);
+                        if (string.IsNullOrWhiteSpace (normalized))
+                            continue;
+                        if (text.Type == KagStringType.CharacterName)
+                        {
+                            pending_names.Add (normalized);
+                            continue;
+                        }
+
+                        var entry = new ScriptTextEntry (normalized);
+                        entry.Names.AddRange (pending_names);
+                        pending_names.Clear();
+                        yield return entry;
+                    }
+                }
+            }
+        }
+
+        static IEnumerable<KagString> ExtractKagLineStrings (string line, string trimmed)
         {
             if (trimmed.StartsWith ("@", StringComparison.Ordinal))
             {
-                foreach (var text in ExtractLineCommandText (line))
+                foreach (var text in ExtractLineCommandStrings (line))
                     yield return text;
                 yield break;
             }
@@ -397,25 +545,25 @@ namespace GameRes.Formats.KiriKiri
             {
                 int pipe = line.IndexOf ('|');
                 if (pipe >= 0 && pipe + 1 < line.Length)
-                    yield return line.Substring (pipe + 1);
+                    yield return new KagString (line.Substring (pipe + 1), KagStringType.Message);
                 yield break;
             }
             if (trimmed.StartsWith ("#", StringComparison.Ordinal))
             {
                 int name_pos = line.IndexOf ('#') + 1;
                 if (name_pos > 0 && name_pos < line.Length)
-                    yield return line.Substring (name_pos);
+                    yield return new KagString (line.Substring (name_pos), KagStringType.CharacterName);
                 yield break;
             }
-            foreach (var text in ExtractMessageText (line))
+            foreach (var text in ExtractMessageStrings (line))
                 yield return text;
         }
 
-        static IEnumerable<string> ExtractLineCommandText (string line)
+        static IEnumerable<KagString> ExtractLineCommandStrings (string line)
         {
             if (line == "@r")
             {
-                yield return "\r\n";
+                yield return new KagString ("\r\n", KagStringType.Message);
                 yield break;
             }
 
@@ -424,14 +572,19 @@ namespace GameRes.Formats.KiriKiri
                 yield break;
 
             var name = command.Groups["command"].Value;
-            if (ContainsString (NameCommands, name) || ContainsString (MessageCommands, name))
+            if (ContainsString (NameCommands, name))
             {
                 foreach (var value in GetJapaneseAttributeValues (command))
-                    yield return value;
+                    yield return new KagString (value, KagStringType.CharacterName);
+            }
+            else if (ContainsString (MessageCommands, name))
+            {
+                foreach (var value in GetJapaneseAttributeValues (command))
+                    yield return new KagString (value, KagStringType.Message);
             }
         }
 
-        static IEnumerable<string> ExtractMessageText (string line)
+        static IEnumerable<KagString> ExtractMessageStrings (string line)
         {
             int segment_start = 0;
             foreach (Match command in InlineCommandRegex.Matches (line))
@@ -441,17 +594,21 @@ namespace GameRes.Formats.KiriKiri
                     continue;
 
                 if (command.Index > segment_start)
-                    yield return line.Substring (segment_start, command.Index - segment_start);
+                    yield return new KagString (line.Substring (segment_start, command.Index - segment_start), KagStringType.Message);
 
-                if (name.StartsWith ("【", StringComparison.Ordinal) && name.EndsWith ("】", StringComparison.Ordinal)
-                    && name.Length > 2)
-                    yield return name.Substring (1, name.Length - 2);
+                bool is_name_bracket = name.StartsWith ("【", StringComparison.Ordinal) && name.EndsWith ("】", StringComparison.Ordinal);
+                if (is_name_bracket && name.Length > 2)
+                    yield return new KagString (name.Substring (1, name.Length - 2), KagStringType.CharacterName);
 
-                if (ContainsString (NameCommands, name) || ContainsString (MessageCommands, name)
-                    || name.StartsWith ("【", StringComparison.Ordinal) && name.EndsWith ("】", StringComparison.Ordinal))
+                if (ContainsString (NameCommands, name) || is_name_bracket)
                 {
                     foreach (var value in GetJapaneseAttributeValues (command))
-                        yield return value;
+                        yield return new KagString (value, KagStringType.CharacterName);
+                }
+                else if (ContainsString (MessageCommands, name))
+                {
+                    foreach (var value in GetJapaneseAttributeValues (command))
+                        yield return new KagString (value, KagStringType.Message);
                 }
                 else if (ContainsString (EnterNameCommands, name) || ContainsString (ExitNameCommands, name))
                 {
@@ -462,7 +619,7 @@ namespace GameRes.Formats.KiriKiri
             }
 
             if (segment_start < line.Length)
-                yield return line.Substring (segment_start);
+                yield return new KagString (line.Substring (segment_start), KagStringType.Message);
         }
 
         static IEnumerable<string> GetJapaneseAttributeValues (Match command)

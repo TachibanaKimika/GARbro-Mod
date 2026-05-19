@@ -926,6 +926,7 @@
     <Compile Include="MnoViolet\ArcMnoViolet.cs" />
     <Compile Include="FC01\ArcMRG.cs" />
     <Compile Include="Nekopack\ArcNEKO.cs" />
+    <Compile Include="NonColor\ScriptWhale.cs" />
     <Compile Include="Nexas\ArcPAC.cs" />
     <Compile Include="NitroPlus\ArcNitro.cs" />
     <Compile Include="Entis\ArcNOA.cs" />
