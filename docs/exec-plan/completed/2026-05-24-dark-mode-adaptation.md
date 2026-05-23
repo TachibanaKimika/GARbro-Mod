@@ -73,6 +73,9 @@ Relevant facts:
 - 2026-05-24: Fixed dark menu popup rendering by replacing the inherited WPF
   `MenuItem`, `ContextMenu`, and `Separator` templates with theme-aware
   templates.
+- 2026-05-24: Fixed `ComboBoxItem` content presentation so ArcFormats option
+  widgets using `DisplayMemberPath`, including the XP3 encryption scheme
+  selector, render display names instead of object type names in dark mode.
 
 ## Decision Log
 
@@ -99,3 +102,5 @@ Relevant facts:
   against the current OS preference; live OS theme switching was not forced.
 - A follow-up visual smoke check verified the dark View menu popup no longer
   renders bright default WPF borders.
+- A follow-up XP3 parameter check verified the encryption scheme dropdown uses
+  `DisplayMemberPath` display names with the shared dark `ComboBoxItem` style.

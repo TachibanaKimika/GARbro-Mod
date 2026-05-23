@@ -235,9 +235,7 @@
                     <Border x:Name="ItemBorder"
                             Background="{TemplateBinding Background}"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          ContentStringFormat="{TemplateBinding ContentStringFormat}"/>
+                        <ContentPresenter ContentSource="Content"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
