@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Dark Mode"
+  short_description: "Keep GARbro WPF UI changes compatible with light and dark themes"
+  default_prompt: "Review or implement a GARbro UI change with full light/dark theme compatibility."

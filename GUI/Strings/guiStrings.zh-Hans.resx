@@ -432,6 +432,12 @@
   <data name="MsgSelectedFiles2" xml:space="preserve">
     <value>选中{0}个文件。</value>
   </data>
+  <data name="MsgSelectedItems1" xml:space="preserve">
+    <value>已选择{0}项</value>
+  </data>
+  <data name="MsgSelectedItems2" xml:space="preserve">
+    <value>已选择{0}项</value>
+  </data>
   <data name="LabelEnterMask" xml:space="preserve">
     <value>请输入通配符掩码</value>
   </data>
@@ -654,5 +660,23 @@
   </data>
   <data name="KrkrDumpUnknownError" xml:space="preserve">
     <value>未知错误。</value>
+  </data>
+  <data name="TextInterface" xml:space="preserve">
+    <value>界面</value>
+  </data>
+  <data name="appTheme" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="appThemeDescription" xml:space="preserve">
+    <value>应用程序配色主题</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>深色</value>
   </data>
 </root>

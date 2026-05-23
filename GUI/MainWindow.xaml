@@ -15,11 +15,6 @@
         Width="{Binding Source={x:Static p:Settings.Default}, Path=winWidth, Mode=TwoWay}"
         WindowState="{Binding Source={x:Static p:Settings.Default}, Path=winState, Mode=TwoWay}">
     <Window.Resources>
-        <!-- alternate colors for directory view -->
-        <SolidColorBrush x:Key="AlternateColor1" Color="#f2f5f9" />
-        <SolidColorBrush x:Key="AlternateColor2" Color="White" />
-        <SolidColorBrush x:Key="InactiveInputBackground" Color="#ebf5fe" />
-
         <!-- toolbar icons -->
         <BitmapImage x:Key="Icon32x32Back"      UriSource="Images/32x32/back button.png"/>
         <BitmapImage x:Key="Icon32x32Forward"   UriSource="Images/32x32/forward button.png"/>
@@ -32,26 +27,28 @@
         <local:EntryTypeConverter x:Key="entryTypeConverter"/>
         <local:SortModeToBooleanConverter x:Key="sortModeToBooleanConverter" />
 
-        <Style x:Key="HeaderLeftAlign" TargetType="{x:Type GridViewColumnHeader}">
+        <Style x:Key="HeaderLeftAlign" TargetType="{x:Type GridViewColumnHeader}"
+               BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
             <Setter Property="HorizontalContentAlignment" Value="Left"></Setter>
         </Style>
         <DataTemplate x:Key="SortArrowUp">
             <DockPanel>
                 <TextBlock Margin="5,0,5,0" Text="{Binding}" />
-                <Path VerticalAlignment="Center" Fill="Gray" Data="M 5,5 15,5 10,0 5,5" />
+                <Path VerticalAlignment="Center" Fill="{DynamicResource Gar.Brush.IconMuted}" Data="M 5,5 15,5 10,0 5,5" />
             </DockPanel>
         </DataTemplate>
         <DataTemplate x:Key="SortArrowDown">
             <DockPanel>
                 <TextBlock Margin="5,0,5,0" Text="{Binding}" />
-                <Path VerticalAlignment="Center" Fill="Gray" Data="M 5,0 10,5 15,0 5,0" />
+                <Path VerticalAlignment="Center" Fill="{DynamicResource Gar.Brush.IconMuted}" Data="M 5,0 10,5 15,0 5,0" />
             </DockPanel>
         </DataTemplate>
         <DataTemplate x:Key="SortArrowNone">
             <TextBlock Margin="5,0,5,0" Text="{Binding}"/>
         </DataTemplate>
         
-        <Style x:Key="DefaultMenuItemStyle" TargetType="{x:Type MenuItem}">
+        <Style x:Key="DefaultMenuItemStyle" TargetType="{x:Type MenuItem}"
+               BasedOn="{StaticResource {x:Type MenuItem}}">
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
 
@@ -124,7 +121,7 @@
     <DockPanel LastChildFill="True">
         <StackPanel x:Name="MainMenuBar" DockPanel.Dock="Top" Orientation="Vertical"
                     Visibility="{Binding Source={x:Static p:Settings.Default}, Path=winMenuBarVisibility, Mode=TwoWay}">
-            <Menu IsMainMenu="True" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}">
+            <Menu IsMainMenu="True" Background="{DynamicResource Gar.Brush.MenuBackground}" Foreground="{DynamicResource Gar.Brush.MenuText}">
                 <MenuItem Header="{x:Static s:guiStrings.MenuFile}">
                     <MenuItem Header="{x:Static s:guiStrings.MenuOpen}" Command="{x:Static local:Commands.OpenFile}" InputGestureText="Ctrl+O"/>
                     <MenuItem Header="{x:Static s:guiStrings.CtxMenuCreate}" InputGestureText="F3"
@@ -133,7 +130,7 @@
                               Command="{x:Static local:Commands.ConvertMedia}" />
                     <MenuItem Header="{x:Static s:guiStrings.MenuRecent}" x:Name="RecentFilesMenu">
                         <MenuItem.ItemContainerStyle>
-                            <Style TargetType="MenuItem">
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                                 <Setter Property="Header" Value="{Binding Path=Item2}"/>
                                 <Setter Property="Command" Value="{x:Static local:Commands.OpenRecent}"/>
                                 <Setter Property="CommandParameter" Value="{Binding Path=Item1}"/>
@@ -170,7 +167,7 @@
             <Separator Height="1" Margin="0"/>
         </StackPanel>
         <Menu Visibility="Collapsed" x:Name="HelperMenuBar"/>
-        <DockPanel x:Name="MainToolBar" Background="{Binding Path=Background, ElementName=HelperMenuBar}"
+        <DockPanel x:Name="MainToolBar" Background="{DynamicResource Gar.Brush.ToolbarBackground}"
                    HorizontalAlignment="Stretch" DockPanel.Dock="Top"
                    Visibility="{Binding Source={x:Static p:Settings.Default}, Path=winToolBarVisibility, Mode=TwoWay}">
             <DockPanel.Resources>
@@ -178,25 +175,31 @@
                     <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
                     <Setter Property="Focusable" Value="False"/>
                     <Setter Property="Margin" Value="1,2,1,2"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Gar.Brush.ControlText}"/>
+                    <Setter Property="Background" Value="{DynamicResource Gar.Brush.ButtonBackground}"/>
                 </Style>
                 <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource {x:Static ToolBar.ToggleButtonStyleKey}}">
                     <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
                     <Setter Property="Focusable" Value="False"/>
                     <Setter Property="Margin" Value="2,2,2,2"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Gar.Brush.ControlText}"/>
+                    <Setter Property="Background" Value="{DynamicResource Gar.Brush.ButtonBackground}"/>
                 </Style>
                 <Style TargetType="{x:Type Separator}" BasedOn="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}">
                     <Setter Property="Margin" Value="5,0,5,0"/>
                 </Style>
                 <!-- Path input textbox mouseover highlight -->
                 <Style TargetType="{x:Type local:ExtAutoCompleteBox}">
-                    <Setter Property="Background" Value="White"/>
+                    <Setter Property="Background" Value="{DynamicResource Gar.Brush.InputBackground}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Gar.Brush.ControlText}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource Gar.Brush.ControlBorder}"/>
                     <Style.Triggers>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsTextBoxFocused" Value="False"/>
                                 <Condition Property="IsMouseOver" Value="False"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="Background" Value="{StaticResource InactiveInputBackground}"/>
+                            <Setter Property="Background" Value="{DynamicResource Gar.Brush.InputInactiveBackground}"/>
                         </MultiTrigger>
                     </Style.Triggers>
                 </Style>
@@ -267,15 +270,24 @@
                     Visibility="{Binding Source={x:Static p:Settings.Default}, Path=winStatusBarVisibility, Mode=TwoWay}">
             <Separator Height="1" Margin="0"/>
             <StatusBar>
-                <StatusBarItem Width="{Binding ElementName=CurrentDirectory, Path=ActualWidth}">
-                    <TextBlock x:Name="appStatusText"/>
+                <StatusBarItem Width="{Binding ElementName=CurrentDirectory, Path=ActualWidth}"
+                               HorizontalContentAlignment="Stretch">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="appStatusText" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="appSelectionText" Grid.Column="1"
+                                   Margin="16,0,0,0" Visibility="Collapsed"/>
+                    </Grid>
                 </StatusBarItem>
                 <Separator Width="1"/>
                 <StatusBarItem x:Name="appPlaybackControl" Visibility="Collapsed">
                     <Button Width="18" Height="18"
                             HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                             Command="{x:Static local:Commands.StopPlayback}">
-                        <Rectangle Stretch="Fill" Fill="Black" Width="8" Height="8"/>
+                        <Rectangle Stretch="Fill" Fill="{DynamicResource Gar.Brush.Icon}" Width="8" Height="8"/>
                     </Button>
                 </StatusBarItem>
                 <StatusBarItem>
@@ -294,15 +306,13 @@
                     ItemsSource="{Binding Source={StaticResource ListViewSource}}"
                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
                     BorderBrush="Transparent" SelectedValuePath="Name"
-                    SelectionMode="Extended" Foreground="Black" AlternationCount="2"
+                    SelectionMode="Extended" Foreground="{DynamicResource Gar.Brush.ListText}"
+                    Background="{DynamicResource Gar.Brush.ListBackground}" AlternationCount="2"
                     ContextMenu="{StaticResource lvDirContextMenu}"
                     PreviewTextInput="lv_TextInput" IsSynchronizedWithCurrentItem="True"
                     PreviewKeyDown="lv_KeyDown"
                     SelectionChanged="lv_SelectionChanged"
                     GridViewColumnHeader.Click="lv_ColumnHeaderClicked">
-                <ListView.Resources>
-                    <SolidColorBrush x:Key="ItemInactiveBackground" Color="#ffcbcbcb" />
-                </ListView.Resources>
                 <ListView.InputBindings>
                     <KeyBinding Key="Enter" Command="{x:Static local:Commands.OpenItem}"/>
                     <KeyBinding Gesture="Ctrl+E" Command="{x:Static local:Commands.ExploreItem}"/>
@@ -314,7 +324,7 @@
                     <MouseBinding Gesture="LeftDoubleClick" Command="{x:Static local:Commands.OpenItem}" />
                 </ListView.InputBindings>
                 <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <EventSetter Event="ListViewItem.MouseDoubleClick" Handler="lvi_DoubleClick" />
                         <Style.Triggers>
@@ -325,7 +335,7 @@
                                     <Condition Property="IsMouseOver" Value="False" />
                                     <Condition Property="ItemsControl.AlternationIndex" Value="0"/>
                                 </MultiTrigger.Conditions>
-                                <Setter Property="Background" Value="{StaticResource AlternateColor1}"/>
+                                <Setter Property="Background" Value="{DynamicResource Gar.Brush.ListAlternateBackground1}"/>
                             </MultiTrigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -333,7 +343,7 @@
                                     <Condition Property="IsMouseOver" Value="False" />
                                     <Condition Property="ItemsControl.AlternationIndex" Value="1"/>
                                 </MultiTrigger.Conditions>
-                                <Setter Property="Background" Value="{StaticResource AlternateColor2}"/>
+                                <Setter Property="Background" Value="{DynamicResource Gar.Brush.ListAlternateBackground2}"/>
                             </MultiTrigger>
                             <!-- END alternate row color -->
                             <!-- BEGIN context menu trigger -->
@@ -376,7 +386,7 @@
                 </ListView.View>
             </local:ListViewEx>
             <Grid Grid.Column="2" Name="PreviewPane" SnapsToDevicePixels="True">
-                <ScrollViewer Name="ImageView" Background="LightGray" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                <ScrollViewer Name="ImageView" Background="{DynamicResource Gar.Brush.PreviewBackground}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                               SizeChanged="PreviewSizeChanged"
                               ContextMenu="{StaticResource imagePreviewContextMenu}">
                     <ScrollViewer.InputBindings>
@@ -386,10 +396,10 @@
                            local:TouchScrolling.IsEnabled="True" RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Cursor="Images/Cursors/grab.cur" local:TouchScrolling.DraggingCursor="Images/Cursors/grabbing.cur" />
                 </ScrollViewer>
-                <jv:TextViewer x:Name="TextView" Visibility="Collapsed" BorderThickness="1,0,0,0" BorderBrush="Black"/>
+                <jv:TextViewer x:Name="TextView" Visibility="Collapsed" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource Gar.Brush.ControlBorder}"/>
             </Grid>
             <!-- Margin and BorderThickness help to react early on mouse pointer -->
-            <GridSplitter Grid.Column="1" Background="Black" ShowsPreview="False" Focusable="False"
+            <GridSplitter Grid.Column="1" Background="{DynamicResource Gar.Brush.Splitter}" ShowsPreview="False" Focusable="False"
                           Margin="-3,0" BorderThickness="3,0" BorderBrush="Transparent"
                           HorizontalAlignment="Center" VerticalAlignment="Stretch" />
         </Grid>

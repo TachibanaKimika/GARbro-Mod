@@ -66,9 +66,9 @@ IN THE SOFTWARE.
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0" Margin="10">
-            <TextBox Text="{Binding Path=AssemblyTitle, Mode=OneWay}" IsReadOnly="True" Background="Transparent" BorderThickness="0" Margin="0,0,0,10" />
-            <TextBox Text="{Binding Path=VersionString, Mode=OneWay}" IsReadOnly="True" Background="Transparent" BorderThickness="0" Margin="0,0,0,10" />
-            <TextBox Text="{Binding Path=AssemblyCopyright, Mode=OneWay}" IsReadOnly="True" Background="Transparent" BorderThickness="0" Margin="0,0,0,10" />
+            <TextBox Text="{Binding Path=AssemblyTitle, Mode=OneWay}" IsReadOnly="True" Background="Transparent" Foreground="{DynamicResource Gar.Brush.ControlText}" BorderThickness="0" Margin="0,0,0,10" />
+            <TextBox Text="{Binding Path=VersionString, Mode=OneWay}" IsReadOnly="True" Background="Transparent" Foreground="{DynamicResource Gar.Brush.ControlText}" BorderThickness="0" Margin="0,0,0,10" />
+            <TextBox Text="{Binding Path=AssemblyCopyright, Mode=OneWay}" IsReadOnly="True" Background="Transparent" Foreground="{DynamicResource Gar.Brush.ControlText}" BorderThickness="0" Margin="0,0,0,10" />
             <TextBlock Background="Transparent" Margin="0,0,0,10" Padding="3,0,0,0">
                 <Hyperlink NavigateUri="{StaticResource DevLink}" RequestNavigate="Hyperlink_RequestNavigate">
                     <TextBlock Text="{x:Static s:guiStrings.LabelDevSite}" ToolTip="{StaticResource DevLink}"/>
@@ -80,7 +80,7 @@ IN THE SOFTWARE.
         <Grid Grid.Column="1" Margin="10">
             <TabControl>
                 <TabItem Header="{x:Static s:guiStrings.TextAboutArchives}">
-                    <Border BorderThickness="1" BorderBrush="Black" VerticalAlignment="Stretch" Margin="0" SnapsToDevicePixels="True">
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource Gar.Brush.ControlBorder}" VerticalAlignment="Stretch" Margin="0" SnapsToDevicePixels="True">
                         <ListView Name="ArchiveFormats" ItemsSource="{Binding Source={StaticResource ArcFormatsSource}}"
                                   ItemContainerStyle="{StaticResource DisableSelectionStyle}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False">
                             <ListView.View>
@@ -112,8 +112,8 @@ IN THE SOFTWARE.
                     </Border> 
                 </TabItem>
                 <TabItem Header="{x:Static s:guiStrings.TextAboutImages}">
-                    <Border BorderThickness="1" BorderBrush="Black" VerticalAlignment="Stretch" Margin="0" SnapsToDevicePixels="True">
-                        <ScrollViewer VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0" Background="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}">
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource Gar.Brush.ControlBorder}" VerticalAlignment="Stretch" Margin="0" SnapsToDevicePixels="True">
+                        <ScrollViewer VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0" Background="{DynamicResource Gar.Brush.WindowBackground}">
                             <ItemsControl Name="ImageFormats" ItemsSource="{Binding Source={StaticResource ImageFormatsSource}}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -129,8 +129,8 @@ IN THE SOFTWARE.
                     </Border>
                 </TabItem>
                 <TabItem Header="{x:Static s:guiStrings.TextAboutAudio}">
-                    <Border BorderThickness="1" BorderBrush="Black" VerticalAlignment="Stretch" Margin="0" SnapsToDevicePixels="True">
-                        <ScrollViewer VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0" Background="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}">
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource Gar.Brush.ControlBorder}" VerticalAlignment="Stretch" Margin="0" SnapsToDevicePixels="True">
+                        <ScrollViewer VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0" Background="{DynamicResource Gar.Brush.WindowBackground}">
                             <ItemsControl Name="AudioFormats" ItemsSource="{Binding Source={StaticResource AudioFormatsSource}}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -146,7 +146,10 @@ IN THE SOFTWARE.
                 </TabItem>
                 <TabItem Header="{x:Static s:guiStrings.TextAboutLicense}">
                     <ScrollViewer>
-                        <RichTextBox Name="LicenseTabText" IsReadOnly="True"/>
+                        <RichTextBox Name="LicenseTabText" IsReadOnly="True"
+                                     Background="{DynamicResource Gar.Brush.WindowBackground}"
+                                     Foreground="{DynamicResource Gar.Brush.WindowText}"
+                                     BorderBrush="{DynamicResource Gar.Brush.ControlBorder}"/>
                     </ScrollViewer>
                 </TabItem>
             </TabControl>

@@ -1,0 +1,58 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#FF6B7280"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightLightBrushKey}" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF2A72C7"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFFFF"/>
+
+    <SolidColorBrush x:Key="Gar.Brush.WindowBackground" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.WindowText" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="Gar.Brush.ControlBackground" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="Gar.Brush.ControlText" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="Gar.Brush.ControlBorder" Color="#FF8D99A6"/>
+    <SolidColorBrush x:Key="Gar.Brush.ControlDisabledText" Color="#FF6B7280"/>
+    <SolidColorBrush x:Key="Gar.Brush.InputBackground" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.InputInactiveBackground" Color="#FFEBF5FE"/>
+    <SolidColorBrush x:Key="Gar.Brush.ButtonBackground" Color="#FFF7F7F7"/>
+    <SolidColorBrush x:Key="Gar.Brush.MenuBackground" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="Gar.Brush.MenuText" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="Gar.Brush.ToolbarBackground" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="Gar.Brush.StatusBarBackground" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListBackground" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListText" Color="#FF000000"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListAlternateBackground1" Color="#FFF2F5F9"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListAlternateBackground2" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListHoverBackground" Color="#FFE7F0FA"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListSelectedBackground" Color="#FF2A72C7"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListSelectedText" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.ListInactiveSelectedBackground" Color="#FFCBDBF1"/>
+    <SolidColorBrush x:Key="Gar.Brush.PreviewBackground" Color="#FFD3D3D3"/>
+    <SolidColorBrush x:Key="Gar.Brush.Splitter" Color="#FF111111"/>
+    <LinearGradientBrush x:Key="Gar.Brush.SectionHeaderBackground" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FFA0A0FF" Offset="0"/>
+        <GradientStop Color="#FFE0E0FF" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Gar.Brush.SectionHeaderText" Color="#FF1F2328"/>
+    <SolidColorBrush x:Key="Gar.Brush.Accent" Color="#FF226EBC"/>
+    <SolidColorBrush x:Key="Gar.Brush.AccentText" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.Error" Color="#FFD32F2F"/>
+    <SolidColorBrush x:Key="Gar.Brush.Warning" Color="#FFB45309"/>
+    <SolidColorBrush x:Key="Gar.Brush.FocusOutline" Color="#FF1BBBFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.ScrollbarTrack" Color="#FFE5E7EB"/>
+    <SolidColorBrush x:Key="Gar.Brush.ScrollbarThumb" Color="#FF9CA3AF"/>
+    <SolidColorBrush x:Key="Gar.Brush.ScrollbarThumbHover" Color="#FF8D96A3"/>
+    <SolidColorBrush x:Key="Gar.Brush.ScrollbarThumbPressed" Color="#FF747F8E"/>
+    <SolidColorBrush x:Key="Gar.Brush.Icon" Color="#FF262626"/>
+    <SolidColorBrush x:Key="Gar.Brush.IconMuted" Color="#FF595959"/>
+    <SolidColorBrush x:Key="Gar.Brush.Hyperlink" Color="#FF1155CC"/>
+    <SolidColorBrush x:Key="Gar.Brush.TextSelectionBackground" Color="#FF2A72C7"/>
+    <SolidColorBrush x:Key="Gar.Brush.TextSelectionText" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Gar.Brush.ToolTipBackground" Color="#FFFFFFE1"/>
+    <SolidColorBrush x:Key="Gar.Brush.ToolTipText" Color="#FF1F2328"/>
+</ResourceDictionary>

@@ -432,6 +432,12 @@
   <data name="MsgSelectedFiles2" xml:space="preserve">
     <value>{0} 파일이 선택에 추가됨</value>
   </data>
+  <data name="MsgSelectedItems1" xml:space="preserve">
+    <value>{0}개 항목 선택됨</value>
+  </data>
+  <data name="MsgSelectedItems2" xml:space="preserve">
+    <value>{0}개 항목 선택됨</value>
+  </data>
   <data name="LabelEnterMask" xml:space="preserve">
     <value>임의문자 입력</value>
   </data>
@@ -568,5 +574,23 @@
   </data>
   <data name="Type_video" xml:space="preserve">
     <value>Video</value>
+  </data>
+  <data name="TextInterface" xml:space="preserve">
+    <value>인터페이스</value>
+  </data>
+  <data name="appTheme" xml:space="preserve">
+    <value>테마</value>
+  </data>
+  <data name="appThemeDescription" xml:space="preserve">
+    <value>앱 색상 테마</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>시스템 설정 따름</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>라이트</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>다크</value>
   </data>
 </root>

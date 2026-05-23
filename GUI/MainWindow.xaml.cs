@@ -488,11 +488,26 @@ namespace GARbro.GUI
             var lv = sender as ListView;
             if (null == lv)
                 return;
+            UpdateSelectionStatus (lv.SelectedItems.Count);
             var item = lv.SelectedItem as EntryViewModel;
             if (item != null && m_last_selected != item)
             {
                 m_last_selected = item;
                 PreviewEntry (item.Source);
+            }
+        }
+
+        void UpdateSelectionStatus (int count)
+        {
+            if (count > 1)
+            {
+                appSelectionText.Text = Localization.Format ("MsgSelectedItems", count);
+                appSelectionText.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                appSelectionText.Text = "";
+                appSelectionText.Visibility = Visibility.Collapsed;
             }
         }
 

@@ -56,6 +56,10 @@ namespace GARbro.GUI
             };
         }
 
+        static readonly IEnumerable<IResourceSetting> InterfaceSettings = new [] {
+            new ThemeResourceSetting(),
+        };
+
         static readonly IEnumerable<IResourceSetting> ViewerSettings = new [] {
             MainWindow.DownScaleImage,
         };
@@ -99,6 +103,10 @@ namespace GARbro.GUI
         private SettingsViewModel CreateSettingsTree ()
         {
             SettingsSectionView[] list = {
+                new SettingsSectionView {
+                    Label = GetGuiString ("TextInterface", "Interface"),
+                    Panel = CreateSectionPanel (InterfaceSettings)
+                },
                 new SettingsSectionView {
                     Label = guiStrings.TextViewer,
                     Panel = CreateSectionPanel (ViewerSettings)
@@ -207,8 +215,39 @@ namespace GARbro.GUI
             };
         }
 
+        UIElement CreateThemeWidget (IResourceSetting setting)
+        {
+            var view = CreateSettingView<string> (setting);
+            var container = new StackPanel {
+                Orientation = Orientation.Vertical,
+                Margin = new Thickness (2.0),
+                DataContext = view,
+            };
+            var caption = new TextBlock {
+                Text = view.Text,
+                ToolTip = view.Description,
+            };
+            var combo_box = new ComboBox {
+                ItemsSource = ThemePreferenceChoice.Values,
+                DisplayMemberPath = "Text",
+                SelectedValuePath = "Value",
+                Margin = new Thickness (0,4,0,0),
+                ToolTip = view.Description,
+            };
+            var binding = new Binding ("Value") {
+                Mode = BindingMode.TwoWay,
+                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
+            };
+            BindingOperations.SetBinding (combo_box, ComboBox.SelectedValueProperty, binding);
+            container.Children.Add (caption);
+            container.Children.Add (combo_box);
+            return container;
+        }
+
         UIElement CreateSettingWidget<TUnknown> (IResourceSetting setting, TUnknown value)
         {
+            if (setting.Name == "appTheme")
+                return CreateThemeWidget (setting);
             if (setting is FixedGaugeSetting)
                 return CreateGaugeWidget (setting as FixedGaugeSetting);
             if (setting is FixedSetSetting)
@@ -240,6 +279,11 @@ namespace GARbro.GUI
                         yield return child;
                 }
             }
+        }
+
+        internal static string GetGuiString (string key, string fallback)
+        {
+            return guiStrings.ResourceManager.GetString (key, guiStrings.Culture) ?? fallback;
         }
 
         private void tvi_MouseRightButtonDown (object sender, MouseButtonEventArgs e)
@@ -426,6 +470,50 @@ namespace GARbro.GUI
             {
                 PropertyChanged (this, new PropertyChangedEventArgs (propertyName));
             }
+        }
+    }
+
+    internal class ThemeResourceSetting : ResourceSettingBase
+    {
+        public ThemeResourceSetting ()
+        {
+            Name = "appTheme";
+            Text = SettingsWindow.GetGuiString ("appTheme", "Theme");
+            Description = SettingsWindow.GetGuiString ("appThemeDescription", "Application color theme");
+        }
+
+        public override object Value {
+            get { return ThemeManager.NormalizePreference (Settings.Default.appTheme); }
+            set {
+                var preference = ThemeManager.NormalizePreference (value as string);
+                if (!string.Equals (Settings.Default.appTheme, preference, StringComparison.Ordinal))
+                {
+                    Settings.Default.appTheme = preference;
+                    ThemeManager.ApplyCurrentPreference();
+                }
+            }
+        }
+    }
+
+    internal class ThemePreferenceChoice
+    {
+        public string Value { get; private set; }
+        public string Text { get; private set; }
+
+        public static IEnumerable<ThemePreferenceChoice> Values {
+            get {
+                return new [] {
+                    new ThemePreferenceChoice (ThemeManager.SystemPreference, SettingsWindow.GetGuiString ("ThemeSystem", "Follow system")),
+                    new ThemePreferenceChoice (ThemeManager.LightTheme, SettingsWindow.GetGuiString ("ThemeLight", "Light")),
+                    new ThemePreferenceChoice (ThemeManager.DarkTheme, SettingsWindow.GetGuiString ("ThemeDark", "Dark")),
+                };
+            }
+        }
+
+        public ThemePreferenceChoice (string value, string text)
+        {
+            Value = value;
+            Text = text;
         }
     }
 }

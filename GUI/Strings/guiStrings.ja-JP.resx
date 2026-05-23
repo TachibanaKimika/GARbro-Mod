@@ -539,6 +539,14 @@ Overwrite?</comment>
     <value>{0} ファイルが選択へ追加されました。</value>
     <comment>{0} files added to selection</comment>
   </data>
+  <data name="MsgSelectedItems1" xml:space="preserve">
+    <value>{0} 項目を選択中</value>
+    <comment>{0} item selected</comment>
+  </data>
+  <data name="MsgSelectedItems2" xml:space="preserve">
+    <value>{0} 項目を選択中</value>
+    <comment>{0} items selected</comment>
+  </data>
   <data name="LabelEnterMask" xml:space="preserve">
     <value>ワイルドカードマスクを入力</value>
     <comment>Enter wildcard mask</comment>
@@ -714,5 +722,23 @@ Overwrite?</comment>
   </data>
   <data name="Type_video" xml:space="preserve">
     <value>ビデオ</value>
+  </data>
+  <data name="TextInterface" xml:space="preserve">
+    <value>インターフェイス</value>
+  </data>
+  <data name="appTheme" xml:space="preserve">
+    <value>テーマ</value>
+  </data>
+  <data name="appThemeDescription" xml:space="preserve">
+    <value>アプリケーションの配色テーマ</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>システム設定に合わせる</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>ライト</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>ダーク</value>
   </data>
 </root>

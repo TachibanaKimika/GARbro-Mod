@@ -381,7 +381,7 @@ namespace GARbro.GUI.Properties {
                 this["appAutoSelectExtractPath"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
@@ -391,6 +391,18 @@ namespace GARbro.GUI.Properties {
             }
             set {
                 this["winDownScaleImage"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("System")]
+        public string appTheme {
+            get {
+                return ((string)(this["appTheme"]));
+            }
+            set {
+                this["appTheme"] = value;
             }
         }
     }

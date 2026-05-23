@@ -28,8 +28,8 @@ IN THE SOFTWARE.
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
         SizeToContent="WidthAndHeight" ResizeMode="NoResize">
     <DockPanel>
-        <DockPanel DockPanel.Dock="Bottom" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
-            <Border BorderThickness="0,1,0,0" BorderBrush="Black">
+        <DockPanel DockPanel.Dock="Bottom" Background="{DynamicResource Gar.Brush.WindowBackground}">
+            <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Gar.Brush.ControlBorder}">
                 <Button HorizontalAlignment="Right" Content="{x:Static s:guiStrings.ButtonOK}"
                         Margin="10" Width="75" Height="25" Click="Button_Click" IsCancel="True"/>
             </Border>

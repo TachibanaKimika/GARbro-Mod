@@ -25,6 +25,9 @@ turning this file into a manual.
   warning but not a build blocker.
 - When behavior, supported formats, build steps, or project boundaries change,
   update the matching documentation in the same change.
+- All GUI, XAML, WPF dialog, icon, and visual styling changes must preserve
+  light and dark theme compatibility. Do not introduce theme-dependent literal
+  colors; use shared theme resources and validate both modes.
 - Keep changes focused. Do not reformat large legacy files or reorder massive
   `.csproj` item lists unless the task requires it.
 
@@ -36,6 +39,8 @@ Use these repo-local skills when the task matches their trigger:
   verification for this solution.
 - `$garbro-format-authoring`: add or modify archive, image, audio, script, or
   scheme handlers under `GameRes`, `ArcFormats`, `Legacy`, or `Experimental`.
+- `$ui-dark-mode`: add, modify, review, or document GUI, XAML, WPF dialogs,
+  visual styling, icons, theme resources, or `ArcFormats` WPF option widgets.
 - `$docs-sync`: check whether code changes need updates to `README.md`,
   `docs/**`, `PLANS.md`, or supported-format documentation.
 - `$commit-with-reflection`: verify current changes, write a commit message,
@@ -67,6 +72,8 @@ Use these repo-local skills when the task matches their trigger:
 - `docs/architecture/project-structure.md`: stable module and dependency map.
 - `docs/reference/build-and-verify.md`: local toolchain, build, and smoke
   verification procedures.
+- `docs/reference/dark-mode-adaptation.md`: full light/dark theme architecture,
+  migration plan, and future UI authoring rules.
 - `docs/reference/script-text-extraction.md`: script extractor text modes,
   JSONL schema, and authoring rules.
 - `docs/exec-plan/README.md`: storage convention for active and completed plans.

@@ -578,7 +578,34 @@
   <data name="MsgSelectedFiles3" xml:space="preserve">
     <value>{0} файлов добавлено к выбранным</value>
   </data>
+  <data name="MsgSelectedItems1" xml:space="preserve">
+    <value>{0} элемент выбран</value>
+  </data>
+  <data name="MsgSelectedItems2" xml:space="preserve">
+    <value>{0} элемента выбрано</value>
+  </data>
+  <data name="MsgSelectedItems3" xml:space="preserve">
+    <value>{0} элементов выбрано</value>
+  </data>
   <data name="Type_video" xml:space="preserve">
     <value>Video</value>
+  </data>
+  <data name="TextInterface" xml:space="preserve">
+    <value>Интерфейс</value>
+  </data>
+  <data name="appTheme" xml:space="preserve">
+    <value>Тема</value>
+  </data>
+  <data name="appThemeDescription" xml:space="preserve">
+    <value>Цветовая тема приложения</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Как в системе</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Светлая</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Темная</value>
   </data>
 </root>

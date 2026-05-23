@@ -435,6 +435,12 @@ Overwrite?</value>
   <data name="MsgSelectedFiles2" xml:space="preserve">
     <value>{0} files added to selection</value>
   </data>
+  <data name="MsgSelectedItems1" xml:space="preserve">
+    <value>{0} item selected</value>
+  </data>
+  <data name="MsgSelectedItems2" xml:space="preserve">
+    <value>{0} items selected</value>
+  </data>
   <data name="LabelEnterMask" xml:space="preserve">
     <value>Enter wildcard mask</value>
   </data>
@@ -658,5 +664,23 @@ Run KrkrDump to start the game, collect the archive parameters, and try opening 
   </data>
   <data name="KrkrDumpUnknownError" xml:space="preserve">
     <value>Unknown error.</value>
+  </data>
+  <data name="TextInterface" xml:space="preserve">
+    <value>Interface</value>
+  </data>
+  <data name="appTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="appThemeDescription" xml:space="preserve">
+    <value>Application color theme</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Follow system</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dark</value>
   </data>
 </root>

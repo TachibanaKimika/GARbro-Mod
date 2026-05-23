@@ -16,8 +16,8 @@
         </Style>
         <ControlTemplate x:Key="errorIndicator">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right" Foreground="Red" FontWeight="Bold" Text="!" VerticalAlignment="Center"/>
-                <Border BorderBrush="Red" BorderThickness="1">
+                <TextBlock DockPanel.Dock="Right" Foreground="{DynamicResource Gar.Brush.Error}" FontWeight="Bold" Text="!" VerticalAlignment="Center"/>
+                <Border BorderBrush="{DynamicResource Gar.Brush.Error}" BorderThickness="1">
                     <AdornedElementPlaceholder Name="ValidationAdorner" />
                 </Border>
             </DockPanel>

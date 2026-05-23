@@ -68,6 +68,7 @@ namespace GARbro.GUI
                 Trace.WriteLine (args.Exception.StackTrace, "Stack trace");
             };
             UpgradeSettings();
+            ThemeManager.Initialize();
             try
             {
                 if (0 != e.Args.Length)
@@ -128,6 +129,7 @@ namespace GARbro.GUI
         {
             try
             {
+                ThemeManager.Shutdown();
                 FormatCatalog.Instance.SaveSettings();
                 Settings.Default.Save();
             }

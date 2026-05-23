@@ -30,18 +30,6 @@ IN THE SOFTWARE.
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
         Height="400" Width="500" WindowStartupLocation="CenterOwner">
     <Window.Resources>
-        <LinearGradientBrush x:Key="SectionTitleBackground" StartPoint="0,0" EndPoint="1,0">
-            <GradientStop Color="#FFA0A0FF" Offset="0"/>
-            <GradientStop Color="#FFE0E0FF" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="ItemSelectedBackground" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FF6AA2DC" Offset="0"/>
-            <GradientStop Color="#FF226EBC" Offset="1"/>
-        </LinearGradientBrush>
-        <LinearGradientBrush x:Key="ItemInactiveBackground" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FFA4B0DB" Offset="0"/>
-            <GradientStop Color="#FF91A2C4" Offset="1"/>
-        </LinearGradientBrush>
         <ControlTemplate x:Key="BoundCheckBox" TargetType="CheckBox">
             <CheckBox DataContext="{TemplateBinding DataContext}" IsChecked="{Binding Value}"
                       Content="{Binding Text}" ToolTip="{Binding Description}" Margin="2"/>
@@ -70,8 +58,8 @@ IN THE SOFTWARE.
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border Padding="5" Background="#00FFFFFF" Width="16" Height="16">
-                            <Path Fill="#FF595959" Stroke="#FF262626" x:Name="ExpandPath">
+                        <Border Padding="5" Background="Transparent" Width="16" Height="16">
+                            <Path Fill="{DynamicResource Gar.Brush.IconMuted}" Stroke="{DynamicResource Gar.Brush.Icon}" x:Name="ExpandPath">
                                 <Path.Data>
                                     <PathGeometry Figures="M0,0L0,6L6,0z" />
                                 </Path.Data>
@@ -82,8 +70,8 @@ IN THE SOFTWARE.
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ExpandPath" Property="Stroke" Value="#FF1BBBFF" />
-                                <Setter TargetName="ExpandPath" Property="Fill" Value="#FFFFFFFF" />
+                                <Setter TargetName="ExpandPath" Property="Stroke" Value="{DynamicResource Gar.Brush.FocusOutline}" />
+                                <Setter TargetName="ExpandPath" Property="Fill" Value="{DynamicResource Gar.Brush.WindowBackground}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="ExpandPath" Property="RenderTransform">
@@ -91,8 +79,8 @@ IN THE SOFTWARE.
                                         <RotateTransform Angle="180" CenterX="3" CenterY="3" />
                                     </Setter.Value>
                                 </Setter>
-                                <Setter TargetName="ExpandPath" Property="Fill" Value="#FF595959" />
-                                <Setter TargetName="ExpandPath" Property="Stroke" Value="#FF262626" />
+                                <Setter TargetName="ExpandPath" Property="Fill" Value="{DynamicResource Gar.Brush.IconMuted}" />
+                                <Setter TargetName="ExpandPath" Property="Stroke" Value="{DynamicResource Gar.Brush.Icon}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -146,8 +134,8 @@ IN THE SOFTWARE.
                                 <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ItemSelectedBackground}"/>
-                                <Setter Property="Foreground" Value="White" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Gar.Brush.ListSelectedBackground}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Gar.Brush.ListSelectedText}" />
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -155,8 +143,8 @@ IN THE SOFTWARE.
                                     <Condition Property="IsSelectionActive" Value="False" />
                                     <Condition Property="IsFocused" Value="False" />
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ItemInactiveBackground}" />
-                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Gar.Brush.ListInactiveSelectedBackground}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Gar.Brush.ControlText}" />
                             </MultiTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
@@ -182,11 +170,12 @@ IN THE SOFTWARE.
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>
-        <Border DockPanel.Dock="Right" BorderThickness="1" BorderBrush="Black" Margin="4,0,0,0" SnapsToDevicePixels="True">
+        <Border DockPanel.Dock="Right" BorderThickness="1" BorderBrush="{DynamicResource Gar.Brush.ControlBorder}" Margin="4,0,0,0" SnapsToDevicePixels="True">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="3"
-                          Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                          Background="{DynamicResource Gar.Brush.WindowBackground}">
                 <StackPanel Orientation="Vertical" DataContext="{Binding ElementName=SectionsPane,Path=SelectedItem}">
-                    <TextBlock Text="{Binding SectionTitle}" Background="{StaticResource SectionTitleBackground}"
+                    <TextBlock Text="{Binding SectionTitle}" Background="{DynamicResource Gar.Brush.SectionHeaderBackground}"
+                               Foreground="{DynamicResource Gar.Brush.SectionHeaderText}"
                                FontWeight="Bold" FontSize="14" Padding="2,0,2,0" Margin="0,0,0,4"/>
                     <Decorator x:Name="SettingsPane"/>
                 </StackPanel>
