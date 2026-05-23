@@ -21,7 +21,8 @@ Perl executable is part of the normal build environment.
 `GameRes/` contains the stable abstractions used throughout the repository:
 
 - `GameRes.cs`: base `IResource` contract, tags, signatures, extensions, and
-  priority metadata.
+  priority metadata. It also carries archive-parameter context and command
+  bridge interfaces used when a format option widget needs host-side actions.
 - `ArchiveFormat.cs`: archive open/create/extract contract and common archive
   safety helpers.
 - `Image.cs` and `ImageDecoder.cs`: image metadata, decoder, and conversion
@@ -56,7 +57,10 @@ Old-style `.csproj` files list source files explicitly. Adding a new `.cs` or
 
 ## Applications and Tools
 
-`GUI/` builds the WPF desktop application `Onachi-GARbro.exe`.
+`GUI/` builds the WPF desktop application `Onachi-GARbro.exe`. It owns host-side
+dialogs and external process integration, including the KrkrDump XP3 assistant;
+format assemblies request those actions through `GameRes` interfaces instead of
+referencing GUI types directly.
 
 `Console/` builds `Onachi-GARbro.Console.exe`, a command-line archive browser
 and extraction tool. The local README describes it as a testing playground and

@@ -43,6 +43,12 @@ namespace GameRes.Formats.KiriKiri
         public byte[] Key2; // 16 bytes
     }
 
+    internal class HxIndexHashSet
+    {
+        public readonly HashSet<string> PathHashes = new HashSet<string> (StringComparer.OrdinalIgnoreCase);
+        public readonly HashSet<string> NameHashes = new HashSet<string> (StringComparer.OrdinalIgnoreCase);
+    }
+
     [Serializable]
     public class HxCrypt : CxEncryption
     {
@@ -90,36 +96,7 @@ namespace GameRes.Formats.KiriKiri
 
         internal virtual Dictionary<string, HxEntry> ReadIndex (string arc_name, byte[] data)
         {
-            if (data.Length <= 20) // 16 + 4
-                return null;
-            var index_key1 = IndexKey1;
-            var index_key2 = IndexKey2;
-            if (null != IndexKeyDict)
-            {
-                if (IndexKeyDict.TryGetValue (arc_name, out HxIndexKey arc_index_key))
-                {
-                    index_key1 = arc_index_key.Key1;
-                    index_key2 = arc_index_key.Key2;
-                }
-            }
-            if (null == index_key1 || index_key1.Length != 32)
-                return null;
-            if (null == index_key2 || index_key2.Length != 16)
-                return null;
-            var seed = new uint[] { 1, 0 };
-            var crypt = new HxChachaDecryptor (index_key1, index_key2, seed);
-            var buf = new byte[data.Length-16];
-            crypt.Decrypt (data, 16, buf, 0, buf.Length);
-            Stream index_stream = null;
-            using (var stream = new MemoryStream (buf))
-            {
-                stream.Position = 4;
-                index_stream = ZLibCompressor.DeCompress (stream);
-            }
-            if (null == index_stream)
-                return null;
-            object index_obj = HxIndexDeserializer.Deserialize (index_stream);
-            var root_obj = index_obj as object[];
+            var root_obj = ReadIndexRoot (arc_name, data);
             if (null == root_obj)
                 return null;
             CreateLookup32 ();
@@ -127,7 +104,7 @@ namespace GameRes.Formats.KiriKiri
             var name_map = new Dictionary<string, string> ();
             try
             {
-                FormatCatalog.Instance.ReadFileList (NamesFile, line => {
+                ReadNamesFile (line => {
                     var name = line.Split (':');  // "hash:name"
                     if (name.Length != 2)
                         return;
@@ -178,6 +155,88 @@ namespace GameRes.Formats.KiriKiri
                 }
             }
             return entry_info_map;
+        }
+
+        internal virtual HxIndexHashSet ReadIndexHashes (string arc_name, byte[] data)
+        {
+            var root_obj = ReadIndexRoot (arc_name, data);
+            if (null == root_obj)
+                return null;
+            CreateLookup32 ();
+            var hashes = new HxIndexHashSet();
+            for (var i = 0; i < root_obj.Length; i += 2)
+            {
+                var path_hash = root_obj[i] as byte[];
+                if (null == path_hash)
+                    continue;
+                hashes.PathHashes.Add (BinaryToString (path_hash));
+                var dir_obj = root_obj[i+1] as object[];
+                if (null == dir_obj)
+                    continue;
+                for (var j = 0; j < dir_obj.Length; j += 2)
+                {
+                    var entry_hash = dir_obj[j] as byte[];
+                    if (null != entry_hash)
+                        hashes.NameHashes.Add (BinaryToString (entry_hash));
+                }
+            }
+            return hashes;
+        }
+
+        object[] ReadIndexRoot (string arc_name, byte[] data)
+        {
+            if (data.Length <= 20) // 16 + 4
+                return null;
+            var index_key1 = IndexKey1;
+            var index_key2 = IndexKey2;
+            if (null != IndexKeyDict)
+            {
+                if (IndexKeyDict.TryGetValue (arc_name, out HxIndexKey arc_index_key))
+                {
+                    index_key1 = arc_index_key.Key1;
+                    index_key2 = arc_index_key.Key2;
+                }
+            }
+            if (null == index_key1 || index_key1.Length != 32)
+                return null;
+            if (null == index_key2 || index_key2.Length != 16)
+                return null;
+            var seed = new uint[] { 1, 0 };
+            var crypt = new HxChachaDecryptor (index_key1, index_key2, seed);
+            var buf = new byte[data.Length-16];
+            crypt.Decrypt (data, 16, buf, 0, buf.Length);
+            Stream index_stream = null;
+            using (var stream = new MemoryStream (buf))
+            {
+                stream.Position = 4;
+                index_stream = ZLibCompressor.DeCompress (stream);
+            }
+            if (null == index_stream)
+                return null;
+            object index_obj = HxIndexDeserializer.Deserialize (index_stream);
+            return index_obj as object[];
+        }
+
+        void ReadNamesFile (Action<string> process_line)
+        {
+            if (string.IsNullOrEmpty (NamesFile))
+                return;
+            if (!Path.IsPathRooted (NamesFile))
+            {
+                FormatCatalog.Instance.ReadFileList (NamesFile, process_line);
+                return;
+            }
+            if (!File.Exists (NamesFile))
+                return;
+            using (var input = new StreamReader (NamesFile, Encoding.UTF8))
+            {
+                string line;
+                while ((line = input.ReadLine()) != null)
+                {
+                    if (line.Length > 0)
+                        process_line (line);
+                }
+            }
         }
 
         internal virtual string GetUnicodeName (uint hash)

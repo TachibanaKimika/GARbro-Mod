@@ -39,6 +39,14 @@ and PSB-backed `.scn` scenario entries.  Filtered mode extracts readable
 dialogue/choice text; raw mode keeps the decoded script text, or all strings
 under `.scn` scenes.
 
+For protected KiriKiri/XP3 archives that require runtime parameters, the XP3
+archive-parameter dialog includes a `Use KrkrDump...` assistant. It starts the
+game executable through the bundled KrkrDump loader with Windows elevation when
+needed, and imports the dumped Hx/Cx parameters as a temporary XP3 scheme for
+the current session. If opening an `.xp3` fails, the GUI can offer the same
+assistant and retry the archive after import. Operational details are in
+`docs/reference/krkrdump-xp3-assist.md`.
+
 BGI/Ethornell archive script entries recognize `._bp` scripts and v1 bytecode
 with the `BurikoCompiledScriptVer1.00` header.  Filtered mode extracts
 character names, messages, and choices; raw mode also includes referenced

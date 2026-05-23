@@ -405,4 +405,34 @@ Choose encryption scheme or enter a passphrase.</value>
     <value>Choose Tim2 image alpha format.
 It can't be read correctly from the file.</value>
   </data>
+  <data name="KrkrDumpButton" xml:space="preserve">
+    <value>Use KrkrDump...</value>
+  </data>
+  <data name="KrkrDumpUnavailable" xml:space="preserve">
+    <value>KrkrDump integration is not available in this host.</value>
+  </data>
+  <data name="KrkrDumpStarting" xml:space="preserve">
+    <value>Starting KrkrDump...</value>
+  </data>
+  <data name="KrkrDumpRequestUnhandled" xml:space="preserve">
+    <value>KrkrDump request was not handled.</value>
+  </data>
+  <data name="KrkrDumpNoResult" xml:space="preserve">
+    <value>KrkrDump did not return a result.</value>
+  </data>
+  <data name="KrkrDumpLogNotFound" xml:space="preserve">
+    <value>KrkrDump log was not found.</value>
+  </data>
+  <data name="KrkrDumpCxTableNotFound" xml:space="preserve">
+    <value>CxdecTable.bin was not found.</value>
+  </data>
+  <data name="KrkrDumpCxOrderNotFound" xml:space="preserve">
+    <value>Cxdec order data was not found.</value>
+  </data>
+  <data name="KrkrDumpIndexKeyNotFound" xml:space="preserve">
+    <value>Index key and nonce were not found.</value>
+  </data>
+  <data name="KrkrDumpSchemeImported" xml:space="preserve">
+    <value>Imported KrkrDump scheme "{0}".</value>
+  </data>
 </root>

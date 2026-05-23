@@ -578,4 +578,85 @@ Overwrite?</value>
   <data name="Type_video" xml:space="preserve">
     <value>Video</value>
   </data>
+  <data name="KrkrDumpTitle" xml:space="preserve">
+    <value>KrkrDump XP3 Assist</value>
+  </data>
+  <data name="KrkrDumpCaption" xml:space="preserve">
+    <value>KrkrDump</value>
+  </data>
+  <data name="KrkrDumpSourceArchive" xml:space="preserve">
+    <value>XP3 archive</value>
+  </data>
+  <data name="KrkrDumpGameExecutable" xml:space="preserve">
+    <value>Game executable</value>
+  </data>
+  <data name="KrkrDumpBrowse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="KrkrDumpStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="KrkrDumpInitialStatus" xml:space="preserve">
+    <value>Select the game executable, then start it through KrkrDump. Close the game after it reaches the point where the archive is loaded.</value>
+  </data>
+  <data name="KrkrDumpExecutableFilter" xml:space="preserve">
+    <value>Executable files (*.exe)|*.exe|All files (*.*)|*.*</value>
+  </data>
+  <data name="KrkrDumpSelectExecutable" xml:space="preserve">
+    <value>Select game executable</value>
+  </data>
+  <data name="KrkrDumpStarting" xml:space="preserve">
+    <value>Starting KrkrDump...</value>
+  </data>
+  <data name="KrkrDumpArchiveNotFound" xml:space="preserve">
+    <value>XP3 archive was not found.</value>
+  </data>
+  <data name="KrkrDumpExecutableNotFound" xml:space="preserve">
+    <value>Game executable was not found.</value>
+  </data>
+  <data name="KrkrDumpNoArchive" xml:space="preserve">
+    <value>No XP3 file was supplied.</value>
+  </data>
+  <data name="KrkrDumpRuntimeNotFound" xml:space="preserve">
+    <value>Bundled KrkrDump {0} files were not found under Tools\KrkrDump.</value>
+  </data>
+  <data name="KrkrDumpPreparingRuntime" xml:space="preserve">
+    <value>Preparing KrkrDump runtime...</value>
+  </data>
+  <data name="KrkrDumpRuntimeIncomplete" xml:space="preserve">
+    <value>KrkrDumpLoader.exe or KrkrDump.dll is missing from the bundled tool directory.</value>
+  </data>
+  <data name="KrkrDumpLaunching" xml:space="preserve">
+    <value>Starting game with KrkrDump injection...</value>
+  </data>
+  <data name="KrkrDumpLaunchCanceled" xml:space="preserve">
+    <value>KrkrDump launch was canceled.</value>
+  </data>
+  <data name="KrkrDumpWaitingExit" xml:space="preserve">
+    <value>Waiting for the game to exit...</value>
+  </data>
+  <data name="KrkrDumpCollectingOutput" xml:space="preserve">
+    <value>Collecting KrkrDump archive parameters...</value>
+  </data>
+  <data name="KrkrDumpFinished" xml:space="preserve">
+    <value>KrkrDump finished.</value>
+  </data>
+  <data name="KrkrDumpCanceled" xml:space="preserve">
+    <value>KrkrDump operation was canceled.</value>
+  </data>
+  <data name="KrkrDumpFallbackPrompt" xml:space="preserve">
+    <value>GARbro could not open this XP3 archive:
+{0}
+
+Run KrkrDump to start the game, collect the archive parameters, and try opening it again?</value>
+  </data>
+  <data name="KrkrDumpXp3HandlerNotFound" xml:space="preserve">
+    <value>XP3 archive handler was not found.</value>
+  </data>
+  <data name="KrkrDumpImportUnsupported" xml:space="preserve">
+    <value>XP3 archive handler cannot import KrkrDump output.</value>
+  </data>
+  <data name="KrkrDumpUnknownError" xml:space="preserve">
+    <value>Unknown error.</value>
+  </data>
 </root>

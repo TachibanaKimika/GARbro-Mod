@@ -574,4 +574,85 @@
   <data name="Type_video" xml:space="preserve">
     <value>影片</value>
   </data>
+  <data name="KrkrDumpTitle" xml:space="preserve">
+    <value>KrkrDump XP3 輔助工具</value>
+  </data>
+  <data name="KrkrDumpCaption" xml:space="preserve">
+    <value>KrkrDump</value>
+  </data>
+  <data name="KrkrDumpSourceArchive" xml:space="preserve">
+    <value>XP3 封存檔</value>
+  </data>
+  <data name="KrkrDumpGameExecutable" xml:space="preserve">
+    <value>遊戲執行檔</value>
+  </data>
+  <data name="KrkrDumpBrowse" xml:space="preserve">
+    <value>瀏覽...</value>
+  </data>
+  <data name="KrkrDumpStart" xml:space="preserve">
+    <value>啟動</value>
+  </data>
+  <data name="KrkrDumpInitialStatus" xml:space="preserve">
+    <value>選擇遊戲執行檔，然後透過 KrkrDump 啟動。遊戲載入目標封存檔後關閉遊戲。</value>
+  </data>
+  <data name="KrkrDumpExecutableFilter" xml:space="preserve">
+    <value>執行檔 (*.exe)|*.exe|所有檔案 (*.*)|*.*</value>
+  </data>
+  <data name="KrkrDumpSelectExecutable" xml:space="preserve">
+    <value>選擇遊戲執行檔</value>
+  </data>
+  <data name="KrkrDumpStarting" xml:space="preserve">
+    <value>正在啟動 KrkrDump...</value>
+  </data>
+  <data name="KrkrDumpArchiveNotFound" xml:space="preserve">
+    <value>找不到 XP3 封存檔。</value>
+  </data>
+  <data name="KrkrDumpExecutableNotFound" xml:space="preserve">
+    <value>找不到遊戲執行檔。</value>
+  </data>
+  <data name="KrkrDumpNoArchive" xml:space="preserve">
+    <value>未提供 XP3 檔案。</value>
+  </data>
+  <data name="KrkrDumpRuntimeNotFound" xml:space="preserve">
+    <value>未在 Tools\KrkrDump 下找到內建 KrkrDump {0} 檔案。</value>
+  </data>
+  <data name="KrkrDumpPreparingRuntime" xml:space="preserve">
+    <value>正在準備 KrkrDump 執行檔...</value>
+  </data>
+  <data name="KrkrDumpRuntimeIncomplete" xml:space="preserve">
+    <value>內建工具目錄中缺少 KrkrDumpLoader.exe 或 KrkrDump.dll。</value>
+  </data>
+  <data name="KrkrDumpLaunching" xml:space="preserve">
+    <value>正在透過 KrkrDump 注入啟動遊戲...</value>
+  </data>
+  <data name="KrkrDumpLaunchCanceled" xml:space="preserve">
+    <value>KrkrDump 啟動已取消。</value>
+  </data>
+  <data name="KrkrDumpWaitingExit" xml:space="preserve">
+    <value>正在等待遊戲退出...</value>
+  </data>
+  <data name="KrkrDumpCollectingOutput" xml:space="preserve">
+    <value>正在收集 KrkrDump 封存參數...</value>
+  </data>
+  <data name="KrkrDumpFinished" xml:space="preserve">
+    <value>KrkrDump 已完成。</value>
+  </data>
+  <data name="KrkrDumpCanceled" xml:space="preserve">
+    <value>KrkrDump 操作已取消。</value>
+  </data>
+  <data name="KrkrDumpFallbackPrompt" xml:space="preserve">
+    <value>GARbro 無法開啟此 XP3 封存檔：
+{0}
+
+是否執行 KrkrDump 啟動遊戲、收集封存參數，然後再次嘗試開啟？</value>
+  </data>
+  <data name="KrkrDumpXp3HandlerNotFound" xml:space="preserve">
+    <value>找不到 XP3 封存檔處理器。</value>
+  </data>
+  <data name="KrkrDumpImportUnsupported" xml:space="preserve">
+    <value>XP3 封存檔處理器無法匯入 KrkrDump 輸出。</value>
+  </data>
+  <data name="KrkrDumpUnknownError" xml:space="preserve">
+    <value>未知錯誤。</value>
+  </data>
 </root>

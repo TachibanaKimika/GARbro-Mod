@@ -403,4 +403,34 @@
     <value>選擇Tim2圖片透明度格式。
 這無法從檔案中正確獲取。</value>
   </data>
+  <data name="KrkrDumpButton" xml:space="preserve">
+    <value>使用 KrkrDump...</value>
+  </data>
+  <data name="KrkrDumpUnavailable" xml:space="preserve">
+    <value>目前宿主不支援 KrkrDump 整合。</value>
+  </data>
+  <data name="KrkrDumpStarting" xml:space="preserve">
+    <value>正在啟動 KrkrDump...</value>
+  </data>
+  <data name="KrkrDumpRequestUnhandled" xml:space="preserve">
+    <value>KrkrDump 請求未被處理。</value>
+  </data>
+  <data name="KrkrDumpNoResult" xml:space="preserve">
+    <value>KrkrDump 未傳回結果。</value>
+  </data>
+  <data name="KrkrDumpLogNotFound" xml:space="preserve">
+    <value>找不到 KrkrDump 日誌。</value>
+  </data>
+  <data name="KrkrDumpCxTableNotFound" xml:space="preserve">
+    <value>找不到 CxdecTable.bin。</value>
+  </data>
+  <data name="KrkrDumpCxOrderNotFound" xml:space="preserve">
+    <value>找不到 Cxdec 順序資料。</value>
+  </data>
+  <data name="KrkrDumpIndexKeyNotFound" xml:space="preserve">
+    <value>找不到索引密鑰和 nonce。</value>
+  </data>
+  <data name="KrkrDumpSchemeImported" xml:space="preserve">
+    <value>已匯入 KrkrDump 參數方案「{0}」。</value>
+  </data>
 </root>

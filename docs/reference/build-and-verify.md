@@ -150,6 +150,26 @@ so `makensis.exe` is available, then run:
 
 The installer is written to `bin\Package\Onachi-GARbro-setup.exe`.
 
+The XP3 KrkrDump assistant expects bundled KrkrDump runtime files next to the
+GUI executable. The repository currently bundles the x86 KrkrDump runtime:
+
+```text
+bin\<Configuration>\Tools\KrkrDump\x86\KrkrDumpLoader.exe
+bin\<Configuration>\Tools\KrkrDump\x86\KrkrDump.dll
+```
+
+Add `bin\<Configuration>\Tools\KrkrDump\x64\KrkrDumpLoader.exe` and
+`bin\<Configuration>\Tools\KrkrDump\x64\KrkrDump.dll` when a working x64
+KrkrDump DLL is available. A flat `Tools\KrkrDump\` directory also works, but
+separate architecture folders avoid injecting a DLL with the wrong process
+architecture. Local development can also use sibling KrkrDump build outputs
+under `..\KrkrDump\Release`, `..\KrkrDump\Win32\Release`,
+`..\KrkrDump\x86\Release`, or `..\KrkrDump\x64\Release`.
+
+Debug GUI builds add a `TextWriterTraceListener` at startup and write diagnostic
+output to `bin\Debug\trace.log`. KrkrDump XP3 imports log the discovered
+KrkrDump artifacts and Hx filename-map hit/miss counters there.
+
 ## Known Environment Failure Signatures
 
 These usually indicate local toolchain setup, not source regressions:
@@ -173,9 +193,9 @@ bin\Debug\Onachi-GARbro.Console.exe -l
 bin\Debug\Onachi-GARbro.Image.Convert.exe -l
 ```
 
-Validated on 2026-05-17 after NuGet restore and MSBuild Debug build:
+Validated on 2026-05-23 after NuGet restore and MSBuild Debug build:
 
-- `Onachi-GARbro.Console.exe -l`: 655 output lines.
+- `Onachi-GARbro.Console.exe -l`: 656 output lines.
 - `Onachi-GARbro.Image.Convert.exe -l`: 440 output lines.
 - `Onachi-GARbro.exe`: started and stayed alive for 3 seconds in a controlled
   smoke run.

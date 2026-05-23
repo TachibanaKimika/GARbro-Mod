@@ -72,6 +72,7 @@ namespace GameRes.Formats.KiriKiri
     public class Xp3Scheme : ResourceScheme
     {
         public IDictionary<string, ICrypt>  KnownSchemes;
+        public IDictionary<string, string>  KnownSchemeNames;
         public ISet<string>                 NoCryptTitles;
     }
 
@@ -413,9 +414,12 @@ NextEntry:
 
         public override ResourceOptions GetDefaultOptions ()
         {
+            var scheme_name = Properties.Settings.Default.XP3Scheme;
+            if (IsTransientSchemeName (scheme_name))
+                scheme_name = null;
             return new Xp3Options {
                 Version             = Properties.Settings.Default.XP3Version,
-                Scheme              = GetScheme (Properties.Settings.Default.XP3Scheme),
+                Scheme              = GetScheme (scheme_name),
                 CompressIndex       = Properties.Settings.Default.XP3CompressHeader,
                 CompressContents    = Properties.Settings.Default.XP3CompressContents,
                 RetainDirs          = Properties.Settings.Default.XP3RetainStructure,
@@ -437,8 +441,21 @@ NextEntry:
             var alg = GuessCryptAlgorithm (file);
             if (null != alg)
                 return alg;
-            var options = Query<Xp3Options> (arcStrings.XP3EncryptedNotice);
+            var transient = GetTransientScheme (file.Name);
+            if (null != transient)
+                return transient;
+            var context = new ResourceParameterContext { SourceFileName = file.Name, Resource = this };
+            var options = Query<Xp3Options> (arcStrings.XP3EncryptedNotice, context);
             return options.Scheme;
+        }
+
+        public override ResourceOptions GetOptions (object widget)
+        {
+            var options = GetDefaultOptions() as Xp3Options;
+            var xp3_widget = widget as GUI.WidgetXP3;
+            if (null != xp3_widget)
+                options.Scheme = xp3_widget.GetScheme();
+            return options;
         }
 
         public static ICrypt GetScheme (string scheme)
@@ -447,6 +464,48 @@ NextEntry:
             if (string.IsNullOrEmpty (scheme) || !KnownSchemes.TryGetValue (scheme, out algorithm))
                 algorithm = NoCryptAlgorithm;
             return algorithm;
+        }
+
+        internal const string KrkrDumpSchemePrefix = "KrkrDump: ";
+        internal static string TransientSchemeName { get; set; }
+        internal static string TransientSourceArchive { get; set; }
+
+        internal static void SetTransientScheme (string scheme, string source_archive)
+        {
+            TransientSchemeName = scheme;
+            TransientSourceArchive = source_archive;
+        }
+
+        internal static bool IsTransientSchemeName (string scheme)
+        {
+            return !string.IsNullOrEmpty (scheme)
+                && scheme.StartsWith (KrkrDumpSchemePrefix, StringComparison.Ordinal);
+        }
+
+        internal static bool IsTransientSchemeFor (string source_archive)
+        {
+            return !string.IsNullOrEmpty (TransientSchemeName)
+                && IsSameFileName (TransientSourceArchive, source_archive);
+        }
+
+        internal static ICrypt GetTransientScheme (string source_archive)
+        {
+            if (!IsTransientSchemeFor (source_archive))
+                return null;
+            return GetScheme (TransientSchemeName);
+        }
+
+        static bool IsSameFileName (string left, string right)
+        {
+            if (string.IsNullOrEmpty (left) || string.IsNullOrEmpty (right))
+                return false;
+            try
+            {
+                left = Path.GetFullPath (left);
+                right = Path.GetFullPath (right);
+            }
+            catch { }
+            return string.Equals (left, right, StringComparison.OrdinalIgnoreCase);
         }
 
         static uint GetFileCheckSum (Stream src)
@@ -767,23 +826,65 @@ NextEntry:
         static Xp3Scheme KiriKiriScheme = new Xp3Scheme
         {
             KnownSchemes = new Dictionary<string, ICrypt>(),
+            KnownSchemeNames = new Dictionary<string, string>(),
             NoCryptTitles = new HashSet<string>()
         };
 
+        static void EnsureSchemeTables ()
+        {
+            if (null == KiriKiriScheme.KnownSchemes)
+                KiriKiriScheme.KnownSchemes = new Dictionary<string, ICrypt>();
+            if (null == KiriKiriScheme.KnownSchemeNames)
+                KiriKiriScheme.KnownSchemeNames = new Dictionary<string, string>();
+            if (null == KiriKiriScheme.NoCryptTitles)
+                KiriKiriScheme.NoCryptTitles = new HashSet<string>();
+        }
+
         public static IDictionary<string, ICrypt> KnownSchemes
         {
-            get { return KiriKiriScheme.KnownSchemes; }
+            get
+            {
+                EnsureSchemeTables ();
+                return KiriKiriScheme.KnownSchemes;
+            }
+        }
+
+        public static IDictionary<string, string> KnownSchemeNames
+        {
+            get
+            {
+                EnsureSchemeTables ();
+                return KiriKiriScheme.KnownSchemeNames;
+            }
         }
 
         public static ISet<string> NoCryptTitles
         {
-            get { return KiriKiriScheme.NoCryptTitles; }
+            get
+            {
+                EnsureSchemeTables ();
+                return KiriKiriScheme.NoCryptTitles;
+            }
+        }
+
+        public static string GetSchemeDisplayName (string scheme)
+        {
+            string name;
+            if (!string.IsNullOrEmpty (scheme)
+                && KnownSchemeNames.TryGetValue (scheme, out name)
+                && !string.IsNullOrWhiteSpace (name))
+                return name;
+            return scheme;
         }
 
         public override ResourceScheme Scheme
         {
             get { return KiriKiriScheme; }
-            set { KiriKiriScheme = (Xp3Scheme)value; }
+            set
+            {
+                KiriKiriScheme = value as Xp3Scheme ?? new Xp3Scheme();
+                EnsureSchemeTables ();
+            }
         }
     }
 

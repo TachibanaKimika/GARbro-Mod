@@ -154,7 +154,12 @@ namespace GameRes
 
         protected OptType Query<OptType> (string notice) where OptType : ResourceOptions
         {
-            var args = new ParametersRequestEventArgs { Notice = notice };
+            return Query<OptType> (notice, null);
+        }
+
+        protected OptType Query<OptType> (string notice, ResourceParameterContext context) where OptType : ResourceOptions
+        {
+            var args = new ParametersRequestEventArgs { Notice = notice, Context = context };
             FormatCatalog.Instance.InvokeParametersRequest (this, args);
             if (!args.InputResult)
                 throw new OperationCanceledException();
@@ -165,6 +170,54 @@ namespace GameRes
 
     public class ResourceOptions
     {
+    }
+
+    public class ResourceParameterContext
+    {
+        public string SourceFileName { get; set; }
+        public IResource Resource { get; set; }
+    }
+
+    public interface IResourceParameterContextReceiver
+    {
+        void SetResourceContext (ResourceParameterContext context);
+    }
+
+    public interface IResourceParameterCommandSource
+    {
+        event EventHandler<ResourceParameterCommandEventArgs> ParameterCommandRequested;
+    }
+
+    public interface IResourceToolResultConsumer
+    {
+        bool ApplyResourceToolResult (ResourceParameterCommandResult result, out string message);
+    }
+
+    public class ResourceParameterCommandEventArgs : EventArgs
+    {
+        public string CommandName { get; private set; }
+        public string SourceFileName { get; set; }
+        public bool Handled { get; set; }
+        public ResourceParameterCommandResult Result { get; set; }
+
+        public ResourceParameterCommandEventArgs (string command_name)
+        {
+            CommandName = command_name;
+        }
+    }
+
+    public class ResourceParameterCommandResult
+    {
+        public bool Success { get; set; }
+        public string OutputDirectory { get; set; }
+        public string LogFileName { get; set; }
+        public string Message { get; set; }
+        public IDictionary<string, string> Metadata { get; private set; }
+
+        public ResourceParameterCommandResult ()
+        {
+            Metadata = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     [Serializable]
@@ -211,6 +264,8 @@ namespace GameRes
         /// Archive-specific options set by InputWidget.
         /// </summary>
         public ResourceOptions Options { get; set; }
+
+        public ResourceParameterContext Context { get; set; }
     }
 
     public class InvalidFormatException : FileFormatException

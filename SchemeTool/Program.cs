@@ -66,6 +66,7 @@ namespace SchemeTool
 #endif
 
                 // scheme.KnownSchemes.Add("game title", crypt);
+                // scheme.KnownSchemeNames["game title"] = "display title";
             }
 
             var gameMap = typeof(GameRes.FormatCatalog).GetField("m_game_map", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)

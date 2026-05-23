@@ -15,3 +15,10 @@ Makefile
 packages
 .nuget
 .vs
+
+!Tools/KrkrDump/
+!Tools/KrkrDump/**/
+!Tools/KrkrDump/**/*.exe
+!Tools/KrkrDump/**/*.dll
+!Tools/KrkrDump/**/*.json
+!Tools/KrkrDump/**/*.md

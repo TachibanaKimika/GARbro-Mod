@@ -346,12 +346,20 @@ namespace GARbro.GUI
         /// </summary>
         DirectoryViewModel TryCreateViewModel (string path)
         {
+            Exception error;
+            return TryCreateViewModel (path, out error);
+        }
+
+        DirectoryViewModel TryCreateViewModel (string path, out Exception error)
+        {
             try
             {
+                error = null;
                 return GetNewViewModel (path);
             }
             catch (Exception X)
             {
+                error = X;
                 SetStatusText (string.Format ("{0}: {1}", Path.GetFileName (path), X.Message));
                 return null;
             }
@@ -857,6 +865,8 @@ namespace GARbro.GUI
             }
             catch (Exception X)
             {
+                if (TryRunKrkrDumpFallback (filename, X))
+                    return;
                 PopupError (string.Format("{0}\n{1}", filename, X.Message), guiStrings.MsgErrorOpening);
             }
         }
@@ -933,9 +943,12 @@ namespace GARbro.GUI
             }
             Trace.WriteLine (new_dir, "OpenDirectoryEntry");
             int old_fs_count = VFS.Count;
-            vm = TryCreateViewModel (new_dir);
+            Exception open_error;
+            vm = TryCreateViewModel (new_dir, out open_error);
             if (null == vm)
             {
+                if (TryRunKrkrDumpFallback (GetEntryFileName (old_dir, entry), open_error))
+                    return;
                 if (VFS.Count == old_fs_count)
                     return;
                 vm = new DirectoryViewModel (VFS.FullPath, new Entry[0], VFS.IsVirtual);
@@ -1420,15 +1433,137 @@ namespace GARbro.GUI
                 if (null != control)
                 {
                     bool busy_state = m_busy_state;
+                    var context_receiver = control as IResourceParameterContextReceiver;
+                    if (null != context_receiver)
+                        context_receiver.SetResourceContext (e.Context);
+                    var command_source = control as IResourceParameterCommandSource;
+                    if (null != command_source)
+                        command_source.ParameterCommandRequested += OnResourceParameterCommandRequested;
                     var param_dialog = new ArcParametersDialog (control, e.Notice);
                     param_dialog.Owner = this;
-                    e.InputResult = param_dialog.ShowDialog() ?? false;
-                    if (e.InputResult)
-                        e.Options = format.GetOptions (control);
-                    if (busy_state)
-                        SetBusyState();
+                    try
+                    {
+                        e.InputResult = param_dialog.ShowDialog() ?? false;
+                        if (e.InputResult)
+                        {
+                            e.Options = format.GetOptions (control);
+                        }
+                    }
+                    finally
+                    {
+                        if (null != command_source)
+                            command_source.ParameterCommandRequested -= OnResourceParameterCommandRequested;
+                        if (busy_state)
+                            SetBusyState();
+                    }
                 }
             }
+        }
+
+        void OnResourceParameterCommandRequested (object sender, ResourceParameterCommandEventArgs e)
+        {
+            if (e.CommandName != KrkrDumpRunner.CommandName)
+                return;
+            var owner = sender is DependencyObject ? Window.GetWindow ((DependencyObject)sender) : this;
+            e.Result = RunKrkrDumpAssistant (e.SourceFileName, owner ?? this);
+            e.Handled = true;
+        }
+
+        ResourceParameterCommandResult RunKrkrDumpAssistant (string source_file, Window owner)
+        {
+            var dialog = new KrkrDumpAssistDialog (source_file);
+            dialog.Owner = owner ?? this;
+            if (dialog.ShowDialog() == true)
+                return dialog.Result;
+            return new ResourceParameterCommandResult {
+                Success = false,
+                Message = KrkrDumpText ("KrkrDumpCanceled"),
+            };
+        }
+
+        bool TryRunKrkrDumpFallback (string filename, Exception failure)
+        {
+            if (!IsXp3File (filename))
+                return false;
+            var reason = null != failure ? failure.Message : KrkrDumpText ("KrkrDumpUnknownError");
+            var message = string.Format (KrkrDumpText ("KrkrDumpFallbackPrompt"),
+                                         reason);
+            var answer = MessageBox.Show (this, message, guiStrings.Type_archive, MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (answer != MessageBoxResult.Yes)
+                return false;
+
+            var result = RunKrkrDumpAssistant (filename, this);
+            if (null == result || !result.Success)
+            {
+                SetStatusText (result != null ? result.Message : KrkrDumpText ("KrkrDumpCanceled"));
+                return true;
+            }
+
+            string import_message;
+            if (!ApplyKrkrDumpResult (filename, result, out import_message))
+            {
+                PopupError (import_message, KrkrDumpText ("KrkrDumpCaption"));
+                return true;
+            }
+            SetStatusText (import_message);
+
+            try
+            {
+                VFS.Flush();
+                OpenFileOrDir (filename);
+            }
+            catch (Exception X)
+            {
+                PopupError (string.Format("{0}\n{1}", filename, X.Message), guiStrings.MsgErrorOpening);
+            }
+            return true;
+        }
+
+        string GetEntryFileName (string parent, EntryViewModel entry)
+        {
+            if (null == entry || null == entry.Source || ViewModel.IsArchive)
+                return null;
+            var name = entry.Source.Name;
+            if (string.IsNullOrEmpty (name))
+                return null;
+            if (Path.IsPathRooted (name))
+                return name;
+            if (!string.IsNullOrEmpty (parent))
+                return Path.Combine (parent, entry.Name);
+            return name;
+        }
+
+        bool IsXp3File (string filename)
+        {
+            return !string.IsNullOrEmpty (filename)
+                && File.Exists (filename)
+                && ".xp3".Equals (Path.GetExtension (filename), StringComparison.OrdinalIgnoreCase);
+        }
+
+        bool ApplyKrkrDumpResult (string filename, ResourceParameterCommandResult result, out string message)
+        {
+            var format = FormatCatalog.Instance.ArcFormats.FirstOrDefault (f => f.Tag == "XP3");
+            if (null == format)
+            {
+                message = KrkrDumpText ("KrkrDumpXp3HandlerNotFound");
+                return false;
+            }
+            var control = format.GetAccessWidget();
+            var context_receiver = control as IResourceParameterContextReceiver;
+            if (null != context_receiver)
+                context_receiver.SetResourceContext (new ResourceParameterContext { SourceFileName = filename, Resource = format });
+            var consumer = control as IResourceToolResultConsumer;
+            if (null == consumer)
+            {
+                message = KrkrDumpText ("KrkrDumpImportUnsupported");
+                return false;
+            }
+            return consumer.ApplyResourceToolResult (result, out message);
+        }
+
+        static string KrkrDumpText (string name)
+        {
+            return guiStrings.ResourceManager.GetString (name) ?? name;
         }
 
         private void CanExecuteFitWindow (object sender, CanExecuteRoutedEventArgs e)
