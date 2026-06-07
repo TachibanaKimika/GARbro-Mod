@@ -54,6 +54,11 @@ with the `BurikoCompiledScriptVer1.00` header.  Filtered mode extracts
 character names, messages, and choices; raw mode also includes referenced
 internal strings.
 
+AdvHD `.ws2` scripts can be opened as script archives and extracted as
+filtered text, raw text, JSONL, or diagnostic bytecode dumps.  Filtered mode
+extracts character names, messages, and choices while removing AdvHD text
+control codes.
+
 Preferences -> Experimental -> Auto-select extraction path makes the extract
 dialog default to the last extraction parent directory plus the nearest parent
 directory name that contains an `.exe` file.

@@ -164,6 +164,7 @@
     <Compile Include="Actgs\ArcDAT.cs" />
     <Compile Include="Adobe\ArcAIR.cs" />
     <Compile Include="Ads\ArcPAC.cs" />
+    <Compile Include="AdvHD\ScriptWS2.cs" />
     <Compile Include="AdvDx\ArcPKD.cs" />
     <Compile Include="AdvRun\ArcARD.cs" />
     <Compile Include="AdvRun\ImagePIZ.cs" />
