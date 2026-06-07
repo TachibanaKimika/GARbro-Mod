@@ -42,6 +42,12 @@ Var StartMenuFolder
     File "${RELEASE_DIR}\${dir}\*.*"
 !macroend
 
+!macro InstallRecursiveSubDir dir
+    CreateDirectory $INSTDIR\${dir}
+    SetOutPath "$INSTDIR\${dir}"
+    File /r "${RELEASE_DIR}\${dir}\*.*"
+!macroend
+
 Function CreateDesktopShortCut
     CreateShortCut "$DESKTOP\$(^Name).lnk" "$INSTDIR\Onachi-GARbro.exe"
 FunctionEnd
@@ -62,6 +68,7 @@ Section "install"
     !insertmacro InstallSubDir zh-Hant
     !insertmacro InstallSubDir x64
     !insertmacro InstallSubDir x86
+    !insertmacro InstallRecursiveSubDir Tools\KrkrDump
 
     SetOutPath $INSTDIR
     WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -94,7 +101,9 @@ Section "uninstall"
     Delete $INSTDIR\*.xml
     Delete $INSTDIR\README.txt
     Delete $INSTDIR\LICENSE.txt
+    Delete $INSTDIR\THIRD-PARTY-NOTICES.txt
     Delete $INSTDIR\supported.html
+    RMDir /r $INSTDIR\Tools
     RMDir /r $INSTDIR\GameData
     RMDir /r $INSTDIR\ja-JP
     RMDir /r $INSTDIR\ko-KR

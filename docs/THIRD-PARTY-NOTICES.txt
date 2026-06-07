@@ -1,0 +1,29 @@
+Third-Party Notices
+===================
+
+This distribution includes third-party components that are not part of the
+Onachi-GARbro MIT-licensed source tree.
+
+KrkrDump runtime
+----------------
+
+Files:
+
+  Tools\KrkrDump\x86\KrkrDumpLoader.exe
+  Tools\KrkrDump\x86\KrkrDump.dll
+
+Source repository:
+
+  https://github.com/crskycode/KrkrDump
+
+License:
+
+  GNU General Public License, version 3.0.
+
+The full KrkrDump license text is distributed with the runtime at:
+
+  Tools\KrkrDump\LICENSE.txt
+
+Onachi-GARbro uses the bundled KrkrDump runtime only as an external helper for
+the XP3 assistant. The GARbro archive listing and extraction logic remains in
+Onachi-GARbro.

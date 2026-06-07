@@ -17,3 +17,12 @@ x64/KrkrDump.dll
 
 The GUI project copies this directory to the application output folder. The
 runtime itself is not built by `GARbro.sln`.
+
+Source repository:
+
+```text
+https://github.com/crskycode/KrkrDump
+```
+
+KrkrDump is distributed under the GNU General Public License, version 3.0. Keep
+`LICENSE.txt` with these runtime files in release packages.

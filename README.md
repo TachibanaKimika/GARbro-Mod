@@ -44,7 +44,9 @@ archive-parameter dialog includes a `Use KrkrDump...` assistant. It starts the
 game executable through the bundled KrkrDump loader with Windows elevation when
 needed, and imports the dumped Hx/Cx parameters as a temporary XP3 scheme for
 the current session. If opening an `.xp3` fails, the GUI can offer the same
-assistant and retry the archive after import. Operational details are in
+assistant and retry the archive after import. If a package is missing the
+bundled KrkrDump runtime, the assistant shows repair instructions and a link to
+the original KrkrDump repository. Operational details are in
 `docs/reference/krkrdump-xp3-assist.md`.
 
 BGI/Ethornell archive script entries recognize `._bp` scripts and v1 bytecode
@@ -92,6 +94,11 @@ Author
 ------
 
 Written by [morkt](https://github.com/morkt/GARbro) under [MIT License](https://github.com/morkt/GARbro/blob/master/LICENSE).
+
+The bundled KrkrDump helper is from
+[crskycode/KrkrDump](https://github.com/crskycode/KrkrDump) and is distributed
+under GPL-3.0. See `THIRD-PARTY-NOTICES.txt` in release packages and
+`Tools/KrkrDump/LICENSE.txt` for the full license text.
 
 Korean translation by [mireado](https://github.com/mireado), [overworks](https://github.com/overworks)
 

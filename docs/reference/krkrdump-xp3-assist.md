@@ -22,6 +22,18 @@ After a fallback run, GARbro retries the original `.xp3` automatically. The
 assistant only imports parameters; normal listing and extraction continue to be
 handled by GARbro after the archive opens.
 
+If the release package is missing the bundled runtime, the assistant reports
+the missing architecture and shows repair guidance. The source-page button opens
+the original KrkrDump repository:
+
+```text
+https://github.com/crskycode/KrkrDump
+```
+
+Users can reinstall a complete Onachi-GARbro package or place
+`KrkrDumpLoader.exe` and `KrkrDump.dll` under the matching
+`Tools\KrkrDump\<architecture>\` directory.
+
 ## Bundled Tool Layout
 
 The runner copies the KrkrDump files into a per-run runtime directory before
@@ -39,6 +51,10 @@ when a working x64 KrkrDump DLL is available. A flat `Tools\KrkrDump\`
 directory is accepted as a fallback. Development builds also probe sibling
 KrkrDump build outputs when this repository and `KrkrDump` share the same
 parent directory.
+
+Release packages must keep `Tools\KrkrDump\LICENSE.txt` with the runtime and
+include `THIRD-PARTY-NOTICES.txt` at the application root. KrkrDump is from
+`crskycode/KrkrDump` and is distributed under GPL-3.0.
 
 ## Imported Data
 

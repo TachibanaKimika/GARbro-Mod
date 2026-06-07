@@ -158,6 +158,17 @@ bin\<Configuration>\Tools\KrkrDump\x86\KrkrDumpLoader.exe
 bin\<Configuration>\Tools\KrkrDump\x86\KrkrDump.dll
 ```
 
+The NSIS installer must install `bin\Release\Tools\KrkrDump\` recursively. A
+packaged installation should contain:
+
+```text
+Tools\KrkrDump\LICENSE.txt
+Tools\KrkrDump\README.md
+Tools\KrkrDump\x86\KrkrDumpLoader.exe
+Tools\KrkrDump\x86\KrkrDump.dll
+THIRD-PARTY-NOTICES.txt
+```
+
 Add `bin\<Configuration>\Tools\KrkrDump\x64\KrkrDumpLoader.exe` and
 `bin\<Configuration>\Tools\KrkrDump\x64\KrkrDump.dll` when a working x64
 KrkrDump DLL is available. A flat `Tools\KrkrDump\` directory also works, but
@@ -165,6 +176,9 @@ separate architecture folders avoid injecting a DLL with the wrong process
 architecture. Local development can also use sibling KrkrDump build outputs
 under `..\KrkrDump\Release`, `..\KrkrDump\Win32\Release`,
 `..\KrkrDump\x86\Release`, or `..\KrkrDump\x64\Release`.
+
+If these files are missing at runtime, the KrkrDump assistant shows repair
+guidance and opens the original KrkrDump repository page on request.
 
 Debug GUI builds add a `TextWriterTraceListener` at startup and write diagnostic
 output to `bin\Debug\trace.log`. KrkrDump XP3 imports log the discovered

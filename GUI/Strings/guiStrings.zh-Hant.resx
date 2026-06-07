@@ -622,6 +622,12 @@
   <data name="KrkrDumpRuntimeNotFound" xml:space="preserve">
     <value>未在 Tools\KrkrDump 下找到內建 KrkrDump {0} 檔案。</value>
   </data>
+  <data name="KrkrDumpRuntimeRepairHelp" xml:space="preserve">
+    <value>目前套件缺少內建 KrkrDump 執行環境。請重新安裝完整的 Onachi-GARbro 套件，或從 KrkrDump 原始倉庫下載並將 KrkrDumpLoader.exe 和 KrkrDump.dll 放到 Tools\KrkrDump\{0} 下。</value>
+  </data>
+  <data name="KrkrDumpOpenSource" xml:space="preserve">
+    <value>開啟 KrkrDump 原始倉庫</value>
+  </data>
   <data name="KrkrDumpPreparingRuntime" xml:space="preserve">
     <value>正在準備 KrkrDump 執行檔...</value>
   </data>

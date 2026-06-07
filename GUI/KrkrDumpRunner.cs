@@ -17,9 +17,21 @@ namespace GARbro.GUI
         public string OutputDirectory { get; set; }
     }
 
+    internal class KrkrDumpRuntimeMissingException : FileNotFoundException
+    {
+        public string Architecture { get; private set; }
+
+        public KrkrDumpRuntimeMissingException (string message, string architecture)
+            : base (message)
+        {
+            Architecture = architecture;
+        }
+    }
+
     internal class KrkrDumpRunner
     {
         public const string CommandName = "KiriKiri.KrkrDump";
+        public const string SourceRepositoryUrl = "https://github.com/crskycode/KrkrDump";
 
         public ResourceParameterCommandResult Run (KrkrDumpRunRequest request, Action<string> report_status)
         {
@@ -31,7 +43,7 @@ namespace GARbro.GUI
             var architecture = GetExecutableArchitecture (request.GameExecutable);
             var tool_dir = ResolveToolDirectory (request.GameExecutable, architecture);
             if (string.IsNullOrEmpty (tool_dir))
-                throw new FileNotFoundException (string.Format (Text ("KrkrDumpRuntimeNotFound"), architecture));
+                throw new KrkrDumpRuntimeMissingException (string.Format (Text ("KrkrDumpRuntimeNotFound"), architecture), architecture);
 
             var final_output_dir = Path.GetFullPath (request.OutputDirectory);
             Directory.CreateDirectory (final_output_dir);
@@ -45,7 +57,7 @@ namespace GARbro.GUI
             var loader = Path.Combine (runtime_dir, "KrkrDumpLoader.exe");
             var dll = Path.Combine (runtime_dir, "KrkrDump.dll");
             if (!File.Exists (loader) || !File.Exists (dll))
-                throw new FileNotFoundException (Text ("KrkrDumpRuntimeIncomplete"));
+                throw new KrkrDumpRuntimeMissingException (Text ("KrkrDumpRuntimeIncomplete"), architecture);
 
             WriteConfiguration (Path.Combine (runtime_dir, "KrkrDump.json"), dump_dir);
 

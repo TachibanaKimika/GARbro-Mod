@@ -626,6 +626,12 @@ Overwrite?</value>
   <data name="KrkrDumpRuntimeNotFound" xml:space="preserve">
     <value>Bundled KrkrDump {0} files were not found under Tools\KrkrDump.</value>
   </data>
+  <data name="KrkrDumpRuntimeRepairHelp" xml:space="preserve">
+    <value>This package is missing the bundled KrkrDump runtime. Reinstall a full Onachi-GARbro package, or download KrkrDump from its source repository and place KrkrDumpLoader.exe and KrkrDump.dll under Tools\KrkrDump\{0}.</value>
+  </data>
+  <data name="KrkrDumpOpenSource" xml:space="preserve">
+    <value>Open KrkrDump page</value>
+  </data>
   <data name="KrkrDumpPreparingRuntime" xml:space="preserve">
     <value>Preparing KrkrDump runtime...</value>
   </data>

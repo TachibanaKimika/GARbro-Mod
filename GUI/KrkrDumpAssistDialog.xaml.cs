@@ -32,6 +32,7 @@ namespace GARbro.GUI
             SourceArchiveLabel.Text = Text ("KrkrDumpSourceArchive");
             GameExecutableLabel.Text = Text ("KrkrDumpGameExecutable");
             BrowseExeButton.Content = Text ("KrkrDumpBrowse");
+            OpenKrkrDumpButton.Content = Text ("KrkrDumpOpenSource");
             RunButton.Content = Text ("KrkrDumpStart");
             CancelButton.Content = guiStrings.ButtonCancel;
         }
@@ -73,8 +74,14 @@ namespace GARbro.GUI
             StatusText.Text = Text ("KrkrDumpStarting");
             try
             {
+                RuntimeNoticeText.Visibility = Visibility.Collapsed;
+                OpenKrkrDumpButton.Visibility = Visibility.Collapsed;
                 Result = await Task.Run (() => m_runner.Run (request, SetStatus));
                 DialogResult = true;
+            }
+            catch (KrkrDumpRuntimeMissingException X)
+            {
+                ShowMissingRuntimeHelp (X);
             }
             catch (OperationCanceledException X)
             {
@@ -90,6 +97,20 @@ namespace GARbro.GUI
                 if (DialogResult != true)
                     SetRunning (false);
             }
+        }
+
+        void OpenKrkrDump_Click (object sender, RoutedEventArgs e)
+        {
+            App.NavigateUri (new Uri (KrkrDumpRunner.SourceRepositoryUrl));
+        }
+
+        void ShowMissingRuntimeHelp (KrkrDumpRuntimeMissingException X)
+        {
+            var architecture = string.IsNullOrEmpty (X.Architecture) ? "x86" : X.Architecture;
+            StatusText.Text = X.Message;
+            RuntimeNoticeText.Text = string.Format (Text ("KrkrDumpRuntimeRepairHelp"), architecture);
+            RuntimeNoticeText.Visibility = Visibility.Visible;
+            OpenKrkrDumpButton.Visibility = Visibility.Visible;
         }
 
         KrkrDumpRunRequest CreateRequest ()
