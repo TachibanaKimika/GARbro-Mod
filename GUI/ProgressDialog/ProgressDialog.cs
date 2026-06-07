@@ -31,6 +31,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Interop;
 
@@ -48,11 +49,12 @@ namespace GARbro.GUI
         private string _windowTitle;
         private string _text;
         private string _description;
-        private Interop.IProgressDialog _dialog;
+        private NativeTaskDialog _dialog;
+        private Interop.IProgressDialog _legacyDialog;
         private string _cancellationText;
         private bool _useCompactPathsForText;
         private bool _useCompactPathsForDescription;
-        private bool _cancellationPending;
+        private volatile bool _cancellationPending;
         private BackgroundWorker _backgroundWorker;
 
         /// <summary>
@@ -129,7 +131,9 @@ namespace GARbro.GUI
             { 
                 _text = value;
                 if (_dialog != null)
-                    _dialog.SetLine (1, Text, UseCompactPathsForText, IntPtr.Zero);
+                    _dialog.SetElementText (TaskDialogElement.MainInstruction, GetDialogText());
+                if (_legacyDialog != null)
+                    _legacyDialog.SetLine (1, Text, UseCompactPathsForText, IntPtr.Zero);
             }
         }
 
@@ -158,7 +162,9 @@ namespace GARbro.GUI
             {
                 _useCompactPathsForText = value;
                 if (_dialog != null)
-                    _dialog.SetLine (1, Text, _useCompactPathsForText, IntPtr.Zero);
+                    _dialog.SetElementText (TaskDialogElement.MainInstruction, GetDialogText());
+                if (_legacyDialog != null)
+                    _legacyDialog.SetLine (1, Text, _useCompactPathsForText, IntPtr.Zero);
             }
         }
 	
@@ -186,7 +192,9 @@ namespace GARbro.GUI
             { 
                 _description = value;
                 if (_dialog != null)
-                    _dialog.SetLine (2, Description, UseCompactPathsForDescription, IntPtr.Zero);
+                    _dialog.SetElementText (TaskDialogElement.Content, GetDialogDescription());
+                if (_legacyDialog != null)
+                    _legacyDialog.SetLine (2, Description, UseCompactPathsForDescription, IntPtr.Zero);
             }
         }
 
@@ -215,7 +223,9 @@ namespace GARbro.GUI
             {
                 _useCompactPathsForDescription = value;
                 if( _dialog != null )
-                    _dialog.SetLine(2, Description, UseCompactPathsForDescription, IntPtr.Zero);
+                    _dialog.SetElementText (TaskDialogElement.Content, GetDialogDescription());
+                if( _legacyDialog != null )
+                    _legacyDialog.SetLine(2, Description, UseCompactPathsForDescription, IntPtr.Zero);
             }
         }
 
@@ -313,8 +323,8 @@ namespace GARbro.GUI
         {
             get
             {
-                _backgroundWorker.ReportProgress (-1); // Call with an out-of-range percentage will update the value of
-                                                       // _cancellationPending but do nothing else.
+                if (_legacyDialog != null)
+                    _backgroundWorker.ReportProgress (-1);
                 return _cancellationPending;
             }
         }
@@ -511,7 +521,9 @@ namespace GARbro.GUI
         /// </summary>
         public IntPtr GetWindowHandle ()
         {
-            var ole = _dialog as Interop.IOleWindow;
+            if (_dialog != null)
+                return _dialog.Handle;
+            var ole = _legacyDialog as Interop.IOleWindow;
             if (null == ole)
                 return IntPtr.Zero;
             IntPtr hwnd;
@@ -567,7 +579,7 @@ namespace GARbro.GUI
         {
             if (percentProgress < 0 || percentProgress > 100)
                 throw new ArgumentOutOfRangeException ("percentProgress");
-            if (_dialog == null)
+            if (_dialog == null && _legacyDialog == null)
                 throw new InvalidOperationException ("The progress dialog is not shown.");
             _backgroundWorker.ReportProgress (percentProgress, new ProgressChangedData { Text = text, Description = description, UserState = userState });
         }
@@ -611,13 +623,30 @@ namespace GARbro.GUI
                 throw new InvalidOperationException ("The progress dialog is already running.");
 
             _cancellationPending = false;
-            _dialog = new Interop.ProgressDialog();
-            _dialog.SetTitle (WindowTitle);
+            _dialog = new NativeTaskDialog (this, argument);
+            try
+            {
+                _dialog.Show (owner);
+                _backgroundWorker.RunWorkerAsync (argument);
+            }
+            catch (Exception X)
+            {
+                System.Diagnostics.Trace.WriteLine ("Native progress dialog failed: " + X.Message, "[TaskDialog]");
+                System.Diagnostics.Trace.WriteLine (X.ToString(), "[TaskDialog]");
+                _dialog = null;
+                RunLegacyProgressDialog (owner, argument);
+            }
+        }
+
+        private void RunLegacyProgressDialog (IntPtr owner, object argument)
+        {
+            _legacyDialog = new Interop.ProgressDialog();
+            _legacyDialog.SetTitle (WindowTitle);
 
             if (CancellationText.Length > 0)
-                _dialog.SetCancelMsg (CancellationText, null);
-            _dialog.SetLine (1, Text, UseCompactPathsForText, IntPtr.Zero);
-            _dialog.SetLine (2, Description, UseCompactPathsForDescription, IntPtr.Zero);
+                _legacyDialog.SetCancelMsg (CancellationText, null);
+            _legacyDialog.SetLine (1, Text, UseCompactPathsForText, IntPtr.Zero);
+            _legacyDialog.SetLine (2, Description, UseCompactPathsForDescription, IntPtr.Zero);
 
             var flags = Interop.ProgressDialogFlags.Normal;
             if (owner != IntPtr.Zero)
@@ -631,7 +660,7 @@ namespace GARbro.GUI
                 if (NativeMethods.IsWindowsVistaOrLater)
                     flags |= Interop.ProgressDialogFlags.MarqueeProgress;
                 else
-                    flags |= Interop.ProgressDialogFlags.NoProgressBar; // Older than Vista doesn't support marquee.
+                    flags |= Interop.ProgressDialogFlags.NoProgressBar;
                 break;
             }
             if( ShowTimeRemaining )
@@ -641,7 +670,8 @@ namespace GARbro.GUI
             if( !MinimizeBox )
                 flags |= Interop.ProgressDialogFlags.NoMinimize;
 
-            _dialog.StartProgressDialog (owner, null, flags, IntPtr.Zero);
+            _legacyDialog.StartProgressDialog (owner, null, flags, IntPtr.Zero);
+            System.Diagnostics.Trace.WriteLine ("Legacy progress dialog started.", "[TaskDialog]");
             _backgroundWorker.RunWorkerAsync (argument);
         }
 
@@ -663,21 +693,29 @@ namespace GARbro.GUI
 
         private void _backgroundWorker_RunWorkerCompleted (object sender, RunWorkerCompletedEventArgs e)
         {
-            _dialog.StopProgressDialog();
-            Marshal.ReleaseComObject (_dialog);
+            if (null != _dialog)
+                _dialog.Close();
             _dialog = null;
+            if (null != _legacyDialog)
+            {
+                _legacyDialog.StopProgressDialog();
+                Marshal.ReleaseComObject (_legacyDialog);
+                _legacyDialog = null;
+            }
 
             OnRunWorkerCompleted (new RunWorkerCompletedEventArgs((!e.Cancelled && e.Error == null) ? e.Result : null, e.Error, e.Cancelled));
         }
 
         private void _backgroundWorker_ProgressChanged (object sender, ProgressChangedEventArgs e)
         {
-            _cancellationPending = _dialog.HasUserCancelled();
-            // ReportProgress doesn't allow values outside this range. However, CancellationPending will call
-            // BackgroundWorker.ReportProgress directly with a value that is outside this range to update the value of the property.
+            if (_legacyDialog != null)
+                _cancellationPending = _legacyDialog.HasUserCancelled();
             if (e.ProgressPercentage >= 0 && e.ProgressPercentage <= 100)
             {
-                _dialog.SetProgress ((uint)e.ProgressPercentage, 100);
+                if (null != _dialog)
+                    _dialog.SetProgress (e.ProgressPercentage);
+                if (null != _legacyDialog)
+                    _legacyDialog.SetProgress ((uint)e.ProgressPercentage, 100);
                 var data = e.UserState as ProgressChangedData;
                 if (data != null)
                 {
@@ -688,6 +726,260 @@ namespace GARbro.GUI
                     OnProgressChanged (new ProgressChangedEventArgs (e.ProgressPercentage, data.UserState));
                 }
             }
+        }
+
+        private string GetDialogText ()
+        {
+            return GetDialogLine (Text, UseCompactPathsForText);
+        }
+
+        private string GetDialogDescription ()
+        {
+            return GetDialogLine (Description, UseCompactPathsForDescription);
+        }
+
+        private static string GetDialogLine (string text, bool compact)
+        {
+            if (string.IsNullOrEmpty (text))
+                return " ";
+            return compact ? GARbro.Shell.File.CompactPath (text, 72) : text;
+        }
+
+        private void NotifyCancelRequested ()
+        {
+            _cancellationPending = true;
+            if (CancellationText.Length > 0 && null != _dialog)
+                _dialog.SetElementText (TaskDialogElement.Content, CancellationText);
+        }
+
+        private sealed class NativeTaskDialog
+        {
+            const int IDCANCEL = 2;
+            const uint WM_USER = 0x0400;
+            const uint TDM_CLICK_BUTTON = WM_USER + 102;
+            const uint TDM_SET_MARQUEE_PROGRESS_BAR = WM_USER + 103;
+            const uint TDM_SET_PROGRESS_BAR_STATE = WM_USER + 104;
+            const uint TDM_SET_PROGRESS_BAR_POS = WM_USER + 106;
+            const uint TDM_SET_PROGRESS_BAR_MARQUEE = WM_USER + 107;
+            const uint TDM_SET_ELEMENT_TEXT = WM_USER + 108;
+            const uint TDM_ENABLE_BUTTON = WM_USER + 111;
+
+            readonly ProgressDialog m_owner;
+            readonly TaskDialogCallback m_callback;
+            readonly ManualResetEvent m_created = new ManualResetEvent (false);
+            IntPtr m_handle;
+            Thread m_thread;
+            Exception m_error;
+            bool m_allow_close;
+
+            public NativeTaskDialog (ProgressDialog owner, object argument)
+            {
+                m_owner = owner;
+                m_callback = DialogCallback;
+            }
+
+            public IntPtr Handle { get { return m_handle; } }
+
+            public void Show (IntPtr owner)
+            {
+                m_thread = new Thread (() => ShowDialog (owner));
+                m_thread.SetApartmentState (ApartmentState.STA);
+                m_thread.IsBackground = true;
+                m_thread.Start();
+                m_created.WaitOne();
+                if (m_error != null)
+                    throw m_error;
+            }
+
+            private void ShowDialog (IntPtr owner)
+            {
+                var flags = TaskDialogFlags.PositionRelativeToWindow | TaskDialogFlags.SizeToContent;
+                switch (m_owner.ProgressBarStyle)
+                {
+                case ProgressBarStyle.ProgressBar:
+                    flags |= TaskDialogFlags.ShowProgressBar;
+                    break;
+                case ProgressBarStyle.MarqueeProgressBar:
+                    flags |= TaskDialogFlags.ShowMarqueeProgressBar;
+                    break;
+                }
+                if (m_owner.ShowCancelButton)
+                    flags |= TaskDialogFlags.AllowDialogCancellation;
+                if (m_owner.MinimizeBox)
+                    flags |= TaskDialogFlags.CanBeMinimized;
+
+                var config = new TaskDialogConfig
+                {
+                    cbSize = (uint)Marshal.SizeOf (typeof(TaskDialogConfig)),
+                    hwndParent = owner,
+                    dwFlags = flags,
+                    dwCommonButtons = TaskDialogCommonButtons.Cancel,
+                    pszWindowTitle = m_owner.WindowTitle,
+                    pszMainInstruction = m_owner.GetDialogText(),
+                    pszContent = m_owner.GetDialogDescription(),
+                    pfCallback = m_callback
+                };
+                int button;
+                int radio_button;
+                bool verification_checked;
+                try
+                {
+                    int hresult = TaskDialogIndirect (ref config, out button, out radio_button, out verification_checked);
+                    if (hresult < 0)
+                        Marshal.ThrowExceptionForHR (hresult);
+                }
+                catch (Exception X)
+                {
+                    m_error = X;
+                }
+                finally
+                {
+                    m_created.Set();
+                    m_handle = IntPtr.Zero;
+                }
+            }
+
+            public void Close ()
+            {
+                if (m_handle == IntPtr.Zero)
+                    return;
+                m_allow_close = true;
+                SendMessage (m_handle, TDM_ENABLE_BUTTON, new IntPtr (IDCANCEL), new IntPtr (1));
+                SendMessage (m_handle, TDM_CLICK_BUTTON, new IntPtr (IDCANCEL), IntPtr.Zero);
+                if (m_thread != null && m_thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                    m_thread.Join (1000);
+            }
+
+            public void SetProgress (int progress)
+            {
+                if (m_handle == IntPtr.Zero)
+                    return;
+                SendMessage (m_handle, TDM_SET_PROGRESS_BAR_POS, new IntPtr (progress), IntPtr.Zero);
+            }
+
+            public void SetElementText (TaskDialogElement element, string text)
+            {
+                if (m_handle == IntPtr.Zero)
+                    return;
+                SendMessage (m_handle, TDM_SET_ELEMENT_TEXT, new IntPtr ((int)element), string.IsNullOrEmpty (text) ? " " : text);
+            }
+
+            int DialogCallback (IntPtr hwnd, TaskDialogNotification notification, IntPtr wParam, IntPtr lParam, IntPtr refData)
+            {
+                switch (notification)
+                {
+                case TaskDialogNotification.Created:
+                    m_handle = hwnd;
+                    m_created.Set();
+                    ThemeManager.ApplyWindowTheme (m_handle);
+                    if (m_owner.ProgressBarStyle == ProgressBarStyle.MarqueeProgressBar)
+                    {
+                        SendMessage (m_handle, TDM_SET_MARQUEE_PROGRESS_BAR, new IntPtr (1), IntPtr.Zero);
+                        SendMessage (m_handle, TDM_SET_PROGRESS_BAR_MARQUEE, new IntPtr (1), IntPtr.Zero);
+                    }
+                    else
+                    {
+                        SendMessage (m_handle, TDM_SET_PROGRESS_BAR_STATE, new IntPtr ((int)TaskDialogProgressBarState.Normal), IntPtr.Zero);
+                    }
+                    break;
+
+                case TaskDialogNotification.ButtonClicked:
+                    if (wParam.ToInt32() == IDCANCEL && !m_allow_close)
+                    {
+                        m_owner.NotifyCancelRequested();
+                        SendMessage (m_handle, TDM_ENABLE_BUTTON, new IntPtr (IDCANCEL), IntPtr.Zero);
+                        SendMessage (m_handle, TDM_SET_PROGRESS_BAR_STATE, new IntPtr ((int)TaskDialogProgressBarState.Paused), IntPtr.Zero);
+                        return 1;
+                    }
+                    break;
+                }
+                return 0;
+            }
+
+            [DllImport ("comctl32.dll", CharSet = CharSet.Unicode, PreserveSig = true)]
+            static extern int TaskDialogIndirect (ref TaskDialogConfig config, out int button, out int radio_button, [MarshalAs (UnmanagedType.Bool)] out bool verification_checked);
+
+            [DllImport ("user32.dll", CharSet = CharSet.Unicode)]
+            static extern IntPtr SendMessage (IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+            [DllImport ("user32.dll", CharSet = CharSet.Unicode)]
+            static extern IntPtr SendMessage (IntPtr hWnd, uint msg, IntPtr wParam, string lParam);
+        }
+
+        delegate int TaskDialogCallback (IntPtr hwnd, TaskDialogNotification notification, IntPtr wParam, IntPtr lParam, IntPtr refData);
+
+        [StructLayout (LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct TaskDialogConfig
+        {
+            public uint cbSize;
+            public IntPtr hwndParent;
+            public IntPtr hInstance;
+            public TaskDialogFlags dwFlags;
+            public TaskDialogCommonButtons dwCommonButtons;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszWindowTitle;
+            public IntPtr hMainIcon;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszMainInstruction;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszContent;
+            public uint cButtons;
+            public IntPtr pButtons;
+            public int nDefaultButton;
+            public uint cRadioButtons;
+            public IntPtr pRadioButtons;
+            public int nDefaultRadioButton;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszVerificationText;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszExpandedInformation;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszExpandedControlText;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszCollapsedControlText;
+            public IntPtr hFooterIcon;
+            [MarshalAs (UnmanagedType.LPWStr)]
+            public string pszFooter;
+            [MarshalAs (UnmanagedType.FunctionPtr)]
+            public TaskDialogCallback pfCallback;
+            public IntPtr lpCallbackData;
+            public uint cxWidth;
+        }
+
+        [Flags]
+        enum TaskDialogFlags : uint
+        {
+            AllowDialogCancellation = 0x0008,
+            ShowProgressBar         = 0x0200,
+            ShowMarqueeProgressBar  = 0x0400,
+            PositionRelativeToWindow = 0x1000,
+            CanBeMinimized          = 0x8000,
+            SizeToContent           = 0x01000000
+        }
+
+        [Flags]
+        enum TaskDialogCommonButtons : uint
+        {
+            Cancel = 0x0008
+        }
+
+        enum TaskDialogNotification : uint
+        {
+            Created       = 0,
+            ButtonClicked = 2
+        }
+
+        enum TaskDialogElement
+        {
+            Content         = 0,
+            MainInstruction = 3
+        }
+
+        enum TaskDialogProgressBarState
+        {
+            Normal = 1,
+            Error  = 2,
+            Paused = 3
         }
     }
 

@@ -177,6 +177,13 @@ namespace GARbro.GUI
             IntPtr hwnd = new WindowInteropHelper (window).Handle;
             if (hwnd == IntPtr.Zero)
                 return;
+            ApplyWindowTheme (hwnd);
+        }
+
+        internal static void ApplyWindowTheme (IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero)
+                return;
             ApplyDarkTitleBar (hwnd, EffectiveTheme == DarkTheme);
         }
 

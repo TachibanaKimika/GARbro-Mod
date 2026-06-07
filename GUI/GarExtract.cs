@@ -28,6 +28,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -327,7 +328,7 @@ namespace GARbro.GUI
 
         private void ExtractCurrentArchive (string destination)
         {
-            var file_list = m_fs.GetFilesRecursive();
+            var file_list = m_fs.GetFilesRecursive().ToList();
             if (!file_list.Any())
             {
                 m_main.SetStatusText (string.Format ("{1}: {0}", guiStrings.MsgEmptyArchive, m_arc_name));
@@ -354,6 +355,9 @@ namespace GARbro.GUI
             m_skip_audio  = !extractDialog.ExtractAudio.IsChecked.Value;
             if (!m_skip_images)
                 m_image_format = extractDialog.GetImageFormat (extractDialog.ImageConversionFormat);
+            Trace.WriteLine (string.Format ("ExtractCurrentArchive. archive='{0}', entries={1}, destination='{2}', skipImages={3}, skipScript={4}, skipAudio={5}, scriptMode='{6}', typeCounts='{7}'",
+                m_arc_name, file_list.Count, destination, m_skip_images, m_skip_script, m_skip_audio,
+                m_script_text_output_mode, FormatTypeCounts (file_list)), "[Extract]");
 
             m_main.SetStatusText (string.Format(guiStrings.MsgExtractingTo, m_arc_name, destination));
             ExtractFilesFromArchive (string.Format (guiStrings.MsgExtractingArchive, m_arc_name), file_list);
@@ -383,6 +387,9 @@ namespace GARbro.GUI
             m_skip_audio  = !extractDialog.ExtractAudio.IsChecked.Value;
             if (!m_skip_images)
                 m_image_format = extractDialog.GetImageFormat (extractDialog.ImageConversionFormat);
+            Trace.WriteLine (string.Format ("ExtractAllArchives. archives={0}, destination='{1}', skipImages={2}, skipScript={3}, skipAudio={4}, scriptMode='{5}'",
+                m_arc_sources.Count, destination, m_skip_images, m_skip_script, m_skip_audio,
+                m_script_text_output_mode), "[Extract]");
 
             m_main.SetStatusText (string.Format(guiStrings.MsgExtractingTo, m_arc_name, destination));
             ExtractArchivesFromList (string.Format (guiStrings.MsgExtractingArchive, m_arc_name));
@@ -391,19 +398,22 @@ namespace GARbro.GUI
         public void Extract (EntryViewModel entry, string destination)
         {
             var view_model = m_main.ViewModel;
-            var selected = m_main.CurrentDirectory.SelectedItems.Cast<EntryViewModel>();
+            var selected = m_main.CurrentDirectory.SelectedItems.Cast<EntryViewModel>().ToList();
             if (!selected.Any() && entry.Name == "..")
-                selected = view_model;
+                selected = view_model.ToList();
 
-            IEnumerable<Entry> file_list = selected.Select (e => e.Source);
+            IEnumerable<Entry> files = selected.Select (e => e.Source);
             if (m_fs is TreeArchiveFileSystem)
-                file_list = (m_fs as TreeArchiveFileSystem).GetFilesRecursive (file_list);
+                files = (m_fs as TreeArchiveFileSystem).GetFilesRecursive (files);
+            var file_list = files.ToList();
 
             if (!file_list.Any())
             {
                 m_main.SetStatusText (guiStrings.MsgChooseFiles);
                 return;
             }
+            Trace.WriteLine (string.Format ("Extract request. archive='{0}', selected={1}, expanded={2}, destinationHint='{3}', typeCounts='{4}'",
+                m_arc_name, selected.Count, file_list.Count, destination, FormatTypeCounts (file_list)), "[Extract]");
 
             ExtractDialog extractDialog;
             bool multiple_files = file_list.Skip (1).Any();
@@ -418,10 +428,14 @@ namespace GARbro.GUI
             m_script_text_output_mode = extractDialog.ScriptTextOutputMode;
             if (multiple_files)
             {
-                m_skip_images = !Settings.Default.appExtractImages;
-                m_skip_script = !Settings.Default.appExtractText;
-                m_skip_audio  = !Settings.Default.appExtractAudio;
+                var archive_dialog = extractDialog as ExtractArchiveDialog;
+                m_skip_images = null != archive_dialog && !(archive_dialog.ExtractImages.IsChecked ?? false);
+                m_skip_script = null != archive_dialog && !(archive_dialog.ExtractText.IsChecked ?? false);
+                m_skip_audio  = null != archive_dialog && !(archive_dialog.ExtractAudio.IsChecked ?? false);
             }
+            Trace.WriteLine (string.Format ("Extract dialog accepted. archive='{0}', multipleFiles={1}, destination='{2}', skipImages={3}, skipScript={4}, skipAudio={5}, scriptMode='{6}'",
+                m_arc_name, multiple_files, extractDialog.Destination, m_skip_images, m_skip_script, m_skip_audio,
+                m_script_text_output_mode), "[Extract]");
             destination = extractDialog.Destination;
             if (!string.IsNullOrEmpty (destination))
             {
@@ -443,6 +457,8 @@ namespace GARbro.GUI
         private void ExtractFilesFromArchive (string text, IEnumerable<Entry> file_list)
         {
             var files = GetFilesToExtract (file_list);
+            Trace.WriteLine (string.Format ("ExtractFilesFromArchive. archive='{0}', filteredFiles={1}, destination='{2}', typeCounts='{3}'",
+                m_arc_name, files.Count, Directory.GetCurrentDirectory(), FormatTypeCounts (files)), "[Extract]");
             if (!files.Any())
             {
                 m_main.SetStatusText (string.Format ("{1}: {0}", guiStrings.MsgNoFiles, m_arc_name));
@@ -464,8 +480,8 @@ namespace GARbro.GUI
             m_progress_dialog.DoWork += (s, e) => ExtractWorker (files);
             m_progress_dialog.RunWorkerCompleted += OnExtractComplete;
             m_main.IsEnabled = false;
-            m_progress_dialog.ShowDialog (m_main);
             m_extract_in_progress = true;
+            m_progress_dialog.ShowDialog (m_main);
         }
 
         private void ExtractArchivesFromList (string text)
@@ -481,21 +497,35 @@ namespace GARbro.GUI
             m_progress_dialog.DoWork += (s, e) => ExtractArchivesWorker();
             m_progress_dialog.RunWorkerCompleted += OnExtractComplete;
             m_main.IsEnabled = false;
-            m_progress_dialog.ShowDialog (m_main);
             m_extract_in_progress = true;
+            m_progress_dialog.ShowDialog (m_main);
         }
 
         private List<Entry> GetFilesToExtract (IEnumerable<Entry> file_list)
         {
             file_list = file_list.Where (e => e.Offset >= 0);
             var files = file_list.ToList();
+            int before_count = files.Count;
             if (files.Count > 1 && (m_skip_images || m_skip_script || m_skip_audio))
             {
                 files = files.Where (f => !(m_skip_images && f.Type == "image") &&
                                           !(m_skip_script && f.Type == "script") &&
                                           !(m_skip_audio  && f.Type == "audio")).ToList();
             }
+            Trace.WriteLine (string.Format ("GetFilesToExtract. before={0}, after={1}, skipImages={2}, skipScript={3}, skipAudio={4}, typeCounts='{5}'",
+                before_count, files.Count, m_skip_images, m_skip_script, m_skip_audio, FormatTypeCounts (files)), "[Extract]");
             return files.OrderBy (e => e.Offset).ToList();
+        }
+
+        static string FormatTypeCounts (IEnumerable<Entry> file_list)
+        {
+            var counts = file_list.GroupBy (e => string.IsNullOrEmpty (e.Type) ? "<empty>" : e.Type)
+                .OrderBy (g => g.Key)
+                .Select (g => string.Format ("{0}={1}", g.Key, g.Count()))
+                .ToList();
+            if (!counts.Any())
+                return "<none>";
+            return string.Join (", ", counts);
         }
 
         void ExtractWorker (IList<Entry> file_list)
@@ -503,6 +533,8 @@ namespace GARbro.GUI
             m_extract_count = 0;
             m_skip_count = 0;
             var arc = m_fs.Source;
+            Trace.WriteLine (string.Format ("ExtractWorker start. archive='{0}', files={1}, scriptMode='{2}', cwd='{3}'",
+                m_arc_name, file_list.Count, m_script_text_output_mode, Directory.GetCurrentDirectory()), "[Extract]");
             bool ignore_errors = false;
             ExtractEntries (arc, file_list, m_arc_name, 0, 1, ref ignore_errors);
         }
@@ -527,8 +559,12 @@ namespace GARbro.GUI
                     fs = OpenArchiveFileSystem (source);
                     Directory.SetCurrentDirectory (m_destination);
                     var file_list = GetFilesToExtract (fs.GetFilesRecursive());
+                    Trace.WriteLine (string.Format ("ExtractArchiveWorker archive ready. archive='{0}', filteredFiles={1}, destination='{2}', typeCounts='{3}'",
+                        archive_name, file_list.Count, Directory.GetCurrentDirectory(), FormatTypeCounts (file_list)), "[Extract]");
                     if (!file_list.Any())
                     {
+                        Trace.WriteLine (string.Format ("ExtractArchiveWorker skipped empty filtered archive. archive='{0}'",
+                            archive_name), "[Extract]");
                         ++m_skip_count;
                         continue;
                     }
@@ -593,6 +629,8 @@ namespace GARbro.GUI
         {
             try
             {
+                Trace.WriteLine (string.Format ("ExtractEntry begin. entry='{0}', type='{1}', offset={2}, size={3}",
+                    entry.Name, entry.Type, entry.Offset, entry.Size), "[Extract]");
                 if (null != m_image_format && entry.Type == "image")
                     ExtractImage (arc, entry, m_image_format);
                 else if (m_convert_audio && entry.Type == "audio")
@@ -602,14 +640,19 @@ namespace GARbro.GUI
                 else
                     ExtractEntryAsIs (arc, entry);
                 ++m_extract_count;
+                Trace.WriteLine (string.Format ("ExtractEntry done. entry='{0}', extracted={1}, skipped={2}",
+                    entry.Name, m_extract_count, m_skip_count), "[Extract]");
             }
             catch (SkipExistingFileException)
             {
                 ++m_skip_count;
+                Trace.WriteLine (string.Format ("ExtractEntry skipped existing. entry='{0}', extracted={1}, skipped={2}",
+                    entry.Name, m_extract_count, m_skip_count), "[Extract]");
                 return true;
             }
             catch (OperationCanceledException)
             {
+                Trace.WriteLine (string.Format ("ExtractEntry canceled. entry='{0}'", entry.Name), "[Extract]");
                 return false;
             }
             catch (Exception X)
@@ -617,12 +660,17 @@ namespace GARbro.GUI
                 if (!HandleExtractError (entry.Name, X, ref ignore_errors))
                     return false;
                 ++m_skip_count;
+                Trace.WriteLine (string.Format ("ExtractEntry skipped after error. entry='{0}', extracted={1}, skipped={2}",
+                    entry.Name, m_extract_count, m_skip_count), "[Extract]");
             }
             return true;
         }
 
         bool HandleExtractError (string name, Exception X, ref bool ignore_errors)
         {
+            Trace.WriteLine (string.Format ("Entry extraction failed. entry='{0}', type='{1}', message='{2}'",
+                name, X.GetType().FullName, X.Message), "[Extract]");
+            Trace.WriteLine (X.ToString(), "[Extract]");
             if (!ignore_errors)
             {
                 var error_text = string.Format (guiStrings.TextErrorExtracting, name, X.Message);
@@ -646,9 +694,13 @@ namespace GARbro.GUI
             using (var input = arc.OpenBinaryEntry (entry))
             {
                 var script_format = ScriptFormat.FindFormat (input);
+                Trace.WriteLine (string.Format ("ExtractScript start. entry='{0}', offset={1}, size={2}, format='{3}', convert={4}",
+                    entry.Name, entry.Offset, entry.Size, null != script_format ? script_format.Tag : "<none>",
+                    ShouldConvertScript (script_format)), "[ScriptExtract]");
                 if (!ShouldConvertScript (script_format))
                 {
                     input.Position = 0;
+                    Trace.WriteLine (string.Format ("ExtractScript copy-as-is. entry='{0}'", entry.Name), "[ScriptExtract]");
                     using (var output = CreateNewFile (entry.Name, true))
                         input.AsStream.CopyTo (output);
                     return;
@@ -658,10 +710,24 @@ namespace GARbro.GUI
                 var configurable = script_format as IConfigurableScriptFormat;
                 if (null == configurable)
                 {
-                    var output_name = Path.ChangeExtension (entry.Name, "txt");
-                    using (var script = script_format.ConvertFrom (input))
-                    using (var output = CreateNewFile (output_name, true))
-                        script.CopyTo (output);
+                    try
+                    {
+                        var output_name = Path.ChangeExtension (entry.Name, "txt");
+                        Trace.WriteLine (string.Format ("ExtractScript convert. entry='{0}', format='{1}', output='{2}'",
+                            entry.Name, script_format.Tag, output_name), "[ScriptExtract]");
+                        using (var script = script_format.ConvertFrom (input))
+                        using (var output = CreateNewFile (output_name, true))
+                            script.CopyTo (output);
+                        Trace.WriteLine (string.Format ("ExtractScript done. entry='{0}', output='{1}'",
+                            entry.Name, output_name), "[ScriptExtract]");
+                    }
+                    catch (Exception X)
+                    {
+                        Trace.WriteLine (string.Format ("ExtractScript failed. entry='{0}', format='{1}', message='{2}'",
+                            entry.Name, script_format.Tag, X.Message), "[ScriptExtract]");
+                        Trace.WriteLine (X.ToString(), "[ScriptExtract]");
+                        throw;
+                    }
                     return;
                 }
 
@@ -681,10 +747,25 @@ namespace GARbro.GUI
 
         void ExtractScriptText (IBinaryStream input, IConfigurableScriptFormat format, Entry entry, string mode, bool use_suffix)
         {
-            var output_name = GetScriptTextOutputName (entry.Name, mode, use_suffix);
-            using (var script = format.ConvertFrom (input, mode))
-            using (var output = CreateNewFile (output_name, true))
-                script.CopyTo (output);
+            var script_format = format as ScriptFormat;
+            try
+            {
+                var output_name = GetScriptTextOutputName (entry.Name, mode, use_suffix);
+                Trace.WriteLine (string.Format ("ExtractScriptText convert. entry='{0}', format='{1}', mode='{2}', output='{3}'",
+                    entry.Name, null != script_format ? script_format.Tag : format.GetType().FullName, mode, output_name), "[ScriptExtract]");
+                using (var script = format.ConvertFrom (input, mode))
+                using (var output = CreateNewFile (output_name, true))
+                    script.CopyTo (output);
+                Trace.WriteLine (string.Format ("ExtractScriptText done. entry='{0}', mode='{1}'",
+                    entry.Name, mode), "[ScriptExtract]");
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (string.Format ("ExtractScriptText failed. entry='{0}', format='{1}', mode='{2}', message='{3}'",
+                    entry.Name, null != script_format ? script_format.Tag : format.GetType().FullName, mode, X.Message), "[ScriptExtract]");
+                Trace.WriteLine (X.ToString(), "[ScriptExtract]");
+                throw;
+            }
         }
 
         static string NormalizeScriptTextMode (string mode)
@@ -814,6 +895,17 @@ namespace GARbro.GUI
 
         void OnExtractComplete (object sender, RunWorkerCompletedEventArgs e)
         {
+            if (null != e.Error)
+            {
+                Trace.WriteLine (string.Format ("Extract complete with worker error. archive='{0}', extracted={1}, skipped={2}, message='{3}'",
+                    m_arc_name, m_extract_count, m_skip_count, e.Error.Message), "[Extract]");
+                Trace.WriteLine (e.Error.ToString(), "[Extract]");
+            }
+            else
+            {
+                Trace.WriteLine (string.Format ("Extract complete. archive='{0}', extracted={1}, skipped={2}, cancelled={3}",
+                    m_arc_name, m_extract_count, m_skip_count, e.Cancelled), "[Extract]");
+            }
             m_main.IsEnabled = true;
             m_extract_in_progress = false;
             m_progress_dialog.Dispose();

@@ -424,10 +424,10 @@ It can't be read correctly from the file.</value>
     <value>KrkrDump log was not found.</value>
   </data>
   <data name="KrkrDumpCxTableNotFound" xml:space="preserve">
-    <value>CxdecTable.bin was not found.</value>
+    <value>CxdecTable.bin was not found. Make sure the game loaded the target XP3 before closing it, then check the .krkrdump output directory.</value>
   </data>
   <data name="KrkrDumpCxOrderNotFound" xml:space="preserve">
-    <value>Cxdec order data was not found.</value>
+    <value>Cxdec order data was not found. Make sure the game loaded the target XP3 before closing it, then check the .krkrdump output directory.</value>
   </data>
   <data name="KrkrDumpIndexKeyNotFound" xml:space="preserve">
     <value>Index key and nonce were not found.</value>

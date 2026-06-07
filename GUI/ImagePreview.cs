@@ -240,6 +240,9 @@ namespace GARbro.GUI
             }
             catch (Exception X)
             {
+                Trace.WriteLine (string.Format ("PreviewText failed. entry='{0}', type='{1}', message='{2}'",
+                    preview.Entry.Name, preview.Entry.Type, X.Message), "[Preview]");
+                Trace.WriteLine (X.ToString(), "[Preview]");
                 ResetPreviewPane();
                 SetStatusText (X.Message);
             }
@@ -257,14 +260,24 @@ namespace GARbro.GUI
             {
                 var script_format = ScriptFormat.FindFormat (input);
                 UpdateScriptTextModeWidget (script_format);
-                if (ShouldConvertScript (script_format))
+                bool convert = ShouldConvertScript (script_format);
+                Trace.WriteLine (string.Format ("PreviewText script. entry='{0}', offset={1}, size={2}, format='{3}', mode='{4}', convert={5}",
+                    entry.Name, entry.Offset, entry.Size, null != script_format ? script_format.Tag : "<none>",
+                    m_preview_script_text_mode, convert), "[Preview]");
+                if (convert)
                 {
                     input.Position = 0;
                     try
                     {
                         var configurable = script_format as IConfigurableScriptFormat;
                         if (null != configurable)
+                        {
+                            Trace.WriteLine (string.Format ("PreviewText convert configurable. entry='{0}', format='{1}', mode='{2}'",
+                                entry.Name, script_format.Tag, m_preview_script_text_mode), "[Preview]");
                             return configurable.ConvertFrom (input, m_preview_script_text_mode);
+                        }
+                        Trace.WriteLine (string.Format ("PreviewText convert. entry='{0}', format='{1}'",
+                            entry.Name, script_format.Tag), "[Preview]");
                         return script_format.ConvertFrom (input);
                     }
                     finally

@@ -155,6 +155,7 @@ namespace GameRes.Formats.KiriKiri
             {
                 result.OutputDirectory,
                 GetMetadata (result, "GameDirectory"),
+                GetMetadata (result, "RuntimeDirectory"),
                 !string.IsNullOrEmpty (result.LogFileName) ? Path.GetDirectoryName (result.LogFileName) : null,
             };
             foreach (var dir in candidates)

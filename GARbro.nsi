@@ -48,12 +48,26 @@ Var StartMenuFolder
     File /r "${RELEASE_DIR}\${dir}\*.*"
 !macroend
 
+!macro CloseProcess process
+    DetailPrint "Closing ${process} if it is running..."
+    nsExec::ExecToLog 'taskkill /IM "${process}" /T /F'
+!macroend
+
 Function CreateDesktopShortCut
     CreateShortCut "$DESKTOP\$(^Name).lnk" "$INSTDIR\Onachi-GARbro.exe"
 FunctionEnd
 
+Function CloseRunningApplications
+    !insertmacro CloseProcess "Onachi-GARbro.exe"
+    !insertmacro CloseProcess "Onachi-GARbro.Console.exe"
+    !insertmacro CloseProcess "Onachi-GARbro.Image.Convert.exe"
+    !insertmacro CloseProcess "SchemeTool.exe"
+    Sleep 1000
+FunctionEnd
+
 Section "install"
     SetOutPath $INSTDIR
+    Call CloseRunningApplications
 
     File "${RELEASE_DIR}\*.*"
     File /oname=README.txt "README.md"

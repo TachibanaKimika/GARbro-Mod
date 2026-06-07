@@ -24,6 +24,7 @@
 //
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using GARbro.GUI.Strings;
 
@@ -54,8 +55,19 @@ namespace GARbro.GUI
         /// </remarks>
         protected Stream CreateNewFile (string filename, bool create_path = false)
         {
-            if (create_path)
-                filename = GameRes.PhysicalFileSystem.CreatePath (filename);
+            string requested_name = filename;
+            try
+            {
+                if (create_path)
+                    filename = GameRes.PhysicalFileSystem.CreatePath (filename);
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (string.Format ("CreateNewFile path creation failed. requested='{0}', createPath={1}, message='{2}'",
+                    requested_name, create_path, X.Message), "[Extract]");
+                Trace.WriteLine (X.ToString(), "[Extract]");
+                throw;
+            }
             FileMode open_mode = FileMode.CreateNew;
             if (m_duplicate_action.ApplyToAll &&
                 m_duplicate_action.Action == ExistingFileAction.Overwrite)
@@ -67,12 +79,25 @@ namespace GARbro.GUI
             catch (IOException) // file already exists?
             {
                 if (!File.Exists (filename) || FileMode.Create == open_mode) // some unforseen I/O error, give up
+                {
+                    Trace.WriteLine (string.Format ("CreateNewFile I/O failed. requested='{0}', path='{1}', mode='{2}'",
+                        requested_name, filename, open_mode), "[Extract]");
                     throw;
+                }
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (string.Format ("CreateNewFile failed. requested='{0}', path='{1}', mode='{2}', message='{3}'",
+                    requested_name, filename, open_mode, X.Message), "[Extract]");
+                Trace.WriteLine (X.ToString(), "[Extract]");
+                throw;
             }
             if (!m_duplicate_action.ApplyToAll)
             {
                 var msg_text = string.Format (guiStrings.TextFileAlreadyExists, Path.GetFileName (filename));
                 m_duplicate_action = m_main.Dispatcher.Invoke (() => m_main.ShowFileExistsDialog (m_title, msg_text, m_progress_dialog.GetWindowHandle()));
+                Trace.WriteLine (string.Format ("Duplicate file action. path='{0}', action='{1}', applyToAll={2}",
+                    filename, m_duplicate_action.Action, m_duplicate_action.ApplyToAll), "[Extract]");
             }
             switch (m_duplicate_action.Action)
             {

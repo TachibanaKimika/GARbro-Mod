@@ -180,9 +180,23 @@ under `..\KrkrDump\Release`, `..\KrkrDump\Win32\Release`,
 If these files are missing at runtime, the KrkrDump assistant shows repair
 guidance and opens the original KrkrDump repository page on request.
 
-Debug GUI builds add a `TextWriterTraceListener` at startup and write diagnostic
-output to `bin\Debug\trace.log`. KrkrDump XP3 imports log the discovered
-KrkrDump artifacts and Hx filename-map hit/miss counters there.
+GUI builds add a rolling file trace listener at startup and write diagnostic
+output to:
+
+```text
+%LOCALAPPDATA%\Onachi\Onachi-GARbro\trace-YYYYMMDD.log
+```
+
+Debug GUI builds also write the same diagnostics to
+`bin\Debug\trace-YYYYMMDD.log`. Each log directory rolls to
+`trace-YYYYMMDD-1.log`, `trace-YYYYMMDD-2.log`, and so on once a file reaches
+50 MiB, and keeps the newest 5 `trace-*.log` files.
+
+Script preview and extraction logs include selection counts, entry type counts,
+dialog filter flags, filtered counts, per-entry extraction start/done/skip
+events, detected script format, requested text mode, output name, file creation
+failures, and exception stack traces. KrkrDump XP3 imports log the discovered
+KrkrDump artifacts and Hx filename-map hit/miss counters there as well.
 
 ## Known Environment Failure Signatures
 

@@ -70,7 +70,8 @@ Onachi-GARbro\KrkrDump\<game>_<archive>_<timestamp>\.krkrdump
 It includes:
 
 - `KrkrDump-*.log` from the copied runtime directory.
-- `CxdecTable.bin` and `CxdecOrder.bin` from the game executable directory.
+- `CxdecTable.bin` and `CxdecOrder.bin` from the copied runtime directory or
+  game executable directory when KrkrDump writes them there.
 
 The XP3 importer converts these KrkrDump outputs into an `HxCrypt` scheme:
 

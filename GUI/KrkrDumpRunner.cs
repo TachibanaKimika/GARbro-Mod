@@ -89,8 +89,8 @@ namespace GARbro.GUI
 
             Report (report_status, Text ("KrkrDumpCollectingOutput"));
             var log_file = CopyNewestLog (runtime_dir, dump_dir);
-            CopyIfExists (Path.Combine (Path.GetDirectoryName (request.GameExecutable), "CxdecTable.bin"), dump_dir);
-            CopyIfExists (Path.Combine (Path.GetDirectoryName (request.GameExecutable), "CxdecOrder.bin"), dump_dir);
+            CopyOutputFile ("CxdecTable.bin", dump_dir, runtime_dir, Path.GetDirectoryName (request.GameExecutable));
+            CopyOutputFile ("CxdecOrder.bin", dump_dir, runtime_dir, Path.GetDirectoryName (request.GameExecutable));
 
             var result = new ResourceParameterCommandResult
             {
@@ -102,6 +102,7 @@ namespace GARbro.GUI
             result.Metadata["SourceArchive"] = request.SourceArchive;
             result.Metadata["GameExecutable"] = request.GameExecutable;
             result.Metadata["GameDirectory"] = Path.GetDirectoryName (request.GameExecutable);
+            result.Metadata["RuntimeDirectory"] = runtime_dir;
             return result;
         }
 
@@ -208,6 +209,21 @@ namespace GARbro.GUI
         {
             if (File.Exists (source))
                 File.Copy (source, Path.Combine (output_dir, Path.GetFileName (source)), true);
+        }
+
+        static void CopyOutputFile (string name, string output_dir, params string[] source_dirs)
+        {
+            foreach (var dir in source_dirs)
+            {
+                if (string.IsNullOrEmpty (dir))
+                    continue;
+                var source = Path.Combine (dir, name);
+                if (File.Exists (source))
+                {
+                    CopyIfExists (source, output_dir);
+                    return;
+                }
+            }
         }
 
         static void WriteConfiguration (string path, string output_dir)

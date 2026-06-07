@@ -40,6 +40,9 @@ namespace GARbro.GUI
     public partial class App : Application
     {
         const string AppUserModelId = "Onachi.Onachi-GARbro";
+        const string TraceFilePrefix = "trace";
+        const long TraceMaxFileSize = 50L * 1024L * 1024L;
+        const int TraceMaxFileCount = 5;
 
         public static string       Name { get { return "Onachi-GARbro"; } }
         public static string FormatsDat { get { return "Formats.dat"; } }
@@ -56,16 +59,17 @@ namespace GARbro.GUI
         {
             SetProcessIdentity();
             string exe_dir = Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly().Location);
-#if DEBUG
-            Trace.Listeners.Add (new TextWriterTraceListener (Path.Combine (exe_dir, "trace.log")));
-            Trace.AutoFlush = true;
-#endif
+            InitializeTraceLogging (exe_dir);
             Trace.WriteLine ("ApplicationStartup --------------------------------", "Onachi-GARbro.App");
+            Trace.WriteLine ("Version: " + Assembly.GetExecutingAssembly().GetName().Version, "Onachi-GARbro.App");
+            Trace.WriteLine ("Executable: " + Assembly.GetExecutingAssembly().Location, "Onachi-GARbro.App");
+            Trace.WriteLine ("Arguments: " + string.Join (" ", e.Args), "Onachi-GARbro.App");
+            Trace.WriteLine ("LocalAppData: " + GetLocalAppDataFolder(), "Onachi-GARbro.App");
             this.DispatcherUnhandledException += (s, args) =>
             {
                 Trace.WriteLine (string.Format ("Unhandled exception caught: {0}", args.Exception.Message),
                                  "Onachi-GARbro.App");
-                Trace.WriteLine (args.Exception.StackTrace, "Stack trace");
+                Trace.WriteLine (args.Exception.ToString(), "Stack trace");
             };
             UpgradeSettings();
             ThemeManager.Initialize();
@@ -89,6 +93,27 @@ namespace GARbro.GUI
 
             DeserializeScheme (Path.Combine (FormatCatalog.Instance.DataDirectory, FormatsDat));
             DeserializeScheme (Path.Combine (GetLocalAppDataFolder(), FormatsDat));
+        }
+
+        void InitializeTraceLogging (string exe_dir)
+        {
+#if DEBUG
+            AddTraceListener (exe_dir);
+#endif
+            AddTraceListener (GetLocalAppDataFolder());
+            Trace.AutoFlush = true;
+        }
+
+        void AddTraceListener (string directory)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty (directory))
+                    Trace.Listeners.Add (new RollingFileTraceListener (directory, TraceFilePrefix, TraceMaxFileSize, TraceMaxFileCount));
+            }
+            catch
+            {
+            }
         }
 
         static void SetProcessIdentity ()

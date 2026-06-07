@@ -422,10 +422,10 @@
     <value>找不到 KrkrDump 日誌。</value>
   </data>
   <data name="KrkrDumpCxTableNotFound" xml:space="preserve">
-    <value>找不到 CxdecTable.bin。</value>
+    <value>找不到 CxdecTable.bin。請確認關閉遊戲前已讓遊戲載入目標 XP3，然後檢查 .krkrdump 輸出目錄。</value>
   </data>
   <data name="KrkrDumpCxOrderNotFound" xml:space="preserve">
-    <value>找不到 Cxdec 順序資料。</value>
+    <value>找不到 Cxdec 順序資料。請確認關閉遊戲前已讓遊戲載入目標 XP3，然後檢查 .krkrdump 輸出目錄。</value>
   </data>
   <data name="KrkrDumpIndexKeyNotFound" xml:space="preserve">
     <value>找不到索引密鑰和 nonce。</value>

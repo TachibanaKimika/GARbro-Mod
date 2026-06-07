@@ -37,6 +37,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using Microsoft.VisualBasic.FileIO;
 using GARbro.GUI.Properties;
 using GARbro.GUI.Strings;
@@ -205,6 +206,19 @@ namespace GARbro.GUI
 
         internal FileErrorDialogResult ShowErrorDialog (string error_title, string error_text, IntPtr parent_hwnd)
         {
+            if (TaskDialog.IsPlatformSupported)
+            {
+                try
+                {
+                    return ShowNativeErrorDialog (error_title, error_text, parent_hwnd);
+                }
+                catch (Exception X)
+                {
+                    Trace.WriteLine ("Native error dialog failed: " + X.Message, "[TaskDialog]");
+                    Trace.WriteLine (X.ToString(), "[TaskDialog]");
+                }
+            }
+
             var dialog = new FileErrorDialog (error_title, error_text);
             SetModalWindowParent (dialog, parent_hwnd);
             return dialog.ShowDialog();
@@ -212,9 +226,95 @@ namespace GARbro.GUI
 
         internal FileExistsDialogResult ShowFileExistsDialog (string title, string text, IntPtr parent_hwnd)
         {
+            if (TaskDialog.IsPlatformSupported)
+            {
+                try
+                {
+                    return ShowNativeFileExistsDialog (title, text, parent_hwnd);
+                }
+                catch (Exception X)
+                {
+                    Trace.WriteLine ("Native file-exists dialog failed: " + X.Message, "[TaskDialog]");
+                    Trace.WriteLine (X.ToString(), "[TaskDialog]");
+                }
+            }
+
             var dialog = new FileExistsDialog (title, text);
             SetModalWindowParent (dialog, parent_hwnd);
             return dialog.ShowDialog();
+        }
+
+        private FileErrorDialogResult ShowNativeErrorDialog (string error_title, string error_text, IntPtr parent_hwnd)
+        {
+            var result = new FileErrorDialogResult();
+            using (var dialog = CreateNativeDialog (error_title, error_title, parent_hwnd, TaskDialogStandardIcon.Error))
+            {
+                dialog.Text = error_text;
+                dialog.FooterCheckBoxText = guiStrings.LabelIgnoreErrors;
+                dialog.FooterCheckBoxChecked = false;
+
+                var continue_button = new TaskDialogButton ("continue", ToNativeButtonText (guiStrings.ButtonContinue)) { Default = true };
+                continue_button.Click += (s, e) => {
+                    result.Continue = true;
+                    result.IgnoreErrors = dialog.FooterCheckBoxChecked ?? false;
+                };
+                var abort_button = new TaskDialogButton ("abort", ToNativeButtonText (guiStrings.ButtonAbort));
+                abort_button.Click += (s, e) => {
+                    result.Continue = false;
+                    result.IgnoreErrors = dialog.FooterCheckBoxChecked ?? false;
+                };
+                dialog.Controls.Add (continue_button);
+                dialog.Controls.Add (abort_button);
+                dialog.Cancelable = true;
+                dialog.Show();
+            }
+            return result;
+        }
+
+        private FileExistsDialogResult ShowNativeFileExistsDialog (string title, string text, IntPtr parent_hwnd)
+        {
+            var result = new FileExistsDialogResult { Action = ExistingFileAction.Abort };
+            using (var dialog = CreateNativeDialog (title, text, parent_hwnd, TaskDialogStandardIcon.Warning))
+            {
+                dialog.Text = guiStrings.LabelDuplicateFileQuestion;
+                dialog.FooterCheckBoxText = guiStrings.LabelApplyToAll;
+                dialog.FooterCheckBoxChecked = false;
+
+                var skip_button = new TaskDialogButton ("skip", ToNativeButtonText (guiStrings.ButtonSkip)) { Default = true };
+                skip_button.Click += (s, e) => result.Action = ExistingFileAction.Skip;
+                var overwrite_button = new TaskDialogButton ("overwrite", ToNativeButtonText (guiStrings.ButtonOverwrite));
+                overwrite_button.Click += (s, e) => result.Action = ExistingFileAction.Overwrite;
+                var rename_button = new TaskDialogButton ("rename", ToNativeButtonText (guiStrings.ButtonRename));
+                rename_button.Click += (s, e) => result.Action = ExistingFileAction.Rename;
+                var abort_button = new TaskDialogButton ("abort", ToNativeButtonText (guiStrings.ButtonAbort));
+                abort_button.Click += (s, e) => result.Action = ExistingFileAction.Abort;
+
+                dialog.Controls.Add (skip_button);
+                dialog.Controls.Add (overwrite_button);
+                dialog.Controls.Add (rename_button);
+                dialog.Controls.Add (abort_button);
+                dialog.Cancelable = true;
+                dialog.Show();
+                result.ApplyToAll = dialog.FooterCheckBoxChecked ?? false;
+            }
+            return result;
+        }
+
+        private TaskDialog CreateNativeDialog (string title, string instruction, IntPtr parent_hwnd, TaskDialogStandardIcon icon)
+        {
+            return new TaskDialog
+            {
+                Caption = title,
+                InstructionText = instruction,
+                Icon = icon,
+                OwnerWindowHandle = parent_hwnd != IntPtr.Zero ? parent_hwnd : new WindowInteropHelper (this).Handle,
+                StartupLocation = TaskDialogStartupLocation.CenterOwner
+            };
+        }
+
+        private static string ToNativeButtonText (string text)
+        {
+            return string.IsNullOrEmpty (text) ? text : text.Replace ("&", "&&").Replace ("_", "&");
         }
 
         private void SetModalWindowParent (Window dialog, IntPtr parent_hwnd)

@@ -422,10 +422,10 @@
     <value>未找到 KrkrDump 日志。</value>
   </data>
   <data name="KrkrDumpCxTableNotFound" xml:space="preserve">
-    <value>未找到 CxdecTable.bin。</value>
+    <value>未找到 CxdecTable.bin。请确认关闭游戏前已让游戏加载目标 XP3，然后检查 .krkrdump 输出目录。</value>
   </data>
   <data name="KrkrDumpCxOrderNotFound" xml:space="preserve">
-    <value>未找到 Cxdec 顺序数据。</value>
+    <value>未找到 Cxdec 顺序数据。请确认关闭游戏前已让游戏加载目标 XP3，然后检查 .krkrdump 输出目录。</value>
   </data>
   <data name="KrkrDumpIndexKeyNotFound" xml:space="preserve">
     <value>未找到索引密钥和 nonce。</value>
