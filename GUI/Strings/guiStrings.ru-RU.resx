@@ -291,6 +291,9 @@
   <data name="TextExtractTitle" xml:space="preserve">
     <value>Извлечь из архива</value>
   </data>
+  <data name="TextOpenDestinationAfterExtract" xml:space="preserve">
+    <value>Открыть папку назначения после извлечения</value>
+  </data>
   <data name="TextParametersTitle" xml:space="preserve">
     <value>Параметры архива</value>
   </data>

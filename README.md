@@ -26,6 +26,8 @@ itself is recognized.
 When multiple archive files are selected in the file system, 'F4' extracts
 them sequentially in the current list order using the same destination and
 conversion options.
+The extraction dialog can remember an option to open the destination folder
+after a successful extraction.
 
 Supported script text extractors can output filtered text, raw text, JSONL,
 or both.

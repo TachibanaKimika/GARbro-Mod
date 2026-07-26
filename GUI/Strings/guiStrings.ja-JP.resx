@@ -349,6 +349,9 @@
     <value>アーカイブからファイルの抽出</value>
     <comment>Extract from archive</comment>
   </data>
+  <data name="TextOpenDestinationAfterExtract" xml:space="preserve">
+    <value>抽出完了後に出力先フォルダーを開く</value>
+  </data>
   <data name="TextParametersTitle" xml:space="preserve">
     <value>アーカイブ形式</value>
     <comment>Archive parameters</comment>

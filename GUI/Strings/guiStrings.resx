@@ -294,6 +294,9 @@
   <data name="TextExtractTitle" xml:space="preserve">
     <value>Extract from archive</value>
   </data>
+  <data name="TextOpenDestinationAfterExtract" xml:space="preserve">
+    <value>Open destination folder after extraction</value>
+  </data>
   <data name="TextParametersTitle" xml:space="preserve">
     <value>Archive parameters</value>
   </data>

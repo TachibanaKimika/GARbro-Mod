@@ -291,6 +291,9 @@
   <data name="TextExtractTitle" xml:space="preserve">
     <value>從壓縮檔案中提取</value>
   </data>
+  <data name="TextOpenDestinationAfterExtract" xml:space="preserve">
+    <value>提取完成後開啟檔案目錄</value>
+  </data>
   <data name="TextParametersTitle" xml:space="preserve">
     <value>壓縮檔案參數</value>
   </data>

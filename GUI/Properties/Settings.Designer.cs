@@ -190,6 +190,18 @@ namespace GARbro.GUI.Properties {
                 this["appExtractText"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool appOpenDestinationAfterExtract {
+            get {
+                return ((bool)(this["appOpenDestinationAfterExtract"]));
+            }
+            set {
+                this["appOpenDestinationAfterExtract"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

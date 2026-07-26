@@ -1182,6 +1182,15 @@ namespace GARbro.GUI.Strings {
                 return ResourceManager.GetString("TextExtractTitle", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open destination folder after extraction.
+        /// </summary>
+        public static string TextOpenDestinationAfterExtract {
+            get {
+                return ResourceManager.GetString("TextOpenDestinationAfterExtract", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to File {0} already exists in the destination folder..

@@ -4,7 +4,7 @@
         xmlns:s="clr-namespace:GARbro.GUI.Strings"
         xmlns:p="clr-namespace:GARbro.GUI.Properties"
         xmlns:local="clr-namespace:GARbro.GUI"
-        Title="{x:Static s:guiStrings.TextExtractTitle}" Height="165.774" Width="400.861"
+        Title="{x:Static s:guiStrings.TextExtractTitle}" Height="195.774" Width="400.861"
         ShowInTaskbar="False"  WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
     <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
@@ -31,6 +31,10 @@
                 <ComboBox x:Name="ScriptTextModeChoice" Margin="0" VerticalAlignment="Center" Height="21" HorizontalAlignment="Right" Width="96"/>
             </StackPanel>
         </Grid>
+        <CheckBox Content="{x:Static s:guiStrings.TextOpenDestinationAfterExtract}"
+                  Margin="10,94,10,0"
+                  VerticalAlignment="Top"
+                  IsChecked="{Binding Source={x:Static p:Settings.Default}, Path=appOpenDestinationAfterExtract, Mode=TwoWay}"/>
         <Button Content="{x:Static s:guiStrings.ButtonExtract}" Click="ExtractButton_Click" HorizontalAlignment="Right" Margin="0,0,102.157,10" Width="75" IsDefault="True" Height="25" VerticalAlignment="Bottom" VerticalContentAlignment="Center"/>
         <Button Content="{x:Static s:guiStrings.ButtonCancel}" Margin="0,0,10.157,10" IsCancel="True" HorizontalAlignment="Right" Width="75" Height="25" VerticalAlignment="Bottom" VerticalContentAlignment="Center"/>
     </Grid>

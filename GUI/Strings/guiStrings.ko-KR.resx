@@ -291,6 +291,9 @@
   <data name="TextExtractTitle" xml:space="preserve">
     <value>아카이브에서 추출</value>
   </data>
+  <data name="TextOpenDestinationAfterExtract" xml:space="preserve">
+    <value>추출 완료 후 대상 폴더 열기</value>
+  </data>
   <data name="TextParametersTitle" xml:space="preserve">
     <value>아카이브 파라미터</value>
   </data>

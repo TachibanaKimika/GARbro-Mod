@@ -252,6 +252,7 @@ namespace GARbro.GUI
         private int                 m_extract_count;
         private int                 m_skip_count;
         private bool                m_extract_in_progress = false;
+        private bool                m_open_destination_after_extract;
 
         public bool IsActive { get { return m_extract_in_progress; } }
 
@@ -341,6 +342,7 @@ namespace GARbro.GUI
             if (!result.Value)
                 return;
             m_script_text_output_mode = extractDialog.ScriptTextOutputMode;
+            m_open_destination_after_extract = Settings.Default.appOpenDestinationAfterExtract;
 
             destination = extractDialog.Destination;
             if (!string.IsNullOrEmpty (destination))
@@ -350,6 +352,7 @@ namespace GARbro.GUI
             }
             else
                 destination = ".";
+            m_destination = Directory.GetCurrentDirectory();
             m_skip_images = !extractDialog.ExtractImages.IsChecked.Value;
             m_skip_script = !extractDialog.ExtractText.IsChecked.Value;
             m_skip_audio  = !extractDialog.ExtractAudio.IsChecked.Value;
@@ -372,6 +375,7 @@ namespace GARbro.GUI
             if (!result.Value)
                 return;
             m_script_text_output_mode = extractDialog.ScriptTextOutputMode;
+            m_open_destination_after_extract = Settings.Default.appOpenDestinationAfterExtract;
 
             destination = extractDialog.Destination;
             if (!string.IsNullOrEmpty (destination))
@@ -381,7 +385,7 @@ namespace GARbro.GUI
             }
             else
                 destination = ".";
-            m_destination = destination;
+            m_destination = Directory.GetCurrentDirectory();
             m_skip_images = !extractDialog.ExtractImages.IsChecked.Value;
             m_skip_script = !extractDialog.ExtractText.IsChecked.Value;
             m_skip_audio  = !extractDialog.ExtractAudio.IsChecked.Value;
@@ -426,6 +430,7 @@ namespace GARbro.GUI
             if (!result.Value)
                 return;
             m_script_text_output_mode = extractDialog.ScriptTextOutputMode;
+            m_open_destination_after_extract = Settings.Default.appOpenDestinationAfterExtract;
             if (multiple_files)
             {
                 var archive_dialog = extractDialog as ExtractArchiveDialog;
@@ -442,6 +447,7 @@ namespace GARbro.GUI
                 destination = Path.GetFullPath (destination);
                 PrepareDestination (destination);
             }
+            m_destination = Directory.GetCurrentDirectory();
             if (!m_skip_images)
                 m_image_format = FormatCatalog.Instance.ImageFormats.FirstOrDefault (f => f.Tag.Equals (Settings.Default.appImageFormat));
 
@@ -944,6 +950,7 @@ namespace GARbro.GUI
 
         void OnExtractComplete (object sender, RunWorkerCompletedEventArgs e)
         {
+            bool cancelled = e.Cancelled || m_progress_dialog.CancellationPending;
             if (null != e.Error)
             {
                 Trace.WriteLine (string.Format ("Extract complete with worker error. archive='{0}', extracted={1}, skipped={2}, message='{3}'",
@@ -953,7 +960,7 @@ namespace GARbro.GUI
             else
             {
                 Trace.WriteLine (string.Format ("Extract complete. archive='{0}', extracted={1}, skipped={2}, cancelled={3}",
-                    m_arc_name, m_extract_count, m_skip_count, e.Cancelled), "[Extract]");
+                    m_arc_name, m_extract_count, m_skip_count, cancelled), "[Extract]");
             }
             m_main.IsEnabled = true;
             m_extract_in_progress = false;
@@ -966,6 +973,34 @@ namespace GARbro.GUI
             }
             m_main.SetStatusText (Localization.Format ("MsgExtractedFiles", m_extract_count));
             this.Dispose();
+            if (m_open_destination_after_extract && null == e.Error && !cancelled && m_extract_count > 0)
+                OpenDestinationDirectory();
+        }
+
+        void OpenDestinationDirectory ()
+        {
+            try
+            {
+                if (!Directory.Exists (m_destination))
+                {
+                    Trace.WriteLine (string.Format ("Extraction destination no longer exists: '{0}'",
+                        m_destination), "[Extract]");
+                    return;
+                }
+                Process.Start (new ProcessStartInfo {
+                    FileName = "explorer.exe",
+                    Arguments = "\"" + m_destination + "\"",
+                    UseShellExecute = true,
+                });
+                Trace.WriteLine (string.Format ("Opened extraction destination: '{0}'",
+                    m_destination), "[Extract]");
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (string.Format ("Failed to open extraction destination '{0}': {1}",
+                    m_destination, X.Message), "[Extract]");
+                m_main.SetStatusText (X.Message);
+            }
         }
         
         #region IDisposable Members
