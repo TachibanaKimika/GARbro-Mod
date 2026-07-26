@@ -70,6 +70,33 @@ Useful variants:
 .\dev.ps1 -App ImageConvert
 ```
 
+## Release Build Script
+
+For the common release build and installer package path, use:
+
+```powershell
+.\build.ps1
+```
+
+The script locates Visual Studio MSBuild, restores NuGet packages when
+`packages/` is missing or when `-Restore` is passed, builds `GARbro.sln` in
+`Release`, runs `GARbro.nsi` through NSIS, and prints the installer SHA-256
+hash.
+
+Useful variants:
+
+```powershell
+.\build.ps1 -Restore
+.\build.ps1 -Smoke
+.\build.ps1 -NoPackage
+.\build.ps1 -Configuration Debug -NoPackage -NoVersionStamp
+```
+
+`build.ps1` preserves the pre-build version stamping by default. Use
+`-NoVersionStamp` only for local verification builds where dirtying
+`Properties/AssemblyInfo.cs` is undesirable; do not use it for final release
+packages.
+
 ## Restore
 
 Preferred restore:
@@ -134,7 +161,14 @@ or release behavior.
 
 ## Packaging
 
-Build `Release` before generating a distributable installer:
+The preferred packaging entry point is:
+
+```powershell
+.\build.ps1
+```
+
+The manual equivalent is to build `Release` before generating a distributable
+installer:
 
 ```powershell
 & 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' `
