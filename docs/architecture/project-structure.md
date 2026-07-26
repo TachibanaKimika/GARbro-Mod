@@ -23,6 +23,9 @@ Perl executable is part of the normal build environment.
 - `GameRes.cs`: base `IResource` contract, tags, signatures, extensions, and
   priority metadata. It also carries archive-parameter context and command
   bridge interfaces used when a format option widget needs host-side actions.
+  The parameter context can also carry a host progress callback, allowing
+  background format work to update application-owned UI without introducing a
+  GUI dependency into format assemblies.
 - `ArchiveFormat.cs`: archive open/create/extract contract and common archive
   safety helpers.
 - `Image.cs` and `ImageDecoder.cs`: image metadata, decoder, and conversion

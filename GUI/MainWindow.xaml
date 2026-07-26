@@ -273,13 +273,29 @@
                 <StatusBarItem Width="{Binding ElementName=CurrentDirectory, Path=ActualWidth}"
                                HorizontalContentAlignment="Stretch">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="appStatusText" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="appSelectionText" Grid.Column="1"
-                                   Margin="16,0,0,0" Visibility="Collapsed"/>
+                        <Grid x:Name="appStatusContent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="appStatusText" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="appSelectionText" Grid.Column="1"
+                                       Margin="16,0,0,0" Visibility="Collapsed"/>
+                        </Grid>
+                        <Grid x:Name="appProgressContent" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="140"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="appProgressText" TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding Text, ElementName=appProgressText}"/>
+                            <ProgressBar x:Name="appProgressBar" Grid.Column="1"
+                                         Height="12" Margin="12,0,0,0"
+                                         Minimum="0" Maximum="100"
+                                         Foreground="{DynamicResource Gar.Brush.Accent}"
+                                         Background="{DynamicResource Gar.Brush.InputInactiveBackground}"
+                                         BorderBrush="{DynamicResource Gar.Brush.ControlBorder}"/>
+                        </Grid>
                     </Grid>
                 </StatusBarItem>
                 <Separator Width="1"/>

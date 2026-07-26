@@ -433,4 +433,79 @@
   <data name="KrkrDumpSchemeImported" xml:space="preserve">
     <value>已导入 KrkrDump 参数方案“{0}”。</value>
   </data>
+  <data name="HxNamesButton" xml:space="preserve">
+    <value>手动导入 HxNames.lst...</value>
+  </data>
+  <data name="HxNamesSameDirectory" xml:space="preserve">
+    <value>应用到同目录 XP3（仅当前会话）</value>
+  </data>
+  <data name="HxNamesNeedHxScheme" xml:space="preserve">
+    <value>请先选择 Hx v4 加密方案，或先导入 KrkrDump 参数。</value>
+  </data>
+  <data name="HxNamesUnavailable" xml:space="preserve">
+    <value>当前宿主不支持导入 HxNames.lst。</value>
+  </data>
+  <data name="HxNamesSelecting" xml:space="preserve">
+    <value>正在选择 HxNames.lst...</value>
+  </data>
+  <data name="HxNamesRequestUnhandled" xml:space="preserve">
+    <value>HxNames.lst 导入请求未被处理。</value>
+  </data>
+  <data name="HxNamesNoResult" xml:space="preserve">
+    <value>HxNames.lst 导入未返回结果。</value>
+  </data>
+  <data name="HxNamesFileNotFound" xml:space="preserve">
+    <value>未找到 HxNames.lst。</value>
+  </data>
+  <data name="HxNamesInvalidLine" xml:space="preserve">
+    <value>HxNames.lst 第 {0} 行无效；应为“哈希:名称”，哈希必须是 16 或 64 位十六进制数。</value>
+  </data>
+  <data name="HxNamesEmpty" xml:space="preserve">
+    <value>HxNames.lst 中没有有效的名称映射。</value>
+  </data>
+  <data name="HxNamesIndexReadFailed" xml:space="preserve">
+    <value>无法使用当前方案读取 Hx v4 索引，请检查归档密钥和加密方案。</value>
+  </data>
+  <data name="HxNamesNoMatches" xml:space="preserve">
+    <value>HxNames.lst 与当前归档中的路径或文件名哈希均不匹配。</value>
+  </data>
+  <data name="HxNamesImported" xml:space="preserve">
+    <value>已导入 {0} 条映射；当前归档匹配路径哈希 {1}/{2}、文件名哈希 {3}/{4}。</value>
+  </data>
+  <data name="HxNamesImportedSameDirectory" xml:space="preserve">
+    <value>已导入 {0} 条映射；当前归档匹配路径哈希 {1}/{2}、文件名哈希 {3}/{4}。本次会话中同目录的其他 XP3 也会复用这些映射。</value>
+  </data>
+  <data name="HxNamesAutoImported" xml:space="preserve">
+    <value>已自动导入 HxNames。{0}</value>
+  </data>
+  <data name="HxNamesAutoImportFailed" xml:space="preserve">
+    <value>{0} 自动导入 HxNames 失败：{1}</value>
+  </data>
+  <data name="HxNamesGenerated" xml:space="preserve">
+    <value>已从 {0} 个场景和 {1} 个候选实时生成 HxNames（命中 {2} 个路径、{3} 个文件名）。{4}</value>
+  </data>
+  <data name="HxNamesGenerationFailed" xml:space="preserve">
+    <value>{0} 实时生成 HxNames 失败：{1}</value>
+  </data>
+  <data name="HxNamesGenerating" xml:space="preserve">
+    <value>正在从已解密的游戏资源实时生成 Hx v4 名称...</value>
+  </data>
+  <data name="HxNamesProgressPreparing" xml:space="preserve">
+    <value>Hx v4 名称恢复：正在准备已解密资源...</value>
+  </data>
+  <data name="HxNamesProgressIndexes" xml:space="preserve">
+    <value>Hx v4 名称恢复：正在读取存档索引 {0}/{1}（成功 {2} 个）</value>
+  </data>
+  <data name="HxNamesProgressScenarios" xml:space="preserve">
+    <value>Hx v4 名称恢复：扫描 {0}（{1}/{2}），条目 {3}/{4}（已解析 {5} 个场景）</value>
+  </data>
+  <data name="HxNamesProgressNoScenarios" xml:space="preserve">
+    <value>Hx v4 名称恢复：未找到场景存档，正在使用日志与通用名称...</value>
+  </data>
+  <data name="HxNamesProgressCandidates" xml:space="preserve">
+    <value>Hx v4 名称恢复：正在扩展候选（{0:N0} 个候选，命中 {1:N0} 个）</value>
+  </data>
+  <data name="HxNamesProgressWriting" xml:space="preserve">
+    <value>Hx v4 名称恢复：正在从 {0:N0} 个候选写入 {1:N0} 个命中...</value>
+  </data>
 </root>

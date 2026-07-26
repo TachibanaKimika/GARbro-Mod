@@ -196,6 +196,29 @@ namespace GARbro.GUI
             Dispatcher.Invoke (() => { appResourceText.Text = text.Trim(); });
         }
 
+        public void ReportResourceProgress (ResourceProgressInfo progress)
+        {
+            if (null == progress)
+                return;
+            Dispatcher.BeginInvoke (new Action (() => {
+                if (progress.IsCompleted)
+                {
+                    appProgressContent.Visibility = Visibility.Collapsed;
+                    appStatusContent.Visibility = Visibility.Visible;
+                    if (!string.IsNullOrWhiteSpace (progress.Message))
+                        appStatusText.Text = progress.Message.Trim();
+                    return;
+                }
+
+                appStatusContent.Visibility = Visibility.Collapsed;
+                appProgressContent.Visibility = Visibility.Visible;
+                appProgressText.Text = (progress.Message ?? string.Empty).Trim();
+                appProgressBar.IsIndeterminate = progress.Percentage < 0;
+                if (progress.Percentage >= 0)
+                    appProgressBar.Value = Math.Max (0, Math.Min (100, progress.Percentage));
+            }));
+        }
+
         /// <summary>
         /// Popup error message box. Could be called from any thread.
         /// </summary>
@@ -1548,6 +1571,8 @@ namespace GARbro.GUI
                 if (null != control)
                 {
                     bool busy_state = m_busy_state;
+                    if (null != e.Context)
+                        e.Context.ProgressReporter = ReportResourceProgress;
                     var context_receiver = control as IResourceParameterContextReceiver;
                     if (null != context_receiver)
                         context_receiver.SetResourceContext (e.Context);
@@ -1577,11 +1602,43 @@ namespace GARbro.GUI
 
         void OnResourceParameterCommandRequested (object sender, ResourceParameterCommandEventArgs e)
         {
-            if (e.CommandName != KrkrDumpRunner.CommandName)
-                return;
             var owner = sender is DependencyObject ? Window.GetWindow ((DependencyObject)sender) : this;
-            e.Result = RunKrkrDumpAssistant (e.SourceFileName, owner ?? this);
-            e.Handled = true;
+            if (e.CommandName == KrkrDumpRunner.CommandName)
+            {
+                e.Result = RunKrkrDumpAssistant (e.SourceFileName, owner ?? this);
+                e.Handled = true;
+                return;
+            }
+            if ("KiriKiri.HxNamesImport" == e.CommandName)
+            {
+                e.Result = SelectHxNamesFile (e.SourceFileName, owner ?? this);
+                e.Handled = true;
+            }
+        }
+
+        ResourceParameterCommandResult SelectHxNamesFile (string source_file, Window owner)
+        {
+            var dialog = new OpenFileDialog
+            {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Filter = HxNamesText ("HxNamesFileFilter"),
+                Multiselect = false,
+                Title = HxNamesText ("HxNamesSelectFile"),
+            };
+            if (!string.IsNullOrEmpty (source_file))
+                dialog.InitialDirectory = Path.GetDirectoryName (source_file);
+            if (dialog.ShowDialog (owner).Value)
+            {
+                var result = new ResourceParameterCommandResult { Success = true };
+                result.Metadata["NamesFile"] = dialog.FileName;
+                return result;
+            }
+            return new ResourceParameterCommandResult
+            {
+                Success = false,
+                Message = HxNamesText ("HxNamesCanceled"),
+            };
         }
 
         ResourceParameterCommandResult RunKrkrDumpAssistant (string source_file, Window owner)
@@ -1666,7 +1723,13 @@ namespace GARbro.GUI
             var control = format.GetAccessWidget();
             var context_receiver = control as IResourceParameterContextReceiver;
             if (null != context_receiver)
-                context_receiver.SetResourceContext (new ResourceParameterContext { SourceFileName = filename, Resource = format });
+            {
+                context_receiver.SetResourceContext (new ResourceParameterContext {
+                    SourceFileName = filename,
+                    Resource = format,
+                    ProgressReporter = ReportResourceProgress,
+                });
+            }
             var consumer = control as IResourceToolResultConsumer;
             if (null == consumer)
             {
@@ -1677,6 +1740,11 @@ namespace GARbro.GUI
         }
 
         static string KrkrDumpText (string name)
+        {
+            return guiStrings.ResourceManager.GetString (name) ?? name;
+        }
+
+        static string HxNamesText (string name)
         {
             return guiStrings.ResourceManager.GetString (name) ?? name;
         }

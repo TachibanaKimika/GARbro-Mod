@@ -433,4 +433,79 @@
   <data name="KrkrDumpSchemeImported" xml:space="preserve">
     <value>已匯入 KrkrDump 參數方案「{0}」。</value>
   </data>
+  <data name="HxNamesButton" xml:space="preserve">
+    <value>手動匯入 HxNames.lst...</value>
+  </data>
+  <data name="HxNamesSameDirectory" xml:space="preserve">
+    <value>套用到同目錄 XP3（僅目前工作階段）</value>
+  </data>
+  <data name="HxNamesNeedHxScheme" xml:space="preserve">
+    <value>請先選擇 Hx v4 加密方案，或先匯入 KrkrDump 參數。</value>
+  </data>
+  <data name="HxNamesUnavailable" xml:space="preserve">
+    <value>目前宿主不支援匯入 HxNames.lst。</value>
+  </data>
+  <data name="HxNamesSelecting" xml:space="preserve">
+    <value>正在選擇 HxNames.lst...</value>
+  </data>
+  <data name="HxNamesRequestUnhandled" xml:space="preserve">
+    <value>HxNames.lst 匯入請求未被處理。</value>
+  </data>
+  <data name="HxNamesNoResult" xml:space="preserve">
+    <value>HxNames.lst 匯入未傳回結果。</value>
+  </data>
+  <data name="HxNamesFileNotFound" xml:space="preserve">
+    <value>找不到 HxNames.lst。</value>
+  </data>
+  <data name="HxNamesInvalidLine" xml:space="preserve">
+    <value>HxNames.lst 第 {0} 行無效；應為「雜湊:名稱」，雜湊必須是 16 或 64 位十六進位數。</value>
+  </data>
+  <data name="HxNamesEmpty" xml:space="preserve">
+    <value>HxNames.lst 中沒有有效的名稱映射。</value>
+  </data>
+  <data name="HxNamesIndexReadFailed" xml:space="preserve">
+    <value>無法使用目前方案讀取 Hx v4 索引，請檢查封存檔金鑰和加密方案。</value>
+  </data>
+  <data name="HxNamesNoMatches" xml:space="preserve">
+    <value>HxNames.lst 與目前封存檔中的路徑或檔名雜湊均不相符。</value>
+  </data>
+  <data name="HxNamesImported" xml:space="preserve">
+    <value>已匯入 {0} 條映射；目前封存檔符合路徑雜湊 {1}/{2}、檔名雜湊 {3}/{4}。</value>
+  </data>
+  <data name="HxNamesImportedSameDirectory" xml:space="preserve">
+    <value>已匯入 {0} 條映射；目前封存檔符合路徑雜湊 {1}/{2}、檔名雜湊 {3}/{4}。本次工作階段中同目錄的其他 XP3 也會重複使用這些映射。</value>
+  </data>
+  <data name="HxNamesAutoImported" xml:space="preserve">
+    <value>已自動匯入 HxNames。{0}</value>
+  </data>
+  <data name="HxNamesAutoImportFailed" xml:space="preserve">
+    <value>{0} 自動匯入 HxNames 失敗：{1}</value>
+  </data>
+  <data name="HxNamesGenerated" xml:space="preserve">
+    <value>已從 {0} 個場景和 {1} 個候選即時產生 HxNames（命中 {2} 個路徑、{3} 個檔名）。{4}</value>
+  </data>
+  <data name="HxNamesGenerationFailed" xml:space="preserve">
+    <value>{0} 即時產生 HxNames 失敗：{1}</value>
+  </data>
+  <data name="HxNamesGenerating" xml:space="preserve">
+    <value>正在從已解密的遊戲資源即時產生 Hx v4 名稱...</value>
+  </data>
+  <data name="HxNamesProgressPreparing" xml:space="preserve">
+    <value>Hx v4 名稱恢復：正在準備已解密資源...</value>
+  </data>
+  <data name="HxNamesProgressIndexes" xml:space="preserve">
+    <value>Hx v4 名稱恢復：正在讀取封存索引 {0}/{1}（成功 {2} 個）</value>
+  </data>
+  <data name="HxNamesProgressScenarios" xml:space="preserve">
+    <value>Hx v4 名稱恢復：掃描 {0}（{1}/{2}），項目 {3}/{4}（已解析 {5} 個場景）</value>
+  </data>
+  <data name="HxNamesProgressNoScenarios" xml:space="preserve">
+    <value>Hx v4 名稱恢復：未找到場景封存，正在使用日誌與通用名稱...</value>
+  </data>
+  <data name="HxNamesProgressCandidates" xml:space="preserve">
+    <value>Hx v4 名稱恢復：正在擴充候選（{0:N0} 個候選，命中 {1:N0} 個）</value>
+  </data>
+  <data name="HxNamesProgressWriting" xml:space="preserve">
+    <value>Hx v4 名稱恢復：正在從 {0:N0} 個候選寫入 {1:N0} 個命中...</value>
+  </data>
 </root>

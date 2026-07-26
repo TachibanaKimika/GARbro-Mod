@@ -438,12 +438,12 @@ NextEntry:
 
         ICrypt QueryCryptAlgorithm (ArcView file)
         {
-            var alg = GuessCryptAlgorithm (file);
-            if (null != alg)
-                return alg;
             var transient = GetTransientScheme (file.Name);
             if (null != transient)
                 return transient;
+            var alg = GuessCryptAlgorithm (file);
+            if (null != alg)
+                return alg;
             var context = new ResourceParameterContext { SourceFileName = file.Name, Resource = this };
             var options = Query<Xp3Options> (arcStrings.XP3EncryptedNotice, context);
             return options.Scheme;
@@ -467,32 +467,98 @@ NextEntry:
         }
 
         internal const string KrkrDumpSchemePrefix = "KrkrDump: ";
+        internal const string HxNamesSchemePrefix = "HxNames: ";
         internal static string TransientSchemeName { get; set; }
         internal static string TransientSourceArchive { get; set; }
+        internal static bool TransientIncludesSameDirectory { get; set; }
+        [ThreadStatic]
+        static ICrypt s_thread_transient_scheme;
+        [ThreadStatic]
+        static string s_thread_transient_source_archive;
+        [ThreadStatic]
+        static bool s_thread_transient_includes_same_directory;
 
-        internal static void SetTransientScheme (string scheme, string source_archive)
+        internal static void SetTransientScheme (string scheme, string source_archive, bool include_same_directory = false)
         {
             TransientSchemeName = scheme;
             TransientSourceArchive = source_archive;
+            TransientIncludesSameDirectory = include_same_directory;
         }
 
         internal static bool IsTransientSchemeName (string scheme)
         {
             return !string.IsNullOrEmpty (scheme)
-                && scheme.StartsWith (KrkrDumpSchemePrefix, StringComparison.Ordinal);
+                && (scheme.StartsWith (KrkrDumpSchemePrefix, StringComparison.Ordinal)
+                    || scheme.StartsWith (HxNamesSchemePrefix, StringComparison.Ordinal));
         }
 
         internal static bool IsTransientSchemeFor (string source_archive)
         {
-            return !string.IsNullOrEmpty (TransientSchemeName)
-                && IsSameFileName (TransientSourceArchive, source_archive);
+            if (string.IsNullOrEmpty (TransientSchemeName))
+                return false;
+            if (IsSameFileName (TransientSourceArchive, source_archive))
+                return true;
+            return TransientIncludesSameDirectory
+                && string.Equals (".xp3", Path.GetExtension (source_archive), StringComparison.OrdinalIgnoreCase)
+                && IsSameDirectory (TransientSourceArchive, source_archive);
         }
 
         internal static ICrypt GetTransientScheme (string source_archive)
         {
+            if (null != s_thread_transient_scheme
+                && IsTransientSchemeFor (source_archive, s_thread_transient_source_archive,
+                                         s_thread_transient_includes_same_directory))
+            {
+                return s_thread_transient_scheme;
+            }
             if (!IsTransientSchemeFor (source_archive))
                 return null;
             return GetScheme (TransientSchemeName);
+        }
+
+        internal static IDisposable PushThreadTransientScheme (ICrypt scheme, string source_archive,
+                                                                bool include_same_directory)
+        {
+            return new ThreadTransientSchemeScope (scheme, source_archive, include_same_directory);
+        }
+
+        static bool IsTransientSchemeFor (string source_archive, string transient_source_archive,
+                                           bool include_same_directory)
+        {
+            if (IsSameFileName (transient_source_archive, source_archive))
+                return true;
+            return include_same_directory
+                && string.Equals (".xp3", Path.GetExtension (source_archive), StringComparison.OrdinalIgnoreCase)
+                && IsSameDirectory (transient_source_archive, source_archive);
+        }
+
+        sealed class ThreadTransientSchemeScope : IDisposable
+        {
+            readonly ICrypt m_previous_scheme;
+            readonly string m_previous_source_archive;
+            readonly bool m_previous_includes_same_directory;
+            bool m_disposed;
+
+            public ThreadTransientSchemeScope (ICrypt scheme, string source_archive,
+                                               bool include_same_directory)
+            {
+                m_previous_scheme = s_thread_transient_scheme;
+                m_previous_source_archive = s_thread_transient_source_archive;
+                m_previous_includes_same_directory = s_thread_transient_includes_same_directory;
+                s_thread_transient_scheme = scheme;
+                s_thread_transient_source_archive = source_archive;
+                s_thread_transient_includes_same_directory = include_same_directory;
+            }
+
+            public void Dispose ()
+            {
+                if (m_disposed)
+                    return;
+                s_thread_transient_scheme = m_previous_scheme;
+                s_thread_transient_source_archive = m_previous_source_archive;
+                s_thread_transient_includes_same_directory = m_previous_includes_same_directory;
+                m_disposed = true;
+            }
         }
 
         static bool IsSameFileName (string left, string right)
@@ -506,6 +572,24 @@ NextEntry:
             }
             catch { }
             return string.Equals (left, right, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool IsSameDirectory (string left, string right)
+        {
+            if (string.IsNullOrEmpty (left) || string.IsNullOrEmpty (right))
+                return false;
+            try
+            {
+                left = Path.GetDirectoryName (Path.GetFullPath (left));
+                right = Path.GetDirectoryName (Path.GetFullPath (right));
+            }
+            catch
+            {
+                left = Path.GetDirectoryName (left);
+                right = Path.GetDirectoryName (right);
+            }
+            return !string.IsNullOrEmpty (left)
+                && string.Equals (left, right, StringComparison.OrdinalIgnoreCase);
         }
 
         static uint GetFileCheckSum (Stream src)

@@ -670,6 +670,15 @@
   <data name="KrkrDumpUnknownError" xml:space="preserve">
     <value>未知错误。</value>
   </data>
+  <data name="HxNamesSelectFile" xml:space="preserve">
+    <value>选择 HxNames.lst</value>
+  </data>
+  <data name="HxNamesFileFilter" xml:space="preserve">
+    <value>Hx v4 名称表 (HxNames.lst;*.lst)|HxNames.lst;*.lst|所有文件 (*.*)|*.*</value>
+  </data>
+  <data name="HxNamesCanceled" xml:space="preserve">
+    <value>已取消导入 HxNames.lst。</value>
+  </data>
   <data name="TextInterface" xml:space="preserve">
     <value>界面</value>
   </data>

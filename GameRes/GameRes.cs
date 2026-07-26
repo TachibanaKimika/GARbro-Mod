@@ -176,6 +176,14 @@ namespace GameRes
     {
         public string SourceFileName { get; set; }
         public IResource Resource { get; set; }
+        public Action<ResourceProgressInfo> ProgressReporter { get; set; }
+    }
+
+    public class ResourceProgressInfo
+    {
+        public int Percentage { get; set; }
+        public string Message { get; set; }
+        public bool IsCompleted { get; set; }
     }
 
     public interface IResourceParameterContextReceiver

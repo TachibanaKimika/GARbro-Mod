@@ -52,6 +52,18 @@ Supported fields:
 Prefer `name` for one speaker and `names` only when multiple names genuinely
 apply to the next message. Do not emit empty messages.
 
+### KiriKiri PSB scenarios
+
+For PSB-backed KiriKiri `.scn` entries, JSONL pairs each message with its
+speaker and the directly associated PSB `voice` identifier. The diagnostic
+dump preserves the complete PSB voice descriptor array, including fields such
+as `name`, `pan`, and `type`, together with scene metadata, jumps, post-eval
+expressions, compiled lines, and message-time environment snapshots.
+
+The PSB dump is decoded object data, not reconstructed KAG source. For text
+KiriKiri/KAG scripts, dump mode instead emits the decoded source with diagnostic
+line numbers.
+
 ## Extraction Rules
 
 - Keep extraction narrow and format-specific. Avoid broad heuristics that turn

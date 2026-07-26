@@ -37,7 +37,78 @@ namespace GameRes.Formats.KiriKiri
             @"\b(?<kind>PathHash|NameHash):\s+""(?<name>.*?)""\s+""(?<salt>.*?)""\s+""(?<hash>[0-9A-Fa-f]+)""",
             RegexOptions.Compiled);
 
-        public static KrkrDumpImportResult Import (ResourceParameterCommandResult result, string source_file)
+        public static KrkrDumpImportResult ImportNamesFile (ResourceParameterCommandResult result, string source_file,
+                                                             string base_scheme_name, bool include_same_directory)
+        {
+            if (null == result || !result.Success)
+                return new KrkrDumpImportResult { Success = false, Message = result != null ? result.Message : Text ("HxNamesNoResult") };
+
+            string names_file = GetMetadata (result, "NamesFile");
+            if (string.IsNullOrEmpty (names_file) || !File.Exists (names_file))
+                return new KrkrDumpImportResult { Success = false, Message = Text ("HxNamesFileNotFound") };
+
+            ICrypt base_algorithm;
+            if (string.IsNullOrEmpty (base_scheme_name)
+                || !Xp3Opener.KnownSchemes.TryGetValue (base_scheme_name, out base_algorithm))
+            {
+                return new KrkrDumpImportResult { Success = false, Message = Text ("HxNamesNeedHxScheme") };
+            }
+            var base_crypt = base_algorithm as HxCrypt;
+            if (null == base_crypt)
+                return new KrkrDumpImportResult { Success = false, Message = Text ("HxNamesNeedHxScheme") };
+
+            Dictionary<string, string> names;
+            string validation_error;
+            if (!TryReadNamesFile (names_file, out names, out validation_error))
+                return new KrkrDumpImportResult { Success = false, Message = validation_error };
+
+            HxIndexHashSet index_hashes;
+            try
+            {
+                var index = ReadHxIndex (source_file);
+                index_hashes = null != index
+                    ? base_crypt.ReadIndexHashes (Path.GetFileName (source_file), index)
+                    : null;
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (string.Format ("Failed to inspect HxNames coverage for '{0}': {1}",
+                                                source_file, X.Message), "[HxNames]");
+                index_hashes = null;
+            }
+            if (null == index_hashes)
+                return new KrkrDumpImportResult { Success = false, Message = Text ("HxNamesIndexReadFailed") };
+
+            int path_matches = names.Keys.Count (x => x.Length == 16 && index_hashes.PathHashes.Contains (x));
+            int name_matches = names.Keys.Count (x => x.Length == 64 && index_hashes.NameHashes.Contains (x));
+            if (0 == path_matches + name_matches)
+                return new KrkrDumpImportResult { Success = false, Message = Text ("HxNamesNoMatches") };
+
+            names_file = Path.GetFullPath (names_file);
+            var crypt = base_crypt.CloneWithAdditionalNamesFile (names_file);
+            var scheme_name = string.Format ("{0}{1} / {2}", Xp3Opener.HxNamesSchemePrefix,
+                                             Xp3Opener.GetSchemeDisplayName (base_scheme_name),
+                                             Path.GetFileNameWithoutExtension (source_file));
+            Xp3Opener.KnownSchemes[scheme_name] = crypt;
+            Xp3Opener.SetTransientScheme (scheme_name, source_file, include_same_directory);
+            Trace.WriteLine (string.Format (
+                "Imported HxNames table. file='{0}', entries={1}, archive='{2}', pathMatches={3}/{4}, nameMatches={5}/{6}, sameDirectory={7}",
+                names_file, names.Count, source_file, path_matches, index_hashes.PathHashes.Count,
+                name_matches, index_hashes.NameHashes.Count, include_same_directory), "[HxNames]");
+
+            var message_name = include_same_directory ? "HxNamesImportedSameDirectory" : "HxNamesImported";
+            return new KrkrDumpImportResult
+            {
+                Success = true,
+                SchemeName = scheme_name,
+                Message = string.Format (Text (message_name), names.Count, path_matches,
+                                         index_hashes.PathHashes.Count, name_matches, index_hashes.NameHashes.Count),
+            };
+        }
+
+        public static KrkrDumpImportResult Import (ResourceParameterCommandResult result, string source_file,
+                                                    bool include_same_directory = false,
+                                                    Action<ResourceProgressInfo> progress_reporter = null)
         {
             if (null == result || !result.Success)
                 return new KrkrDumpImportResult { Success = false, Message = result != null ? result.Message : Text ("KrkrDumpNoResult") };
@@ -76,6 +147,7 @@ namespace GameRes.Formats.KiriKiri
                 IndexKeyDict = data.IndexKeys.Count > 0 ? data.IndexKeys : null,
             };
 
+            var logged_names = new Dictionary<string, string> (data.Names, StringComparer.OrdinalIgnoreCase);
             FilterNamesToSourceArchive (source_file, data, crypt);
             data.NamesFile = WriteNamesFile (result, data);
             crypt.NamesFile = data.NamesFile;
@@ -83,13 +155,214 @@ namespace GameRes.Formats.KiriKiri
 
             var scheme_name = CreateSchemeName (result, source_file);
             Xp3Opener.KnownSchemes[scheme_name] = crypt;
-            Xp3Opener.SetTransientScheme (scheme_name, source_file);
-            return new KrkrDumpImportResult
+            Xp3Opener.SetTransientScheme (scheme_name, source_file, include_same_directory);
+            var import = new KrkrDumpImportResult
             {
                 Success = true,
                 SchemeName = scheme_name,
                 Message = string.Format (Text ("KrkrDumpSchemeImported"), scheme_name),
             };
+
+            // Make the last generated result available immediately while a fresh
+            // scenario scan runs in the background. HxCrypt reads this path when
+            // opening an index, so the atomic replacement performed by the
+            // generator also refreshes subsequent archive opens.
+            foreach (var existing_names_file in FindAutomaticNamesFiles (result, source_file))
+            {
+                var existing_result = new ResourceParameterCommandResult { Success = true };
+                existing_result.Metadata["NamesFile"] = existing_names_file;
+                var existing_import = ImportNamesFile (
+                    existing_result, source_file, scheme_name, include_same_directory);
+                if (existing_import.Success)
+                {
+                    Trace.WriteLine (string.Format (
+                        "Applied existing HxNames result before live regeneration. file='{0}', archive='{1}'",
+                        existing_names_file, source_file), "[HxNames]");
+                    break;
+                }
+                Trace.WriteLine (string.Format (
+                    "Existing HxNames result was not applicable before regeneration. file='{0}', reason='{1}'",
+                    existing_names_file, existing_import.Message), "[HxNames]");
+            }
+
+            var generated_names_file = GetAutomaticNamesCacheFile (result, source_file);
+            HxNameGenerationResult generation = null;
+            KrkrDumpImportResult generated_import_failure = null;
+            if (!string.IsNullOrEmpty (generated_names_file))
+            {
+                generation = HxNameGenerator.Generate (
+                    source_file, crypt, logged_names, generated_names_file, progress_reporter);
+                if (generation.Success)
+                {
+                    var generated_result = new ResourceParameterCommandResult { Success = true };
+                    generated_result.Metadata["NamesFile"] = generated_names_file;
+                    var generated_import = ImportNamesFile (
+                        generated_result, source_file, scheme_name, include_same_directory);
+                    if (generated_import.Success)
+                    {
+                        generated_import.Message = string.Format (Text ("HxNamesGenerated"),
+                            generation.ScenarioCount, generation.CandidateCount,
+                            generation.PathMatches, generation.NameMatches,
+                            generated_import.Message);
+                        return generated_import;
+                    }
+                    generated_import_failure = generated_import;
+                    Trace.WriteLine (string.Format (
+                        "Generated HxNames did not match the selected archive. file='{0}', reason='{1}'",
+                        generated_names_file, generated_import.Message), "[HxNames]");
+                }
+            }
+
+            var automatic_names_files = FindAutomaticNamesFiles (result, source_file).ToList();
+            if (generation != null && generation.Success)
+            {
+                automatic_names_files.RemoveAll (x => string.Equals (
+                    x, generated_names_file, StringComparison.OrdinalIgnoreCase));
+            }
+            if (0 == automatic_names_files.Count)
+            {
+                if (generation != null && !generation.Success)
+                {
+                    import.Message = string.Format (Text ("HxNamesGenerationFailed"),
+                                                    import.Message, generation.Error);
+                }
+                else if (null != generated_import_failure)
+                {
+                    import.Message = string.Format (Text ("HxNamesAutoImportFailed"),
+                                                    import.Message, generated_import_failure.Message);
+                }
+                return import;
+            }
+
+            KrkrDumpImportResult last_failure = generated_import_failure;
+            foreach (var automatic_names_file in automatic_names_files)
+            {
+                var names_result = new ResourceParameterCommandResult { Success = true };
+                names_result.Metadata["NamesFile"] = automatic_names_file;
+                var names_import = ImportNamesFile (names_result, source_file, scheme_name, include_same_directory);
+                if (names_import.Success)
+                {
+                    names_import.Message = string.Format (Text ("HxNamesAutoImported"), names_import.Message);
+                    Trace.WriteLine (string.Format ("Automatically imported HxNames cache '{0}'.",
+                                                    automatic_names_file), "[HxNames]");
+                    return names_import;
+                }
+                last_failure = names_import;
+                Trace.WriteLine (string.Format ("Automatic HxNames candidate rejected. file='{0}', reason='{1}'",
+                                                automatic_names_file, names_import.Message), "[HxNames]");
+            }
+            if (null != last_failure)
+                import.Message = string.Format (Text ("HxNamesAutoImportFailed"), import.Message, last_failure.Message);
+            if (generation != null && !generation.Success)
+                import.Message = string.Format (Text ("HxNamesGenerationFailed"), import.Message, generation.Error);
+            return import;
+        }
+
+        static IEnumerable<string> FindAutomaticNamesFiles (ResourceParameterCommandResult result, string source_file)
+        {
+            var candidates = new List<string>();
+            AddCandidate (candidates, GetMetadata (result, "HxNamesFile"));
+
+            AddCandidate (candidates, GetAutomaticNamesCacheFile (result, source_file));
+
+            if (!string.IsNullOrEmpty (source_file))
+            {
+                var source_directory = Path.GetDirectoryName (source_file);
+                if (!string.IsNullOrEmpty (source_directory))
+                    AddCandidate (candidates, Path.Combine (source_directory, "HxNames.lst"));
+            }
+            var game_directory_from_result = GetMetadata (result, "GameDirectory");
+            if (!string.IsNullOrEmpty (game_directory_from_result))
+                AddCandidate (candidates, Path.Combine (game_directory_from_result, "HxNames.lst"));
+
+            return candidates.Where (File.Exists);
+        }
+
+        static string GetAutomaticNamesCacheFile (ResourceParameterCommandResult result, string source_file)
+        {
+            var game_executable = GetMetadata (result, "GameExecutable");
+            var game_id = Path.GetFileNameWithoutExtension (game_executable);
+            if (string.IsNullOrWhiteSpace (game_id) && !string.IsNullOrEmpty (source_file))
+            {
+                var game_directory = Path.GetDirectoryName (source_file);
+                game_id = !string.IsNullOrEmpty (game_directory)
+                    ? Path.GetFileName (game_directory)
+                    : null;
+            }
+            if (string.IsNullOrWhiteSpace (game_id))
+                return null;
+            foreach (char c in Path.GetInvalidFileNameChars())
+                game_id = game_id.Replace (c, '_');
+            var local_app_data = Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine (local_app_data, "Onachi", "Onachi-GARbro",
+                                 "HxNames", game_id, "HxNames.lst");
+        }
+
+        static void AddCandidate (ICollection<string> candidates, string path)
+        {
+            if (string.IsNullOrWhiteSpace (path))
+                return;
+            try
+            {
+                path = Path.GetFullPath (path);
+            }
+            catch
+            {
+                return;
+            }
+            if (!candidates.Contains (path, StringComparer.OrdinalIgnoreCase))
+                candidates.Add (path);
+        }
+
+        static bool TryReadNamesFile (string names_file, out Dictionary<string, string> names, out string error)
+        {
+            names = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+            error = null;
+            try
+            {
+                using (var input = new StreamReader (names_file, Encoding.UTF8))
+                {
+                    string line;
+                    int line_number = 0;
+                    while ((line = input.ReadLine()) != null)
+                    {
+                        ++line_number;
+                        if (string.IsNullOrWhiteSpace (line) || line.StartsWith ("#") || line.StartsWith (";"))
+                            continue;
+                        int separator = line.IndexOf (':');
+                        var hash = separator > 0 ? line.Substring (0, separator).Trim() : string.Empty;
+                        var name = separator >= 0 ? line.Substring (separator+1) : string.Empty;
+                        if ((hash.Length != 16 && hash.Length != 64) || !IsHexString (hash)
+                            || (hash.Length == 64 && 0 == name.Length))
+                        {
+                            error = string.Format (Text ("HxNamesInvalidLine"), line_number);
+                            return false;
+                        }
+                        names[hash.ToUpperInvariant()] = name;
+                    }
+                }
+            }
+            catch (Exception X)
+            {
+                error = X.Message;
+                return false;
+            }
+            if (0 == names.Count)
+            {
+                error = Text ("HxNamesEmpty");
+                return false;
+            }
+            return true;
+        }
+
+        static bool IsHexString (string value)
+        {
+            foreach (char c in value)
+            {
+                if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')))
+                    return false;
+            }
+            return value.Length > 0;
         }
 
         static string CreateSchemeName (ResourceParameterCommandResult result, string source_file)
@@ -293,7 +566,7 @@ namespace GameRes.Formats.KiriKiri
             }
         }
 
-        static byte[] ReadHxIndex (string source_file)
+        internal static byte[] ReadHxIndex (string source_file)
         {
             using (var file = new ArcView (source_file))
             {

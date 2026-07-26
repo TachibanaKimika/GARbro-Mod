@@ -29,8 +29,8 @@ conversion options.
 The extraction dialog can remember an option to open the destination folder
 after a successful extraction.
 
-Supported script text extractors can output filtered text, raw text, JSONL,
-or both.
+Supported script text extractors can output filtered text, raw text, diagnostic
+dumps, JSONL, or both.
 When a script supports this choice, the preview panel shows a Script selector
 for switching between supported text modes.
 Extractor behavior and JSONL field conventions are documented in
@@ -39,7 +39,10 @@ Extractor behavior and JSONL field conventions are documented in
 KiriKiri/XP3 script preview and extraction recognize `.ks`, scrambled `.txt`,
 and PSB-backed `.scn` scenario entries.  Filtered mode extracts readable
 dialogue/choice text; raw mode keeps the decoded script text, or all strings
-under `.scn` scenes.
+under `.scn` scenes.  PSB JSONL output preserves the speaker, message, and
+associated voice identifier.  Diagnostic dump mode includes PSB scene metadata,
+control flow, compiled lines, full voice descriptors, and environment snapshots;
+for text KAG scripts it emits decoded source with line numbers.
 
 For protected KiriKiri/XP3 archives that require runtime parameters, the XP3
 archive-parameter dialog includes a `Use KrkrDump...` assistant. It starts the
@@ -51,6 +54,20 @@ bundled KrkrDump runtime, the assistant shows repair instructions and a link to
 the original KrkrDump repository. Operational details are in
 `docs/reference/krkrdump-xp3-assist.md`.
 
+For Hx v4 archives whose contents decrypt but whose hashed names remain
+unresolved, GARbro can generate `HxNames.lst` itself after KrkrDump finishes.
+It decrypts Hx indexes and scenario PSBs, builds resource-name candidates,
+computes the Hx v4 hashes, and retains only candidates that occur in the game
+indexes. Generation runs in the background and its output is saved in the
+per-game local cache for inspection or reuse. On later runs, the last generated
+result is applied immediately while GARbro rebuilds it from the current
+resources in the background. The bottom status bar shows the current archive,
+scenario-entry, candidate, and write progress while this rebuild is running.
+The table is validated against the current archive
+and can be applied to other XP3 archives in the same directory for the current
+session. Compatible external tables can still be imported manually as a
+fallback.
+
 BGI/Ethornell archive script entries recognize `._bp` scripts and v1 bytecode
 with the `BurikoCompiledScriptVer1.00` header.  Filtered mode extracts
 character names, messages, and choices; raw mode also includes referenced
@@ -60,6 +77,17 @@ AdvHD `.ws2` scripts can be opened as script archives and extracted as
 filtered text, raw text, JSONL, or diagnostic bytecode dumps.  Filtered mode
 extracts character names, messages, and choices while removing AdvHD text
 control codes.
+
+Silky's/AI6WIN `.mes` and `.map` scripts support filtered text, raw text,
+JSONL, and diagnostic dumps.  MES extraction recognizes both AI6WIN and
+Silky's+ bytecode, pairs character names with messages in JSONL, and decodes
+line breaks and ruby markers; MAP extraction reads its UTF-16 message table.
+
+Softpal `Sv20` `.src` scripts are recognized when `POINT.DAT` and `TEXT.DAT`
+are available in the same directory.  Filtered mode extracts character names,
+messages, and choices; raw mode preserves Softpal text markers, while JSONL
+keeps name/message structure and dump mode emits decoded bytecode diagnostics.
+Voice mapping is not performed.
 
 Preferences -> Experimental -> Auto-select extraction path makes the extract
 dialog default to the last extraction parent directory plus the nearest parent

@@ -435,4 +435,79 @@ It can't be read correctly from the file.</value>
   <data name="KrkrDumpSchemeImported" xml:space="preserve">
     <value>Imported KrkrDump scheme "{0}".</value>
   </data>
+  <data name="HxNamesButton" xml:space="preserve">
+    <value>Import HxNames.lst manually...</value>
+  </data>
+  <data name="HxNamesSameDirectory" xml:space="preserve">
+    <value>Apply to XP3 archives in the same folder (this session)</value>
+  </data>
+  <data name="HxNamesNeedHxScheme" xml:space="preserve">
+    <value>Select an Hx v4 encryption scheme or import KrkrDump parameters first.</value>
+  </data>
+  <data name="HxNamesUnavailable" xml:space="preserve">
+    <value>HxNames.lst import is not available in this host.</value>
+  </data>
+  <data name="HxNamesSelecting" xml:space="preserve">
+    <value>Selecting HxNames.lst...</value>
+  </data>
+  <data name="HxNamesRequestUnhandled" xml:space="preserve">
+    <value>HxNames.lst import request was not handled.</value>
+  </data>
+  <data name="HxNamesNoResult" xml:space="preserve">
+    <value>HxNames.lst import did not return a result.</value>
+  </data>
+  <data name="HxNamesFileNotFound" xml:space="preserve">
+    <value>HxNames.lst was not found.</value>
+  </data>
+  <data name="HxNamesInvalidLine" xml:space="preserve">
+    <value>HxNames.lst line {0} is invalid. Expected HASH:name with a 16- or 64-digit hexadecimal hash.</value>
+  </data>
+  <data name="HxNamesEmpty" xml:space="preserve">
+    <value>HxNames.lst does not contain any valid mappings.</value>
+  </data>
+  <data name="HxNamesIndexReadFailed" xml:space="preserve">
+    <value>Could not read the Hx v4 index with the selected scheme. Check the archive keys and encryption scheme.</value>
+  </data>
+  <data name="HxNamesNoMatches" xml:space="preserve">
+    <value>HxNames.lst does not match any path or file-name hashes in the current archive.</value>
+  </data>
+  <data name="HxNamesImported" xml:space="preserve">
+    <value>Imported {0} mappings. Current archive matched {1}/{2} path hashes and {3}/{4} file-name hashes.</value>
+  </data>
+  <data name="HxNamesImportedSameDirectory" xml:space="preserve">
+    <value>Imported {0} mappings. Current archive matched {1}/{2} path hashes and {3}/{4} file-name hashes. Other XP3 archives in this folder will reuse them during this session.</value>
+  </data>
+  <data name="HxNamesAutoImported" xml:space="preserve">
+    <value>HxNames was imported automatically. {0}</value>
+  </data>
+  <data name="HxNamesAutoImportFailed" xml:space="preserve">
+    <value>{0} Automatic HxNames import failed: {1}</value>
+  </data>
+  <data name="HxNamesGenerated" xml:space="preserve">
+    <value>Generated HxNames in real time from {0} scenarios and {1} candidates ({2} path and {3} file-name matches). {4}</value>
+  </data>
+  <data name="HxNamesGenerationFailed" xml:space="preserve">
+    <value>{0} Real-time HxNames generation failed: {1}</value>
+  </data>
+  <data name="HxNamesGenerating" xml:space="preserve">
+    <value>Generating Hx v4 names from decrypted game resources...</value>
+  </data>
+  <data name="HxNamesProgressPreparing" xml:space="preserve">
+    <value>Hx v4 name recovery: preparing decrypted resources...</value>
+  </data>
+  <data name="HxNamesProgressIndexes" xml:space="preserve">
+    <value>Hx v4 name recovery: reading archive indexes {0}/{1} ({2} readable)</value>
+  </data>
+  <data name="HxNamesProgressScenarios" xml:space="preserve">
+    <value>Hx v4 name recovery: scanning {0} ({1}/{2}), entry {3}/{4} ({5} scenarios parsed)</value>
+  </data>
+  <data name="HxNamesProgressNoScenarios" xml:space="preserve">
+    <value>Hx v4 name recovery: no scenario archive found; using logged and common names...</value>
+  </data>
+  <data name="HxNamesProgressCandidates" xml:space="preserve">
+    <value>Hx v4 name recovery: expanding candidates ({0:N0} candidates, {1:N0} matches)</value>
+  </data>
+  <data name="HxNamesProgressWriting" xml:space="preserve">
+    <value>Hx v4 name recovery: writing {1:N0} matches from {0:N0} candidates...</value>
+  </data>
 </root>

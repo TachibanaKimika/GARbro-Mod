@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.IO.Compression;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using GameRes.Formats.Emote;
@@ -50,7 +51,12 @@ namespace GameRes.Formats.KiriKiri
         const uint ScrambledMode1Signature = 0xFF01FEFE;
         const uint ScrambledMode2Signature = 0xFF02FEFE;
 
-        static readonly string[] s_text_modes = { ScriptTextMode.Filtered, ScriptTextMode.Raw, ScriptTextMode.JsonLines };
+        static readonly string[] s_text_modes = {
+            ScriptTextMode.Filtered,
+            ScriptTextMode.Raw,
+            ScriptTextMode.Dump,
+            ScriptTextMode.JsonLines,
+        };
 
         static readonly Regex LineCommandRegex = new Regex (
             @"^\s*@(?<command>[^ ]+)(?: +(?<attrname>[^= ]+)(?: *= *(?<attrvalue>""(?:\\""|[^""])*""|'(?:\\'|[^'])*'|[^""' ]*))?)*",
@@ -125,6 +131,14 @@ namespace GameRes.Formats.KiriKiri
 
         public Stream ConvertFrom (IBinaryStream file, string text_mode)
         {
+            bool dump = string.Equals (text_mode, ScriptTextMode.Dump, StringComparison.OrdinalIgnoreCase);
+            if (dump)
+            {
+                if (file.Name.HasExtension (".scn"))
+                    return CreateScenarioDump (file);
+                return CreateKagDump (ReadTextScript (file), file.Name);
+            }
+
             bool jsonl = string.Equals (text_mode, ScriptTextMode.JsonLines, StringComparison.OrdinalIgnoreCase);
             if (jsonl)
             {
@@ -205,6 +219,210 @@ namespace GameRes.Formats.KiriKiri
             return output;
         }
 
+        static Stream CreateScenarioDump (IBinaryStream file)
+        {
+            file.Position = 0;
+            var output = new MemoryStream();
+            using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
+            using (var reader = new PsbReader (file))
+            {
+                if (!reader.ParseNonEncrypted())
+                    throw new InvalidFormatException();
+                var scenes = reader.GetRootKey<IList> ("scenes");
+                if (null == scenes)
+                    throw new InvalidFormatException();
+
+                writer.WriteLine ("# KiriKiri PSB scenario dump");
+                writer.WriteLine ("# This is not reconstructed KAG source; it is a decoded PSB object dump.");
+                writer.WriteLine ();
+                writer.WriteLine ("[Header]");
+                WritePsbProperty (writer, "Source", file.Name);
+                WritePsbProperty (writer, "Version", reader.Version);
+                WritePsbProperty (writer, "Encrypted", reader.IsEncrypted);
+                WritePsbProperty (writer, "Name", reader.GetRootKey<string> ("name"));
+                WritePsbProperty (writer, "Hash", reader.GetRootKey<string> ("hash"));
+                WritePsbProperty (writer, "SceneCount", scenes.Count);
+                WritePsbProperty (writer, "Outlines", reader.GetRootKey<IList> ("outlines"));
+                writer.WriteLine ();
+
+                for (int i = 0; i < scenes.Count; ++i)
+                {
+                    var scene = scenes[i] as IDictionary;
+                    writer.WriteLine ("[Scene {0:D4}]", i);
+                    if (null == scene)
+                    {
+                        WritePsbProperty (writer, "Value", scenes[i]);
+                        writer.WriteLine ();
+                        continue;
+                    }
+
+                    writer.WriteLine ("[Metadata]");
+                    foreach (DictionaryEntry item in scene)
+                    {
+                        var key = item.Key as string;
+                        if ("lines" == key || "texts" == key || "nexts" == key
+                            || "postevals" == key || "selects" == key)
+                            continue;
+                        WritePsbProperty (writer, key ?? item.Key.ToString(), item.Value);
+                    }
+                    writer.WriteLine ();
+
+                    WriteScenarioTexts (writer, GetValue<IList> (scene, "texts"));
+                    WritePsbListSection (writer, "Selects", GetValue<IList> (scene, "selects"));
+                    WritePsbListSection (writer, "Nexts", GetValue<IList> (scene, "nexts"));
+                    WritePsbListSection (writer, "Postevals", GetValue<IList> (scene, "postevals"));
+                    WritePsbListSection (writer, "Lines", GetValue<IList> (scene, "lines"));
+                }
+            }
+            output.Position = 0;
+            return new BinMemoryStream (output, file.Name);
+        }
+
+        static Stream CreateKagDump (string script, string name)
+        {
+            var output = new MemoryStream();
+            using (var writer = new StreamWriter (output, new UTF8Encoding (true), 0x400, true))
+            using (var reader = new StringReader (script))
+            {
+                writer.WriteLine ("# KiriKiri/KAG decoded text dump");
+                writer.WriteLine ("# This is decoded source text with diagnostic line numbers.");
+                writer.WriteLine ();
+                writer.WriteLine ("[Lines]");
+                string line;
+                int line_number = 1;
+                while (null != (line = reader.ReadLine()))
+                    writer.WriteLine ("{0:D6}: {1}", line_number++, line);
+            }
+            output.Position = 0;
+            return new BinMemoryStream (output, name);
+        }
+
+        static void WriteScenarioTexts (TextWriter writer, IList texts)
+        {
+            writer.WriteLine ("[Texts]");
+            if (null == texts || 0 == texts.Count)
+            {
+                writer.WriteLine ("<empty>");
+                writer.WriteLine ();
+                return;
+            }
+
+            for (int i = 0; i < texts.Count; ++i)
+            {
+                var text = texts[i] as IList;
+                string real_name;
+                string display_name;
+                string message;
+                bool has_message = TryGetScenarioText (text, out real_name, out display_name, out message);
+                writer.Write ("#{0:D4}", i);
+                if (has_message)
+                {
+                    writer.Write (" name=");
+                    WritePsbValue (writer, display_name ?? real_name);
+                    var voices = GetScenarioVoices (text);
+                    if (null != voices)
+                    {
+                        writer.Write (" voice=");
+                        WritePsbValue (writer, GetScenarioVoice (text));
+                        writer.Write (" voiceData=");
+                        WritePsbValue (writer, voices);
+                    }
+                }
+                writer.WriteLine ();
+                if (has_message)
+                    writer.WriteLine (NormalizeScenarioText (message));
+                writer.Write ("raw=");
+                WritePsbValue (writer, texts[i]);
+                writer.WriteLine ();
+                writer.WriteLine ();
+            }
+        }
+
+        static void WritePsbListSection (TextWriter writer, string name, IList values)
+        {
+            writer.WriteLine ("[{0}]", name);
+            if (null == values || 0 == values.Count)
+            {
+                writer.WriteLine ("<empty>");
+            }
+            else
+            {
+                for (int i = 0; i < values.Count; ++i)
+                {
+                    writer.Write ("#{0:D4} ", i);
+                    WritePsbValue (writer, values[i]);
+                    writer.WriteLine ();
+                }
+            }
+            writer.WriteLine ();
+        }
+
+        static void WritePsbProperty (TextWriter writer, string name, object value)
+        {
+            writer.Write (name);
+            writer.Write ('=');
+            WritePsbValue (writer, value);
+            writer.WriteLine ();
+        }
+
+        static void WritePsbValue (TextWriter writer, object value)
+        {
+            if (null == value)
+            {
+                writer.Write ("null");
+                return;
+            }
+            var text = value as string;
+            if (null != text)
+            {
+                ScriptJsonLines.WriteJsonString (writer, text);
+                return;
+            }
+            var dict = value as IDictionary;
+            if (null != dict)
+            {
+                writer.Write ('{');
+                bool first = true;
+                foreach (DictionaryEntry item in dict)
+                {
+                    if (!first)
+                        writer.Write (',');
+                    first = false;
+                    ScriptJsonLines.WriteJsonString (writer, item.Key.ToString());
+                    writer.Write (':');
+                    WritePsbValue (writer, item.Value);
+                }
+                writer.Write ('}');
+                return;
+            }
+            var list = value as IList;
+            if (null != list)
+            {
+                writer.Write ('[');
+                for (int i = 0; i < list.Count; ++i)
+                {
+                    if (i > 0)
+                        writer.Write (',');
+                    WritePsbValue (writer, list[i]);
+                }
+                writer.Write (']');
+                return;
+            }
+            var boolean = value as bool?;
+            if (boolean.HasValue)
+            {
+                writer.Write (boolean.Value ? "true" : "false");
+                return;
+            }
+            var formattable = value as IFormattable;
+            if (null != formattable)
+            {
+                writer.Write (formattable.ToString (null, CultureInfo.InvariantCulture));
+                return;
+            }
+            ScriptJsonLines.WriteJsonString (writer, value.ToString());
+        }
+
         static IEnumerable<string> ReadScenarioLines (IBinaryStream file, bool filter)
         {
             file.Position = 0;
@@ -277,45 +495,14 @@ namespace GameRes.Formats.KiriKiri
             foreach (var text_obj in texts)
             {
                 var text = text_obj as IList;
-                if (null == text || text.Count < 3)
-                    continue;
-
-                string real_name = GetString (text, 0);
+                string real_name;
                 string display_name;
-                object message;
-                if (text[1] is IList)
-                {
-                    display_name = null;
-                    message = text[1];
-                }
-                else
-                {
-                    display_name = GetString (text, 1);
-                    if (null == display_name && !string.IsNullOrEmpty (real_name) && real_name != "＠")
-                        display_name = real_name;
-                    message = GetString (text, 2);
-                    if (null == message)
-                        message = text[2];
-                }
-
-                var languages = message as IList;
-                if (null != languages && languages.Count > 0)
-                {
-                    var language_text = languages[0] as IList;
-                    if (null != language_text && language_text.Count >= 2)
-                    {
-                        display_name = GetString (language_text, 0);
-                        message = GetString (language_text, 1);
-                    }
-                }
-
-                var message_text = message as string;
-                if (null != message_text)
-                {
-                    if (!string.IsNullOrEmpty (real_name))
-                        yield return NormalizeScenarioText (display_name ?? real_name);
-                    yield return NormalizeScenarioText (message_text);
-                }
+                string message;
+                if (!TryGetScenarioText (text, out real_name, out display_name, out message))
+                    continue;
+                if (!string.IsNullOrEmpty (real_name))
+                    yield return NormalizeScenarioText (display_name ?? real_name);
+                yield return NormalizeScenarioText (message);
             }
         }
 
@@ -379,47 +566,93 @@ namespace GameRes.Formats.KiriKiri
             foreach (var text_obj in texts)
             {
                 var text = text_obj as IList;
-                if (null == text || text.Count < 3)
-                    continue;
-
-                string real_name = GetString (text, 0);
+                string real_name;
                 string display_name;
-                object message;
-                if (text[1] is IList)
-                {
-                    display_name = null;
-                    message = text[1];
-                }
-                else
-                {
-                    display_name = GetString (text, 1);
-                    if (null == display_name && !string.IsNullOrEmpty (real_name) && real_name != "＠")
-                        display_name = real_name;
-                    message = GetString (text, 2);
-                    if (null == message)
-                        message = text[2];
-                }
-
-                var languages = message as IList;
-                if (null != languages && languages.Count > 0)
-                {
-                    var language_text = languages[0] as IList;
-                    if (null != language_text && language_text.Count >= 2)
-                    {
-                        display_name = GetString (language_text, 0);
-                        message = GetString (language_text, 1);
-                    }
-                }
-
-                var message_text = message as string;
-                if (null == message_text)
+                string message;
+                if (!TryGetScenarioText (text, out real_name, out display_name, out message))
                     continue;
 
-                var entry = new ScriptTextEntry (NormalizeScenarioText (message_text));
+                var entry = new ScriptTextEntry (NormalizeScenarioText (message));
                 if (!string.IsNullOrEmpty (real_name))
                     entry.Names.Add (NormalizeScenarioText (display_name ?? real_name));
+                entry.Voice = GetScenarioVoice (text);
                 yield return entry;
             }
+        }
+
+        static bool TryGetScenarioText (IList text, out string real_name, out string display_name,
+                                        out string message_text)
+        {
+            real_name = null;
+            display_name = null;
+            message_text = null;
+            if (null == text || text.Count < 3)
+                return false;
+
+            real_name = GetString (text, 0);
+            object message;
+            if (text[1] is IList)
+            {
+                message = text[1];
+            }
+            else
+            {
+                display_name = GetString (text, 1);
+                if (null == display_name && !string.IsNullOrEmpty (real_name) && real_name != "＠")
+                    display_name = real_name;
+                message = GetString (text, 2);
+                if (null == message)
+                    message = text[2];
+            }
+
+            var languages = message as IList;
+            if (null != languages && languages.Count > 0)
+            {
+                var language_text = languages[0] as IList;
+                if (null != language_text && language_text.Count >= 2)
+                {
+                    display_name = GetString (language_text, 0);
+                    message = GetString (language_text, 1);
+                }
+            }
+            message_text = message as string;
+            return null != message_text;
+        }
+
+        static string GetScenarioVoice (IList text)
+        {
+            var voices = GetScenarioVoices (text);
+            if (null == voices)
+                return null;
+            foreach (var voice_obj in voices)
+            {
+                var voice = voice_obj as IDictionary;
+                if (null == voice)
+                    continue;
+                var id = GetValue<string> (voice, "voice");
+                if (!string.IsNullOrEmpty (id))
+                    return id;
+            }
+            return null;
+        }
+
+        static IList GetScenarioVoices (IList text)
+        {
+            if (null == text)
+                return null;
+            for (int i = 2; i < text.Count; ++i)
+            {
+                var voices = text[i] as IList;
+                if (null == voices)
+                    continue;
+                foreach (var voice_obj in voices)
+                {
+                    var voice = voice_obj as IDictionary;
+                    if (null != voice && !string.IsNullOrEmpty (GetValue<string> (voice, "voice")))
+                        return voices;
+                }
+            }
+            return null;
         }
 
         static T GetValue<T> (IDictionary dict, string key) where T : class

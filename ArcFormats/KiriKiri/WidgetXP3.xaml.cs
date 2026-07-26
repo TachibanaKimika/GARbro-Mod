@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Data;
 using GameRes;
@@ -16,10 +17,12 @@ namespace GameRes.Formats.GUI
                                       IResourceToolResultConsumer
     {
         const string KrkrDumpCommandName = "KiriKiri.KrkrDump";
+        const string HxNamesCommandName = "KiriKiri.HxNamesImport";
 
         string m_source_file;
         string m_imported_scheme;
         bool m_resetting_scheme;
+        Action<ResourceProgressInfo> m_progress_reporter;
 
         public event EventHandler<ResourceParameterCommandEventArgs> ParameterCommandRequested;
 
@@ -30,6 +33,8 @@ namespace GameRes.Formats.GUI
                 last_selected = null;
             InitializeComponent();
             KrkrDumpButton.Content = Text ("KrkrDumpButton");
+            HxNamesButton.Content = Text ("HxNamesButton");
+            HxNamesSameDirectoryText.Text = Text ("HxNamesSameDirectory");
             ResetSchemeSource();
             this.Loaded += (s, e) => {
                 m_resetting_scheme = true;
@@ -60,11 +65,13 @@ namespace GameRes.Formats.GUI
 
         public void SetResourceContext (ResourceParameterContext context)
         {
+            m_progress_reporter = null != context ? context.ProgressReporter : null;
             if (null != context)
             {
                 m_source_file = context.SourceFileName;
-                if (Xp3Opener.IsTransientSchemeFor (m_source_file))
-                    m_imported_scheme = Xp3Opener.TransientSchemeName;
+                m_imported_scheme = Xp3Opener.IsTransientSchemeFor (m_source_file)
+                    ? Xp3Opener.TransientSchemeName
+                    : null;
             }
         }
 
@@ -102,7 +109,7 @@ namespace GameRes.Formats.GUI
                 m_imported_scheme = null;
         }
 
-        void OnKrkrDumpClick (object sender, System.Windows.RoutedEventArgs e)
+        async void OnKrkrDumpClick (object sender, System.Windows.RoutedEventArgs e)
         {
             var handler = ParameterCommandRequested;
             if (null == handler)
@@ -118,18 +125,87 @@ namespace GameRes.Formats.GUI
                 KrkrDumpStatus.Text = Text ("KrkrDumpRequestUnhandled");
                 return;
             }
-            string message;
-            ApplyResourceToolResult (args.Result, out message);
-            KrkrDumpStatus.Text = message;
+            KrkrDumpStatus.Text = Text ("HxNamesGenerating");
+            KrkrDumpButton.IsEnabled = false;
+            HxNamesButton.IsEnabled = false;
+            var progress_reporter = m_progress_reporter;
+            ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
+            try
+            {
+                var result = args.Result;
+                var source_file = m_source_file;
+                var same_directory = HxNamesSameDirectory.IsChecked == true;
+                var import = await Task.Run (() => KrkrDumpResultImporter.Import (
+                    result, source_file, same_directory, progress_reporter));
+                KrkrDumpStatus.Text = import.Message;
+                ApplyImportResult (import);
+                ReportProgress (progress_reporter, 100, import.Message, true);
+            }
+            catch (Exception X)
+            {
+                KrkrDumpStatus.Text = X.Message;
+                ReportProgress (progress_reporter, 100, X.Message, true);
+            }
+            finally
+            {
+                KrkrDumpButton.IsEnabled = true;
+                HxNamesButton.IsEnabled = true;
+            }
+        }
+
+        void OnHxNamesClick (object sender, System.Windows.RoutedEventArgs e)
+        {
+            var base_scheme = !string.IsNullOrEmpty (m_imported_scheme)
+                ? m_imported_scheme
+                : Scheme.SelectedValue as string;
+            if (!(Xp3Opener.GetScheme (base_scheme) is HxCrypt))
+            {
+                KrkrDumpStatus.Text = Text ("HxNamesNeedHxScheme");
+                return;
+            }
+            var handler = ParameterCommandRequested;
+            if (null == handler)
+            {
+                KrkrDumpStatus.Text = Text ("HxNamesUnavailable");
+                return;
+            }
+            KrkrDumpStatus.Text = Text ("HxNamesSelecting");
+            var args = new ResourceParameterCommandEventArgs (HxNamesCommandName) { SourceFileName = m_source_file };
+            handler (this, args);
+            if (!args.Handled)
+            {
+                KrkrDumpStatus.Text = Text ("HxNamesRequestUnhandled");
+                return;
+            }
+            var import = KrkrDumpResultImporter.ImportNamesFile (
+                args.Result, m_source_file, base_scheme, HxNamesSameDirectory.IsChecked == true);
+            KrkrDumpStatus.Text = import.Message;
+            ApplyImportResult (import);
         }
 
         public bool ApplyResourceToolResult (ResourceParameterCommandResult result, out string message)
         {
-            var import = KrkrDumpResultImporter.Import (result, m_source_file);
-            message = import.Message;
-            if (!import.Success)
-                return false;
+            var progress_reporter = m_progress_reporter;
+            ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
+            try
+            {
+                var import = KrkrDumpResultImporter.Import (
+                    result, m_source_file, HxNamesSameDirectory.IsChecked == true, progress_reporter);
+                message = import.Message;
+                ReportProgress (progress_reporter, 100, import.Message, true);
+                return ApplyImportResult (import);
+            }
+            catch (Exception X)
+            {
+                ReportProgress (progress_reporter, 100, X.Message, true);
+                throw;
+            }
+        }
 
+        bool ApplyImportResult (KrkrDumpImportResult import)
+        {
+            if (null == import || !import.Success)
+                return false;
             ResetSchemeSource();
             m_imported_scheme = import.SchemeName;
             return true;
@@ -138,6 +214,26 @@ namespace GameRes.Formats.GUI
         static string Text (string name)
         {
             return arcStrings.ResourceManager.GetString (name) ?? name;
+        }
+
+        static void ReportProgress (Action<ResourceProgressInfo> reporter, int percentage,
+                                    string message, bool completed = false)
+        {
+            if (null == reporter)
+                return;
+            try
+            {
+                reporter (new ResourceProgressInfo {
+                    Percentage = percentage,
+                    Message = message,
+                    IsCompleted = completed,
+                });
+            }
+            catch (Exception X)
+            {
+                System.Diagnostics.Trace.WriteLine (
+                    "HxNames progress reporter failed: " + X.Message, "[HxNames]");
+            }
         }
     }
 

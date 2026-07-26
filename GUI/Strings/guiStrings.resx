@@ -674,6 +674,15 @@ Run KrkrDump to start the game, collect the archive parameters, and try opening 
   <data name="KrkrDumpUnknownError" xml:space="preserve">
     <value>Unknown error.</value>
   </data>
+  <data name="HxNamesSelectFile" xml:space="preserve">
+    <value>Select HxNames.lst</value>
+  </data>
+  <data name="HxNamesFileFilter" xml:space="preserve">
+    <value>Hx v4 name tables (HxNames.lst;*.lst)|HxNames.lst;*.lst|All files (*.*)|*.*</value>
+  </data>
+  <data name="HxNamesCanceled" xml:space="preserve">
+    <value>HxNames.lst import was canceled.</value>
+  </data>
   <data name="TextInterface" xml:space="preserve">
     <value>Interface</value>
   </data>

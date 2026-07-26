@@ -57,6 +57,7 @@ namespace GameRes.Formats.KiriKiri
         public ulong   FilterKey;
         public int     RandomType;
         public string  NamesFile;
+        public string[] AdditionalNamesFiles;
         public Dictionary<string, HxIndexKey> IndexKeyDict;
 
         public HxCrypt (CxScheme scheme) : base (scheme)
@@ -100,18 +101,24 @@ namespace GameRes.Formats.KiriKiri
             if (null == root_obj)
                 return null;
             CreateLookup32 ();
-            var path_map = new Dictionary<string, string> ();
-            var name_map = new Dictionary<string, string> ();
+            var path_map = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+            var name_map = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
             try
             {
                 ReadNamesFile (line => {
-                    var name = line.Split (':');  // "hash:name"
-                    if (name.Length != 2)
+                    int separator = line.IndexOf (':'); // "hash:name"
+                    if (separator <= 0)
                         return;
-                    if (name[0].Length == 16)
-                        path_map[name[0]] = name[1];
-                    else if (name[0].Length == 64)
-                        name_map[name[0]] = name[1];
+                    var hash = line.Substring (0, separator).Trim();
+                    var value = line.Substring (separator+1);
+                    if (hash.Length == 16)
+                    {
+                        if ("/" == value || "\\" == value)
+                            value = string.Empty;
+                        path_map[hash] = value;
+                    }
+                    else if (hash.Length == 64)
+                        name_map[hash] = value;
                 });
             }
             catch (Exception) { }
@@ -217,18 +224,61 @@ namespace GameRes.Formats.KiriKiri
             return index_obj as object[];
         }
 
+        internal HxCrypt CloneWithAdditionalNamesFile (string names_file)
+        {
+            var scheme = new CxScheme
+            {
+                Mask = m_mask,
+                Offset = m_offset,
+                PrologOrder = PrologOrder,
+                OddBranchOrder = OddBranchOrder,
+                EvenBranchOrder = EvenBranchOrder,
+                ControlBlock = ControlBlock,
+                TpmFileName = TpmFileName,
+            };
+            var names_files = new List<string>();
+            if (null != AdditionalNamesFiles)
+                names_files.AddRange (AdditionalNamesFiles);
+            if (!string.IsNullOrEmpty (names_file)
+                && !names_files.Exists (x => string.Equals (x, names_file, StringComparison.OrdinalIgnoreCase)))
+            {
+                names_files.Add (names_file);
+            }
+            return new HxCrypt (scheme)
+            {
+                IndexKey1 = IndexKey1,
+                IndexKey2 = IndexKey2,
+                FilterKey = FilterKey,
+                RandomType = RandomType,
+                NamesFile = NamesFile,
+                AdditionalNamesFiles = names_files.ToArray(),
+                IndexKeyDict = IndexKeyDict,
+            };
+        }
+
         void ReadNamesFile (Action<string> process_line)
         {
-            if (string.IsNullOrEmpty (NamesFile))
+            ReadNamesFile (NamesFile, process_line);
+            if (null == AdditionalNamesFiles)
                 return;
-            if (!Path.IsPathRooted (NamesFile))
+            foreach (var names_file in AdditionalNamesFiles)
+                ReadNamesFile (names_file, process_line);
+        }
+
+        void ReadNamesFile (string names_file, Action<string> process_line)
+        {
+            if (string.IsNullOrEmpty (names_file))
+                return;
+            if (!Path.IsPathRooted (names_file))
             {
-                FormatCatalog.Instance.ReadFileList (NamesFile, process_line);
+                FormatCatalog.Instance.ReadFileList (names_file, process_line);
                 return;
             }
-            if (!File.Exists (NamesFile))
+            if (!File.Exists (names_file))
                 return;
-            using (var input = new StreamReader (NamesFile, Encoding.UTF8))
+            using (var file = new FileStream (names_file, FileMode.Open, FileAccess.Read,
+                                              FileShare.ReadWrite | FileShare.Delete))
+            using (var input = new StreamReader (file, Encoding.UTF8))
             {
                 string line;
                 while ((line = input.ReadLine()) != null)

@@ -11,7 +11,12 @@
               SelectionChanged="OnSchemeSelectionChanged"/>
     <TextBlock Name="AlgorithmName" DataContext="{Binding ElementName=Scheme, Path=SelectedItem}" Margin="0,5,0,0"
                Text="{Binding Path=Value, Mode=OneWay}"/>
-            <Button Name="KrkrDumpButton" Width="180" Margin="0,8,0,0"
-                    HorizontalAlignment="Left" Click="OnKrkrDumpClick"/>
-            <TextBlock Name="KrkrDumpStatus" Margin="0,6,0,0" TextWrapping="Wrap"/>
+    <Button Name="KrkrDumpButton" Width="180" Margin="0,8,0,0"
+            HorizontalAlignment="Left" Click="OnKrkrDumpClick"/>
+    <Button Name="HxNamesButton" Width="180" Margin="0,6,0,0"
+            HorizontalAlignment="Left" Click="OnHxNamesClick"/>
+    <CheckBox Name="HxNamesSameDirectory" Margin="0,6,0,0" IsChecked="True">
+        <TextBlock Name="HxNamesSameDirectoryText" TextWrapping="Wrap"/>
+    </CheckBox>
+    <TextBlock Name="KrkrDumpStatus" Margin="0,6,0,0" TextWrapping="Wrap"/>
 </StackPanel>
