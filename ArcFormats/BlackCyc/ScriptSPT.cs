@@ -73,9 +73,25 @@ namespace GameRes.Formats.BlackCyc
         Dump,
     }
 
-    internal class SptEntry : Entry
+    internal class SptEntry : Entry, IScriptTextOutputEntry
     {
         public SptEntryContent Content;
+
+        public string TextMode
+        {
+            get
+            {
+                switch (Content)
+                {
+                case SptEntryContent.RawText:
+                    return ScriptTextMode.Raw;
+                case SptEntryContent.Dump:
+                    return ScriptTextMode.Dump;
+                default:
+                    return ScriptTextMode.Filtered;
+                }
+            }
+        }
     }
 
     [Export(typeof(ScriptFormat))]

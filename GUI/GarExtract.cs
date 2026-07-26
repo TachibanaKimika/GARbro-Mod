@@ -506,6 +506,7 @@ namespace GARbro.GUI
             file_list = file_list.Where (e => e.Offset >= 0);
             var files = file_list.ToList();
             int before_count = files.Count;
+            files = FilterScriptTextOutputs (files);
             if (files.Count > 1 && (m_skip_images || m_skip_script || m_skip_audio))
             {
                 files = files.Where (f => !(m_skip_images && f.Type == "image") &&
@@ -515,6 +516,52 @@ namespace GARbro.GUI
             Trace.WriteLine (string.Format ("GetFilesToExtract. before={0}, after={1}, skipImages={2}, skipScript={3}, skipAudio={4}, typeCounts='{5}'",
                 before_count, files.Count, m_skip_images, m_skip_script, m_skip_audio, FormatTypeCounts (files)), "[Extract]");
             return files.OrderBy (e => e.Offset).ToList();
+        }
+
+        private List<Entry> FilterScriptTextOutputs (List<Entry> files)
+        {
+            var outputs = files.Select (entry => new {
+                    Entry = entry,
+                    Output = entry as IScriptTextOutputEntry,
+                })
+                .Where (item => null != item.Output)
+                .ToList();
+            if (!outputs.Any())
+                return files;
+            if (m_skip_script)
+                return files.Where (entry => !(entry is IScriptTextOutputEntry)).ToList();
+
+            var available_modes = new HashSet<string> (
+                outputs.Select (item => item.Output.TextMode),
+                StringComparer.OrdinalIgnoreCase);
+            var selected_modes = new HashSet<string> (StringComparer.OrdinalIgnoreCase);
+            if (ExtractDialog.ScriptTextBoth == m_script_text_output_mode)
+            {
+                selected_modes.Add (ScriptTextMode.Filtered);
+                selected_modes.Add (ScriptTextMode.Raw);
+            }
+            else
+            {
+                string selected_mode = NormalizeScriptTextMode (m_script_text_output_mode);
+                if (!available_modes.Contains (selected_mode))
+                {
+                    if (!available_modes.Contains (ScriptTextMode.Filtered))
+                        return files;
+                    selected_mode = ScriptTextMode.Filtered;
+                }
+                selected_modes.Add (selected_mode);
+            }
+
+            var filtered = files.Where (entry => {
+                    var output = entry as IScriptTextOutputEntry;
+                    return null == output || selected_modes.Contains (output.TextMode);
+                })
+                .ToList();
+            Trace.WriteLine (string.Format (
+                "FilterScriptTextOutputs. requestedMode='{0}', selectedModes='{1}', virtualBefore={2}, virtualAfter={3}",
+                m_script_text_output_mode, string.Join (",", selected_modes), outputs.Count,
+                filtered.Count (entry => entry is IScriptTextOutputEntry)), "[ScriptExtract]");
+            return filtered;
         }
 
         static string FormatTypeCounts (IEnumerable<Entry> file_list)
@@ -631,7 +678,9 @@ namespace GARbro.GUI
             {
                 Trace.WriteLine (string.Format ("ExtractEntry begin. entry='{0}', type='{1}', offset={2}, size={3}",
                     entry.Name, entry.Type, entry.Offset, entry.Size), "[Extract]");
-                if (null != m_image_format && entry.Type == "image")
+                if (entry is IScriptTextOutputEntry)
+                    ExtractEntryAsIs (arc, entry);
+                else if (null != m_image_format && entry.Type == "image")
                     ExtractImage (arc, entry, m_image_format);
                 else if (m_convert_audio && entry.Type == "audio")
                     ExtractAudio (arc, entry);

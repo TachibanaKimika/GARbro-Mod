@@ -176,6 +176,14 @@ namespace GameRes
         Stream ConvertFrom (IBinaryStream file, string text_mode);
     }
 
+    /// <summary>
+    /// Marks an archive entry that already represents one converted script text mode.
+    /// </summary>
+    public interface IScriptTextOutputEntry
+    {
+        string TextMode { get; }
+    }
+
     public abstract class GenericScriptFormat : ScriptFormat
     {
         public override bool IsScript (IBinaryStream file)

@@ -21,6 +21,14 @@ Formats should expose only the modes they can support honestly. If a mode is
 requested through the UI but the format does not list it in `TextModes`,
 extraction falls back to the format default.
 
+Some standalone script formats are also exposed as small virtual archives so
+their converted text can be previewed. Entries produced by these archive
+handlers must implement `IScriptTextOutputEntry` and report their mode. Archive
+extraction then writes only the selected mode and copies the already-converted
+entry as-is instead of feeding it through script detection again. The UI's
+`Both` choice means `filtered` plus `raw`; diagnostic `dump` and structured
+`jsonl` output remain explicit choices.
+
 ## JSONL Schema
 
 Use `ScriptJsonLines.CreateStream` to write JSONL. Do not hand-roll JSON

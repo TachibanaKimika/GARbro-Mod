@@ -107,9 +107,27 @@ namespace GameRes.Formats.AdvHD
         JsonLines,
     }
 
-    internal class Ws2Entry : Entry
+    internal class Ws2Entry : Entry, IScriptTextOutputEntry
     {
         public Ws2EntryContent Content;
+
+        public string TextMode
+        {
+            get
+            {
+                switch (Content)
+                {
+                case Ws2EntryContent.RawText:
+                    return ScriptTextMode.Raw;
+                case Ws2EntryContent.Dump:
+                    return ScriptTextMode.Dump;
+                case Ws2EntryContent.JsonLines:
+                    return ScriptTextMode.JsonLines;
+                default:
+                    return ScriptTextMode.Filtered;
+                }
+            }
+        }
     }
 
     [Export(typeof(ScriptFormat))]
