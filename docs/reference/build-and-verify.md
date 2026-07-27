@@ -184,6 +184,46 @@ so `makensis.exe` is available, then run:
 
 The installer is written to `bin\Package\Onachi-GARbro-setup.exe`.
 
+The GUI project first stages the repo-local Codex skill under
+`bin\<Configuration>\Skills\garbro-cli`, then creates the distributable
+`bin\<Configuration>\garbro-cli-skill.zip`. The ZIP must contain:
+
+```text
+garbro-cli\SKILL.md
+garbro-cli\agents\openai.yaml
+garbro-cli\references\command-reference.md
+garbro-cli\references\script-text-modes.md
+garbro-cli\references\machine-protocol.md
+garbro-cli\references\extraction-safety.md
+```
+
+`GARbro.nsi` installs the ZIP next to the executables. The settings page saves
+an atomic copy to a user-selected path; it does not inspect or modify the
+current user's Codex home. After building, verify the package without touching
+the real Codex home:
+
+```powershell
+.\tests\Installer\Invoke-CodexSkillPackageTests.ps1 -Configuration Release
+```
+
+The components page offers an initially unchecked option to add the installation
+directory, which contains `Onachi-GARbro.Cli.exe`, to the machine `PATH`.
+`Installer\Update-Path.ps1` performs the add/remove operation without the NSIS
+string-length limit. The uninstaller removes the directory only when the
+installer recorded that it added the entry. Exercise the helper safely in a
+child process before packaging:
+
+```powershell
+.\tests\Installer\Invoke-PathRegistrationTests.ps1
+.\tests\Installer\Invoke-CodexSkillPackageTests.ps1 -Configuration Release
+```
+
+Do not run an installer merely to verify this component on a development
+machine: installation closes running GARbro processes and changes machine
+state. Compile `GARbro.nsi`, inspect the component in verbose compiler output,
+and reserve a real install/uninstall smoke for a disposable Windows test
+environment.
+
 The XP3 KrkrDump assistant expects bundled KrkrDump runtime files next to the
 GUI executable. The repository currently bundles the x86 KrkrDump runtime:
 
@@ -251,9 +291,28 @@ When reporting these, include the exact command and the first blocking error.
 After a successful build, use the smallest relevant smoke check:
 
 ```powershell
+bin\Debug\Onachi-GARbro.Cli.exe capabilities --output json --non-interactive
 bin\Debug\Onachi-GARbro.Console.exe -l
 bin\Debug\Onachi-GARbro.Image.Convert.exe -l
 ```
+
+For the machine CLI protocol, extraction safety, synthetic script/ZIP cases,
+and optional local YPF/JPEG samples:
+
+```powershell
+.\tests\Cli\Invoke-CliTests.ps1 -Configuration Debug
+
+.\tests\Cli\Invoke-CliTests.ps1 `
+  -Configuration Debug `
+  -SampleRoot "I:\TempDays\[Whirlpool][201903]pieces／渡り鳥のソムニウム"
+
+.\tests\Installer\Invoke-PathRegistrationTests.ps1
+```
+
+The test script creates output only below a unique system temporary directory.
+The external sample path is read-only test input and no sample data is added to
+the repository. See `docs/reference/cli-machine-interface.md` for the command
+and protocol contract.
 
 Validated on 2026-05-23 after NuGet restore and MSBuild Debug build:
 
@@ -261,6 +320,19 @@ Validated on 2026-05-23 after NuGet restore and MSBuild Debug build:
 - `Onachi-GARbro.Image.Convert.exe -l`: 440 output lines.
 - `Onachi-GARbro.exe`: started and stayed alive for 3 seconds in a controlled
   smoke run.
+
+Validated on 2026-07-27 for the machine CLI:
+
+- Release solution build and CLI/Console/Image.Convert smoke passed.
+- Debug and Release CLI E2E each passed 173 assertions.
+- The Release NSIS package included the CLI executable and config.
+- The installer PATH helper passed 7 process-scoped assertions without changing
+  the user or machine environment, and NSIS compiled both add and uninstall
+  cleanup paths.
+- The packaged Codex skill ZIP test passed 39 assertions, including exact
+  source/package content equality, required multi-document references, safe ZIP
+  paths, save-to-disk behavior, and atomic replacement under a temporary
+  directory. It did not change the real Codex home.
 
 For a changed archive handler:
 
@@ -276,5 +348,7 @@ bin\Debug\Onachi-GARbro.Image.Convert.exe path\to\sample.image
 bin\Debug\Onachi-GARbro.Image.Convert.exe -t PNG path\to\sample.image
 ```
 
-Do not invent sample files. If samples are unavailable, state that behavior was
+Do not invent arbitrary files and claim they validate a format handler. The CLI
+suite's generated ZIP/KiriKiri cases are deterministic protocol and safety
+fixtures; use real samples for format-specific behavior, or state that it was
 build-verified only.

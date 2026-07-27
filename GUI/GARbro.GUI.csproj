@@ -173,6 +173,7 @@
     <Compile Include="ConvertMedia.xaml.cs">
       <DependentUpon>ConvertMedia.xaml</DependentUpon>
     </Compile>
+    <Compile Include="CodexSkillPackage.cs" />
     <Compile Include="CreateArchive.xaml.cs">
       <DependentUpon>CreateArchive.xaml</DependentUpon>
     </Compile>
@@ -389,8 +390,17 @@
       <Link>THIRD-PARTY-NOTICES.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <GarbroCliSkillFile Include="..\.codex\skills\garbro-cli\**\*.*" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="PackageGarbroCliSkill" AfterTargets="Build">
+    <RemoveDir Directories="$(OutputPath)Skills" />
+    <Copy SourceFiles="@(GarbroCliSkillFile)"
+          DestinationFiles="@(GarbroCliSkillFile->'$(OutputPath)Skills\garbro-cli\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <ZipDirectory SourceDirectory="$(OutputPath)Skills"
+                  DestinationFile="$(OutputPath)garbro-cli-skill.zip"
+                  Overwrite="true" />
+  </Target>
   <PropertyGroup>
     <PreBuildEvent>perl "$(SolutionDir)inc-revision.pl" "$(ProjectPath)" $(ConfigurationName) "$(SolutionDir)\"
 exit 0</PreBuildEvent>

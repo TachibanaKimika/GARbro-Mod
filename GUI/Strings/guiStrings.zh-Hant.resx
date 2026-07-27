@@ -697,4 +697,40 @@
   <data name="ThemeDark" xml:space="preserve">
     <value>深色</value>
   </data>
+  <data name="TextAiIntegration" xml:space="preserve">
+    <value>AI 整合</value>
+  </data>
+  <data name="CodexSkillPackageDescription" xml:space="preserve">
+    <value>下載完整的 GARbro CLI SKILL ZIP 套件，其中分別包含命令、指令碼文字模式、機器協定和解包安全說明。</value>
+  </data>
+  <data name="CodexSkillPackageName" xml:space="preserve">
+    <value>ZIP 套件：{0}</value>
+  </data>
+  <data name="CodexSkillPackageSave" xml:space="preserve">
+    <value>下載 SKILL ZIP...</value>
+  </data>
+  <data name="CodexSkillPackageUnavailable" xml:space="preserve">
+    <value>找不到隨程式提供的 SKILL ZIP。請重新安裝完整安裝套件，或重新建置 GARbro。</value>
+  </data>
+  <data name="CodexSkillPackageFilter" xml:space="preserve">
+    <value>ZIP 壓縮檔 (*.zip)|*.zip|所有檔案 (*.*)|*.*</value>
+  </data>
+  <data name="CodexSkillPackageDialogTitle" xml:space="preserve">
+    <value>儲存 GARbro CLI SKILL 套件</value>
+  </data>
+  <data name="CodexSkillPackageSaved" xml:space="preserve">
+    <value>GARbro CLI SKILL ZIP 已儲存到：
+
+{0}
+
+請將其中的 garbro-cli 目錄解壓縮到 $CODEX_HOME\skills；未設定 CODEX_HOME 時，請解壓縮到 %USERPROFILE%\.codex\skills。</value>
+  </data>
+  <data name="CodexSkillPackageCaption" xml:space="preserve">
+    <value>GARbro CLI SKILL 套件</value>
+  </data>
+  <data name="CodexSkillPackageSaveFailed" xml:space="preserve">
+    <value>無法儲存 GARbro CLI SKILL ZIP：
+
+{0}</value>
+  </data>
 </root>

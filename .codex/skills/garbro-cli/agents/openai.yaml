@@ -1,0 +1,4 @@
+interface:
+  display_name: "GARbro CLI"
+  short_description: "Inspect resources and export structured script text"
+  default_prompt: "Use $garbro-cli to inspect this visual novel resource and export only the archive entries or script text modes I request."

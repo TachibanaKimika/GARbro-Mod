@@ -744,4 +744,40 @@ Overwrite?</comment>
   <data name="ThemeDark" xml:space="preserve">
     <value>ダーク</value>
   </data>
+  <data name="TextAiIntegration" xml:space="preserve">
+    <value>AI 連携</value>
+  </data>
+  <data name="CodexSkillPackageDescription" xml:space="preserve">
+    <value>完全な GARbro CLI SKILL を ZIP パッケージとしてダウンロードします。コマンド、スクリプトテキストモード、機械プロトコル、展開の安全性について個別の資料が含まれます。</value>
+  </data>
+  <data name="CodexSkillPackageName" xml:space="preserve">
+    <value>ZIP パッケージ: {0}</value>
+  </data>
+  <data name="CodexSkillPackageSave" xml:space="preserve">
+    <value>SKILL ZIP をダウンロード...</value>
+  </data>
+  <data name="CodexSkillPackageUnavailable" xml:space="preserve">
+    <value>同梱の SKILL ZIP がありません。完全版パッケージを再インストールするか、GARbro を再ビルドしてください。</value>
+  </data>
+  <data name="CodexSkillPackageFilter" xml:space="preserve">
+    <value>ZIP アーカイブ (*.zip)|*.zip|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="CodexSkillPackageDialogTitle" xml:space="preserve">
+    <value>GARbro CLI SKILL パッケージを保存</value>
+  </data>
+  <data name="CodexSkillPackageSaved" xml:space="preserve">
+    <value>GARbro CLI SKILL ZIP を次の場所に保存しました:
+
+{0}
+
+中の garbro-cli フォルダーを $CODEX_HOME\skills に展開してください。CODEX_HOME が未設定の場合は %USERPROFILE%\.codex\skills に展開します。</value>
+  </data>
+  <data name="CodexSkillPackageCaption" xml:space="preserve">
+    <value>GARbro CLI SKILL パッケージ</value>
+  </data>
+  <data name="CodexSkillPackageSaveFailed" xml:space="preserve">
+    <value>GARbro CLI SKILL ZIP を保存できませんでした:
+
+{0}</value>
+  </data>
 </root>

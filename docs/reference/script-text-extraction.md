@@ -29,6 +29,37 @@ entry as-is instead of feeding it through script detection again. The UI's
 `Both` choice means `filtered` plus `raw`; diagnostic `dump` and structured
 `jsonl` output remain explicit choices.
 
+## Machine CLI Selection
+
+The machine CLI requires exactly one explicit mode per invocation:
+
+```text
+script extract PATH --mode filtered|raw|dump|jsonl --destination DIR
+```
+
+The generated filenames are:
+
+| Mode | Generated filename | Primary use |
+| --- | --- | --- |
+| `filtered` | `<base>.txt` | readable dialogue, narration, names, and choices |
+| `raw` | `<base>.raw.txt` | decoded source-like or less-filtered context |
+| `dump` | `<base>.dump.txt` | handler-specific diagnostics and reverse engineering |
+| `jsonl` | `<base>.jsonl` | structured message rows for tools and regression tests |
+
+`raw` is format-dependent and does not promise original bytes or recompilable
+source. `dump` may contain disassembly, offsets, line numbers, decoded object
+data, metadata, or internal state; it is not a clean translation corpus.
+
+Do not confuse the generated-file mode with the independent stdout option:
+
+- `--mode jsonl` writes structured script messages to the destination file.
+- `--output jsonl` writes machine-protocol event envelopes to standard output.
+
+One command may use both. The destination file follows the message schema below;
+stdout follows `garbro.cli/v1`. Use `formats list --kind script` or `probe` to
+read the selected handler's `textModes`. The CLI returns
+`script_mode_not_supported` rather than falling back to a different mode.
+
 ## JSONL Schema
 
 Use `ScriptJsonLines.CreateStream` to write JSONL. Do not hand-roll JSON

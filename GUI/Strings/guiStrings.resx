@@ -701,4 +701,40 @@ Run KrkrDump to start the game, collect the archive parameters, and try opening 
   <data name="ThemeDark" xml:space="preserve">
     <value>Dark</value>
   </data>
+  <data name="TextAiIntegration" xml:space="preserve">
+    <value>AI integration</value>
+  </data>
+  <data name="CodexSkillPackageDescription" xml:space="preserve">
+    <value>Download the complete GARbro CLI SKILL as a ZIP package. It includes separate command, script text mode, protocol, and extraction safety references.</value>
+  </data>
+  <data name="CodexSkillPackageName" xml:space="preserve">
+    <value>ZIP package: {0}</value>
+  </data>
+  <data name="CodexSkillPackageSave" xml:space="preserve">
+    <value>Download SKILL ZIP...</value>
+  </data>
+  <data name="CodexSkillPackageUnavailable" xml:space="preserve">
+    <value>The bundled SKILL ZIP is missing. Reinstall the full package or rebuild GARbro.</value>
+  </data>
+  <data name="CodexSkillPackageFilter" xml:space="preserve">
+    <value>ZIP archives (*.zip)|*.zip|All files (*.*)|*.*</value>
+  </data>
+  <data name="CodexSkillPackageDialogTitle" xml:space="preserve">
+    <value>Save GARbro CLI SKILL package</value>
+  </data>
+  <data name="CodexSkillPackageSaved" xml:space="preserve">
+    <value>GARbro CLI SKILL ZIP was saved to:
+
+{0}
+
+Extract its garbro-cli folder into $CODEX_HOME\skills, or %USERPROFILE%\.codex\skills when CODEX_HOME is unset.</value>
+  </data>
+  <data name="CodexSkillPackageCaption" xml:space="preserve">
+    <value>GARbro CLI SKILL package</value>
+  </data>
+  <data name="CodexSkillPackageSaveFailed" xml:space="preserve">
+    <value>Could not save the GARbro CLI SKILL ZIP:
+
+{0}</value>
+  </data>
 </root>

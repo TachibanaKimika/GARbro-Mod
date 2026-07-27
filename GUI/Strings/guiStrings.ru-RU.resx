@@ -611,4 +611,40 @@
   <data name="ThemeDark" xml:space="preserve">
     <value>Темная</value>
   </data>
+  <data name="TextAiIntegration" xml:space="preserve">
+    <value>Интеграция с ИИ</value>
+  </data>
+  <data name="CodexSkillPackageDescription" xml:space="preserve">
+    <value>Скачать полный навык GARbro CLI в ZIP-пакете. В него входят отдельные справочники по командам, режимам текста сценариев, машинному протоколу и безопасному извлечению.</value>
+  </data>
+  <data name="CodexSkillPackageName" xml:space="preserve">
+    <value>ZIP-пакет: {0}</value>
+  </data>
+  <data name="CodexSkillPackageSave" xml:space="preserve">
+    <value>Скачать ZIP навыка...</value>
+  </data>
+  <data name="CodexSkillPackageUnavailable" xml:space="preserve">
+    <value>Встроенный ZIP навыка отсутствует. Переустановите полный пакет или пересоберите GARbro.</value>
+  </data>
+  <data name="CodexSkillPackageFilter" xml:space="preserve">
+    <value>Архивы ZIP (*.zip)|*.zip|Все файлы (*.*)|*.*</value>
+  </data>
+  <data name="CodexSkillPackageDialogTitle" xml:space="preserve">
+    <value>Сохранение пакета навыка GARbro CLI</value>
+  </data>
+  <data name="CodexSkillPackageSaved" xml:space="preserve">
+    <value>ZIP навыка GARbro CLI сохранён:
+
+{0}
+
+Распакуйте папку garbro-cli в $CODEX_HOME\skills или в %USERPROFILE%\.codex\skills, если CODEX_HOME не задан.</value>
+  </data>
+  <data name="CodexSkillPackageCaption" xml:space="preserve">
+    <value>Пакет навыка GARbro CLI</value>
+  </data>
+  <data name="CodexSkillPackageSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить ZIP навыка GARbro CLI:
+
+{0}</value>
+  </data>
 </root>

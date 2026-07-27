@@ -279,24 +279,34 @@ public interface IHeadlessResourceOptionsProvider
 .codex/skills/garbro-cli/
   SKILL.md
   agents/openai.yaml
+  references/
+    command-reference.md
+    script-text-modes.md
+    machine-protocol.md
+    extraction-safety.md
 ```
 
 只有发现重复且易错的辅助逻辑时才增加 `scripts/`。不要在 SKILL 内复制解包、
 转换或 JSON 解析实现；确定性逻辑属于 CLI。
 
-`SKILL.md` 保持简短，使用命令式工作流：
+`SKILL.md` 保持简短，负责能力发现、CLI 定位、协议协商和按任务路由：
 
 1. 定位 Release 或 Debug CLI；不存在时使用 `$garbro-build-verify` 构建。
 2. 调用 `capabilities` 并验证 `garbro.cli/v1`。
-3. 对未知输入先 `probe`，写操作前先 `archive list` 或 `--dry-run`。
-4. 默认非交互、禁止覆盖、使用明确 destination 和规模限制。
-5. 遇到 `needs_input` 时向用户说明缺少的具体方案或参数。
-6. 解析最终 envelope/summary，报告输出位置、成功数、失败数和限制。
-7. 不在没有用户授权的情况下扩大为整目录批量提取或覆盖。
+3. 脚本导出前加载 `script-text-modes.md`，明确 `filtered`、`raw`、`dump`、
+   生成文件 JSONL 和 stdout JSONL 的边界。
+4. 归档写入前加载 `extraction-safety.md`，先列目录或 dry-run。
+5. 需要语法时加载 `command-reference.md`；解析 envelope 或错误时加载
+   `machine-protocol.md`。
+6. 默认非交互、禁止覆盖、使用明确 destination 和规模限制。
+7. 遇到 `needs_input` 时向用户说明缺少的具体方案或参数。
+8. 解析最终 envelope/summary，报告输出位置、成功数、失败数和限制。
+9. 不在没有用户授权的情况下扩大为整目录批量提取或覆盖。
 
-详细命令和 schema 的单一事实源应是未来的
-`docs/reference/cli-machine-interface.md`。SKILL 直接引用该文件，避免复制一份
-容易漂移的协议文档。
+产品级协议的耐久事实源仍是 `docs/reference/cli-machine-interface.md` 和
+`docs/reference/script-text-extraction.md`。分发 ZIP 中的 SKILL references 是
+面向代理运行时的自包含操作手册；构建测试逐文件比较 repo-local SKILL 与 ZIP，
+并用关键词断言保护最容易漂移的模式、协议和安全边界。
 
 SKILL 的触发描述应覆盖：
 
@@ -330,47 +340,49 @@ SKILL 的触发描述应覆盖：
 
 ## Acceptance Criteria
 
-- [ ] `GARbro.sln` 包含 `GARbro.Cli`，Debug 和 Release 均可由 Visual Studio
+- [x] `GARbro.sln` 包含 `GARbro.Cli`，Debug 和 Release 均可由 Visual Studio
       MSBuild 构建。
-- [ ] `capabilities`、`formats list`、`probe`、`archive list` 在机器模式下只输出
+- [x] `capabilities`、`formats list`、`probe`、`archive list` 在机器模式下只输出
       可解析的 v1 JSON/JSONL。
-- [ ] 归档提取默认不覆盖，并通过真实写入计数和规范化路径阻止逃逸及规模失控。
-- [ ] 脚本命令复用 `IConfigurableScriptFormat`，诚实暴露各格式支持的文本模式。
-- [ ] 图片信息与转换不再要求 AI 解析 `Image.Convert` 的人类文本。
-- [ ] 所有需要 GUI 参数但尚无 headless provider 的格式返回 exit 5 和
+- [x] 归档提取默认不覆盖，并通过真实写入计数和规范化路径阻止逃逸及规模失控。
+- [x] 脚本命令复用 `IConfigurableScriptFormat`，诚实暴露各格式支持的文本模式。
+- [x] 图片信息与转换不再要求 AI 解析 `Image.Convert` 的人类文本。
+- [x] 所有需要 GUI 参数但尚无 headless provider 的格式返回 exit 5 和
       `needs_input` envelope。
-- [ ] Debug/Release CLI smoke、协议 golden files、路径安全和部分成功用例通过。
+- [x] Debug/Release CLI smoke、协议 golden files、路径安全和部分成功用例通过。
 - [ ] 至少使用一个真实普通归档、一个需要参数的归档、一个脚本和一个图片样本
       完成端到端验证；不能公开的样本以本地路径记录测试结果，不提交资源本体。
-- [ ] NSIS 和 release build 包含 `Onachi-GARbro.Cli.exe` 及运行所需依赖。
-- [ ] `docs/reference/cli-machine-interface.md`、README、项目结构和构建文档同步。
+- [x] NSIS 和 release build 包含 `Onachi-GARbro.Cli.exe` 及运行所需依赖。
+- [x] 完整安装包包含可独立保存的 `garbro-cli-skill.zip`；设置页把 ZIP 复制到
+      用户选择的位置，不直接修改 Codex skills 目录。
+- [x] `docs/reference/cli-machine-interface.md`、README、项目结构和构建文档同步。
 - [ ] `.codex/skills/garbro-cli` 通过 skill validator 和代表性 forward tests。
-- [ ] 旧 Console/Image.Convert 在兼容期内继续通过既有 smoke。
+- [x] 旧 Console/Image.Convert 在兼容期内继续通过既有 smoke。
 
 ## Implementation Checklist
 
 ### Phase 0: contract and fixtures
 
-- [ ] 编写 `docs/reference/cli-machine-interface.md`，冻结 v1 envelope、事件和退出码。
-- [ ] 确定可合法提交的最小合成 fixtures；为私有样本建立不入库的本地测试清单。
-- [ ] 记录当前 Console/Image.Convert 输出作为迁移基线。
-- [ ] 在 `GARbro.sln` 中添加 `Cli/GARbro.Cli.csproj`。
+- [x] 编写 `docs/reference/cli-machine-interface.md`，冻结 v1 envelope、事件和退出码。
+- [x] 确定可合法提交的最小合成 fixtures；为私有样本建立不入库的本地测试清单。
+- [x] 记录当前 Console/Image.Convert 输出作为迁移基线。
+- [x] 在 `GARbro.sln` 中添加 `Cli/GARbro.Cli.csproj`。
 
 ### Phase 1: read-only MVP
 
-- [ ] 实现命令解析、全局参数、输出 writer 和统一异常映射。
-- [ ] 实现 `capabilities`、`formats list` 和 `probe`。
-- [ ] 实现流式 `archive list` JSONL。
-- [ ] 实现 `NonInteractiveParameterBroker` 和 `needs_input`。
-- [ ] 添加 PowerShell smoke，校验输出能被 `ConvertFrom-Json` 解析。
+- [x] 实现命令解析、全局参数、输出 writer 和统一异常映射。
+- [x] 实现 `capabilities`、`formats list` 和 `probe`。
+- [x] 实现流式 `archive list` JSONL。
+- [x] 实现 `NonInteractiveParameterBroker` 和 `needs_input`。
+- [x] 添加 PowerShell smoke，校验输出能被 `ConvertFrom-Json` 解析。
 
 ### Phase 2: safe extraction and media
 
-- [ ] 实现 output path resolver、碰撞检查和原子写入。
-- [ ] 实现计数输出流、文件/字节/深度限额和取消。
-- [ ] 实现 `archive extract` 与 `--dry-run`。
-- [ ] 实现 `script extract` 及四种共享文本模式。
-- [ ] 实现 `image info` 和 `image convert`。
+- [x] 实现 output path resolver、碰撞检查和原子写入。
+- [x] 实现计数输出流、文件/字节/深度限额和取消。
+- [x] 实现 `archive extract` 与 `--dry-run`。
+- [x] 实现 `script extract` 及四种共享文本模式。
+- [x] 实现 `image info` 和 `image convert`。
 - [ ] 为成功、冲突、路径逃逸、超限、取消和 partial success 添加回归用例。
 
 ### Phase 3: headless format parameters
@@ -382,11 +394,12 @@ SKILL 的触发描述应覆盖：
 
 ### Phase 4: SKILL and packaging
 
-- [ ] 使用 `skill-creator` 的 `init_skill.py` 创建 repo-local `garbro-cli`。
-- [ ] 生成与 SKILL 一致的 `agents/openai.yaml`。
-- [ ] 运行 `quick_validate.py`。
+- [x] 使用 `skill-creator` 的 `init_skill.py` 创建 repo-local `garbro-cli`。
+- [x] 生成与 SKILL 一致的 `agents/openai.yaml`。
+- [x] 运行 `quick_validate.py`。
 - [ ] 用代表性自然语言请求做 forward tests，并按失败模式收紧 SKILL。
-- [ ] 更新 `build.ps1`、NSIS、README、项目结构和 build/verify 文档。
+- [x] 更新 `build.ps1`、NSIS、README、项目结构和 build/verify 文档。
+- [x] 在设置页增加 SKILL ZIP 保存入口，并将四份任务参考打进分发包。
 - [ ] 增加新 CLI Debug/Release 和安装包 smoke。
 
 ### Phase 5: stabilization
@@ -407,41 +420,64 @@ bin\Debug\Onachi-GARbro.Cli.exe capabilities --output json
 bin\Debug\Onachi-GARbro.Cli.exe formats list --kind all --output json
 ```
 
-- [ ] JSON 均可通过 PowerShell `ConvertFrom-Json`。
-- [ ] ArcFormats、Legacy、Experimental 和脚本格式均被预期发现。
-- [ ] 缺少可选 ArcExtra 时 capabilities 明确报告，而不是启动失败。
+- [x] JSON 均可通过 PowerShell `ConvertFrom-Json`。
+- [x] ArcFormats、Legacy、Experimental 和脚本格式均被预期发现。
+- [x] 缺少可选 ArcExtra 时 capabilities 明确报告，而不是启动失败。
 
 ### Protocol
 
 - [ ] 每个命令有成功、usage、unrecognized、needs_input 和 internal error golden
       response。
-- [ ] JSONL 每行独立可解析，最后一行总是 summary/error。
-- [ ] 标准错误日志不会污染标准输出。
+- [x] JSONL 每行独立可解析，最后一行总是 summary/error。
+- [x] 标准错误日志不会污染标准输出。
 - [ ] 未知可选字段不会使 SKILL 失败。
 
 ### Safety
 
 - [ ] 测试 `../`、绝对路径、盘符、UNC、保留名和规范化后重名。
 - [ ] 测试 existing file 在 `never`、`skip`、未来 `replace` 策略下的行为。
-- [ ] 测试声明大小正常但实际解压超限。
+- [x] 测试声明大小正常但实际解压超限。
 - [ ] 测试 max files、total bytes、entry bytes、depth 和 Ctrl+C。
-- [ ] 验证失败不留下最终文件，临时文件可清理。
+- [x] 验证失败不留下最终文件，临时文件可清理。
 
 ### End-to-end
 
-- [ ] 普通归档：probe、list、dry-run、选择性提取。
+- [x] 普通归档：probe、list、dry-run、选择性提取。
 - [ ] 受保护归档：稳定返回 needs_input，再用显式参数成功。
-- [ ] 脚本：filtered/raw/dump/jsonl 与格式声明一致。
-- [ ] 图片：info 与 convert 的 metadata/output 一致。
+- [x] 脚本：filtered/raw/dump/jsonl 与格式声明一致。
+- [x] 图片：info 与 convert 的 metadata/output 一致。
 - [ ] GUI 仍可启动并完成受影响路径。
-- [ ] 旧 Console 与 Image.Convert smoke 继续通过。
+- [x] 旧 Console 与 Image.Convert smoke 继续通过。
 
 ## Progress
 
 - 2026-07-26：完成现状审计，确认现有 Console、Image.Convert、脚本提取和
   `ParametersRequest` 可作为新架构基础。
 - 2026-07-26：确定“稳定 CLI 为能力边界、SKILL 为薄编排层”的长期方向。
-- 2026-07-26：创建本 active ExecPlan；尚未开始 CLI 实现。
+- 2026-07-26：创建本 active ExecPlan。
+- 2026-07-27：完成独立 `GARbro.Cli` 的 v1 只读命令、安全提取、脚本导出和
+  图片转换，实现非交互 `needs_input` 与稳定退出码。
+- 2026-07-27：新增 PowerShell E2E；Debug/Release 各通过 173 个断言，覆盖
+  合成恶意 ZIP、实际字节超限、加密 ZIP、四种 KiriKiri 模式，以及
+  `I:\TempDays` 中真实 YPF/JPEG 样本。样本本体未进入仓库。
+- 2026-07-27：创建并验证 `.codex/skills/garbro-cli`，同步 README、架构、
+  build/verify、build smoke 和 NSIS 清单。
+- 2026-07-27：Release 全解与 CLI/Console/Image.Convert smoke 通过；NSIS
+  成功生成安装包，SHA256 为
+  `C3E39C4C54F0C17AF276F6EB3D0B164D53CC8C02B303D0E43C0FA07EBFE46E4E`；
+  `garbro-cli-skill.zip` 的 SHA256 为
+  `A7B16F4E342D8DAD605AC4B3200C86334B6F2AD31A3FBFA1D7AA5D6E59803105`。
+- 2026-07-27：NSIS 新增默认不勾选的 system PATH 组件；安装时只记录自身新增的
+  条目，卸载时据此清理。进程级测试覆盖 add/already-present/remove，未改动真实
+  用户或系统 PATH。
+- 2026-07-27：`garbro-cli` SKILL 定位顺序扩展为仓库 Release、Debug、当前
+  PATH、Program Files 安装目录。
+- 2026-07-27：将 `garbro-cli` SKILL 拆成短入口和命令、脚本文本模式、机器协议、
+  提取安全四份 reference；尤其固定 `--mode jsonl` 与 `--output jsonl` 的不同
+  目标和 schema。
+- 2026-07-27：GUI 设置新增 “AI integration”，只把安装包内的
+  `garbro-cli-skill.zip` 保存到用户选择的位置，不推断或修改 Codex home。
+  ZIP/保存测试通过 39 个断言，覆盖完整内容哈希、安全路径和原子覆盖。
 
 ## Decision Log
 
@@ -475,14 +511,36 @@ GARbro 历史格式的强类型 options 差异很大。v1 先可靠返回 `needs
 当前解决方案、依赖和验证体系以 Windows/.NET Framework 为中心。CLI 的协议应
 保持平台中立，但实现迁移需另立计划，不能成为 v1 的阻塞项。
 
+### 2026-07-27: PATH 注册是可选且带所有权的安装组件
+
+安装不应静默改动机器环境，因此组件默认不勾选。NSIS 字符串寄存器长度不足以安全
+处理任意长 PATH，实际读写交给内置 PowerShell/.NET helper。只有 installer 确实
+新增条目时才写入所有权标记，防止卸载误删用户原有配置。
+
+### 2026-07-27: SKILL 以 ZIP 随应用分发，由用户决定安装位置
+
+普通用户通常没有源码仓库，repo-local SKILL 不能作为唯一分发渠道。Release 构建
+把完整 `garbro-cli` 目录打成一个顶层目录明确的 `garbro-cli-skill.zip`，NSIS
+随程序安装该 ZIP。GUI 只负责让用户保存一个经过验证的本地副本，使用目标目录内
+临时文件和原子替换，既不依赖网络，也不猜测 Codex、Claude Code 或其他代理工具
+的技能目录。用户可先审阅 ZIP，再按所用环境的规则解压；因此分发与安装解耦，也
+不会覆盖用户自行修改的 SKILL。
+
+长期保持三层边界：
+
+1. `Onachi-GARbro.Cli.exe` 是唯一确定性能力和安全边界。
+2. `.codex/skills/garbro-cli` 是可版本控制、可验证的代理操作手册源目录。
+3. `garbro-cli-skill.zip` 是跨环境分发物；设置页只导出，环境注册由用户或对应
+   代理平台完成。
+
 ## Outcomes
 
-当前产出是已冻结方向和可执行分阶段清单，没有实现新 CLI 或 SKILL。
-
-预期完成结果：
+当前已实现：
 
 - GARbro 拥有一个安全、版本化、非交互的机器接口。
-- AI 通过 repo-local SKILL 稳定完成探测、浏览、选择性提取和结构化文本转换。
+- AI 通过 repo-local 或用户从 ZIP 安装的自包含 SKILL 稳定完成探测、浏览、
+  选择性提取和结构化文本转换。
+- 安装器可由用户选择把 CLI 目录加入 system PATH，并在卸载时安全清理自身条目。
 - GUI、旧 Console 和 Image.Convert 在迁移期保持兼容。
 - 未来若增加 MCP、批处理或归档创建，复用同一协议与安全层。
 

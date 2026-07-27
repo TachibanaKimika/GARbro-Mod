@@ -30,11 +30,49 @@ The extraction dialog can remember an option to open the destination folder
 after a successful extraction.
 
 Supported script text extractors can output filtered text, raw text, diagnostic
-dumps, JSONL, or both.
+dumps, JSONL, or both in the GUI. The machine CLI requires one explicit
+`--mode`; run it twice when both filtered and raw files are needed.
 When a script supports this choice, the preview panel shows a Script selector
 for switching between supported text modes.
 Extractor behavior and JSONL field conventions are documented in
 `docs/reference/script-text-extraction.md`.
+
+Machine CLI
+-----------
+
+`Onachi-GARbro.Cli.exe` provides a versioned, non-interactive command interface
+for automation and AI agents. It can report capabilities and formats, probe and
+list resources, safely extract selected archive entries, export supported
+scripts in four text modes, and inspect or convert images.
+
+Machine output uses `garbro.cli/v1` JSON or JSONL on standard output. Extraction
+defaults to no overwrite and enforces destination containment, atomic temporary
+writes, file/byte/depth limits, and dry-run planning. Formats that require a GUI
+password or scheme return a structured `needs_input` result instead of opening
+a dialog or guessing a value.
+
+The Windows installer offers an optional, initially unchecked component that
+adds the selected installation directory to the system `PATH`. Open a new
+terminal after selecting it. The uninstaller removes only the entry that the
+installer itself added; otherwise invoke the CLI by its full installed path.
+
+The full package also bundles `garbro-cli-skill.zip`. Open
+`Preferences -> AI integration` and choose `Save SKILL ZIP...` to save a copy
+where you want it. The ZIP contains one top-level `garbro-cli` directory with a
+short `SKILL.md`, Codex UI metadata, and separate references for commands,
+script text modes, the machine protocol, and extraction safety. Review it, then
+extract that directory to `$CODEX_HOME\skills` or
+`%USERPROFILE%\.codex\skills`. GARbro does not modify the Codex skills
+directory itself.
+
+For script export, `--mode filtered|raw|dump|jsonl` controls the generated file:
+readable text, decoded/source-like context, diagnostic data, or structured
+message rows. It is independent of `--output json|jsonl|text`, which controls
+the CLI response written to standard output. A command may use both JSONL
+options, but their schemas and destinations are different.
+
+See `docs/reference/cli-machine-interface.md` for commands, schema, exit codes,
+safety rules, and end-to-end verification.
 
 KiriKiri/XP3 script preview and extraction recognize `.ks`, scrambled `.txt`,
 and PSB-backed `.scn` scenario entries.  Filtered mode extracts readable

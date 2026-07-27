@@ -61,9 +61,19 @@ Old-style `.csproj` files list source files explicitly. Adding a new `.cs` or
 ## Applications and Tools
 
 `GUI/` builds the WPF desktop application `Onachi-GARbro.exe`. It owns host-side
-dialogs and external process integration, including the KrkrDump XP3 assistant;
-format assemblies request those actions through `GameRes` interfaces instead of
-referencing GUI types directly.
+dialogs and external process integration, including the KrkrDump XP3 assistant,
+and the save-to-disk UI for the bundled Codex skill ZIP; format assemblies request
+resource actions through `GameRes` interfaces instead of referencing GUI types
+directly. The GUI build assembles the complete repo-local skill, including its
+task-specific references, into `garbro-cli-skill.zip`. The application only
+exports that artifact to a user-selected path; it does not register or update a
+Codex installation.
+
+`Cli/` builds `Onachi-GARbro.Cli.exe`, the versioned non-interactive automation
+boundary. It owns command parsing, JSON/JSONL envelopes, non-interactive
+parameter failure mapping, output path validation, extraction budgets, and
+atomic file writes. It references `GameRes`; archive, image, audio, and script
+implementations remain in their existing MEF-discovered assemblies.
 
 `Console/` builds `Onachi-GARbro.Console.exe`, a command-line archive browser
 and extraction tool. The local README describes it as a testing playground and

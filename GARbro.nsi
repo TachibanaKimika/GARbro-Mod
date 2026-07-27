@@ -1,6 +1,8 @@
 Unicode true
 !include "MUI2.nsh"
+!include "WinMessages.nsh"
 !define RELEASE_DIR bin\Release
+!define APP_REG_KEY "Software\Onachi\Onachi-GARbro"
 
 Name "Onachi-GARbro"
 OutFile "bin\Package\Onachi-GARbro-setup.exe"
@@ -19,6 +21,7 @@ Var StartMenuFolder
 !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
 
 !insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_STARTMENU GARbro $StartMenuFolder
 !insertmacro MUI_PAGE_INSTFILES
@@ -59,13 +62,63 @@ FunctionEnd
 
 Function CloseRunningApplications
     !insertmacro CloseProcess "Onachi-GARbro.exe"
+    !insertmacro CloseProcess "Onachi-GARbro.Cli.exe"
     !insertmacro CloseProcess "Onachi-GARbro.Console.exe"
     !insertmacro CloseProcess "Onachi-GARbro.Image.Convert.exe"
     !insertmacro CloseProcess "SchemeTool.exe"
     Sleep 1000
 FunctionEnd
 
-Section "install"
+Function AddInstallDirToPath
+    InitPluginsDir
+    SetOutPath "$PLUGINSDIR"
+    File /oname=Update-Path.ps1 "Installer\Update-Path.ps1"
+    nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Update-Path.ps1" -Action Add -Scope Machine -TargetPath "$INSTDIR"'
+    Pop $0
+    Pop $1
+    StrCmp $0 "0" add_path_write
+    StrCmp $0 "10" add_path_exists
+    DetailPrint "Could not add the GARbro CLI directory to PATH: $1"
+    MessageBox MB_ICONEXCLAMATION|MB_OK "GARbro was installed, but its CLI directory could not be added to the system PATH.$\r$\n$\r$\n$1"
+    Return
+
+add_path_write:
+    WriteRegStr HKLM "${APP_REG_KEY}" "CliPathAdded" "$INSTDIR"
+    SendMessage ${HWND_BROADCAST} ${WM_SETTINGCHANGE} 0 "STR:Environment" /TIMEOUT=5000
+    DetailPrint "Added $INSTDIR to the system PATH."
+    Return
+
+add_path_exists:
+    DetailPrint "$INSTDIR is already present in the system PATH."
+FunctionEnd
+
+Function un.RemoveInstallDirFromPath
+    ClearErrors
+    ReadRegStr $4 HKLM "${APP_REG_KEY}" "CliPathAdded"
+    IfErrors remove_path_done
+    StrCmp $4 "" remove_path_done
+
+    InitPluginsDir
+    SetOutPath "$PLUGINSDIR"
+    File /oname=Update-Path.ps1 "Installer\Update-Path.ps1"
+    nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Update-Path.ps1" -Action Remove -Scope Machine -TargetPath "$4"'
+    Pop $0
+    Pop $1
+    StrCmp $0 "0" remove_path_cleanup
+    DetailPrint "Could not remove the GARbro CLI directory from PATH: $1"
+    MessageBox MB_ICONEXCLAMATION|MB_OK "GARbro was uninstalled, but its CLI directory could not be removed from the system PATH.$\r$\n$\r$\n$1"
+    Return
+
+remove_path_cleanup:
+    SendMessage ${HWND_BROADCAST} ${WM_SETTINGCHANGE} 0 "STR:Environment" /TIMEOUT=5000
+    DetailPrint "Removed $4 from the system PATH."
+    DeleteRegValue HKLM "${APP_REG_KEY}" "CliPathAdded"
+    DeleteRegKey /ifempty HKLM "${APP_REG_KEY}"
+remove_path_done:
+FunctionEnd
+
+Section "Onachi-GARbro application" SEC_MAIN
+    SectionIn RO
     SetOutPath $INSTDIR
     Call CloseRunningApplications
 
@@ -96,7 +149,12 @@ Section "install"
     !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
+Section /o "Add GARbro CLI to system PATH" SEC_CLI_PATH
+    Call AddInstallDirToPath
+SectionEnd
+
 Section "uninstall"
+    Call un.RemoveInstallDirFromPath
     !insertmacro MUI_STARTMENU_GETFOLDER GARbro $StartMenuFolder
     Delete "$SMPROGRAMS\$StartMenuFolder\$(^Name).lnk"
     Delete "$SMPROGRAMS\$StartMenuFolder\Read me.lnk"
@@ -107,6 +165,7 @@ Section "uninstall"
     ClearErrors
 
     Delete $INSTDIR\Onachi-GARbro.exe
+    Delete $INSTDIR\Onachi-GARbro.Cli.exe
     Delete $INSTDIR\Onachi-GARbro.Console.exe
     Delete $INSTDIR\Onachi-GARbro.Image.Convert.exe
     Delete $INSTDIR\*.exe.config
@@ -117,6 +176,7 @@ Section "uninstall"
     Delete $INSTDIR\LICENSE.txt
     Delete $INSTDIR\THIRD-PARTY-NOTICES.txt
     Delete $INSTDIR\supported.html
+    Delete $INSTDIR\garbro-cli-skill.zip
     RMDir /r $INSTDIR\Tools
     RMDir /r $INSTDIR\GameData
     RMDir /r $INSTDIR\ja-JP

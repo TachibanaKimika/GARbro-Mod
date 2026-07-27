@@ -596,4 +596,40 @@
   <data name="ThemeDark" xml:space="preserve">
     <value>다크</value>
   </data>
+  <data name="TextAiIntegration" xml:space="preserve">
+    <value>AI 연동</value>
+  </data>
+  <data name="CodexSkillPackageDescription" xml:space="preserve">
+    <value>전체 GARbro CLI SKILL을 ZIP 패키지로 다운로드합니다. 명령, 스크립트 텍스트 모드, 기계 프로토콜 및 압축 해제 안전성에 대한 별도 문서가 포함됩니다.</value>
+  </data>
+  <data name="CodexSkillPackageName" xml:space="preserve">
+    <value>ZIP 패키지: {0}</value>
+  </data>
+  <data name="CodexSkillPackageSave" xml:space="preserve">
+    <value>SKILL ZIP 다운로드...</value>
+  </data>
+  <data name="CodexSkillPackageUnavailable" xml:space="preserve">
+    <value>번들 SKILL ZIP이 없습니다. 전체 패키지를 다시 설치하거나 GARbro를 다시 빌드하세요.</value>
+  </data>
+  <data name="CodexSkillPackageFilter" xml:space="preserve">
+    <value>ZIP 압축 파일 (*.zip)|*.zip|모든 파일 (*.*)|*.*</value>
+  </data>
+  <data name="CodexSkillPackageDialogTitle" xml:space="preserve">
+    <value>GARbro CLI SKILL 패키지 저장</value>
+  </data>
+  <data name="CodexSkillPackageSaved" xml:space="preserve">
+    <value>GARbro CLI SKILL ZIP을 다음 위치에 저장했습니다:
+
+{0}
+
+안의 garbro-cli 폴더를 $CODEX_HOME\skills에 압축 해제하세요. CODEX_HOME이 설정되지 않은 경우 %USERPROFILE%\.codex\skills에 압축 해제합니다.</value>
+  </data>
+  <data name="CodexSkillPackageCaption" xml:space="preserve">
+    <value>GARbro CLI SKILL 패키지</value>
+  </data>
+  <data name="CodexSkillPackageSaveFailed" xml:space="preserve">
+    <value>GARbro CLI SKILL ZIP을 저장할 수 없습니다:
+
+{0}</value>
+  </data>
 </root>

@@ -36,6 +36,7 @@ using System.Windows.Media;
 using GameRes;
 using GARbro.GUI.Properties;
 using GARbro.GUI.Strings;
+using Microsoft.Win32;
 
 namespace GARbro.GUI
 {
@@ -69,6 +70,8 @@ namespace GARbro.GUI
         };
 
         SettingsViewModel ViewModel;
+        Button m_codex_skill_button;
+        TextBlock m_codex_skill_status;
 
         static string LastSelectedSection = null;
 
@@ -106,6 +109,10 @@ namespace GARbro.GUI
                 new SettingsSectionView {
                     Label = GetGuiString ("TextInterface", "Interface"),
                     Panel = CreateSectionPanel (InterfaceSettings)
+                },
+                new SettingsSectionView {
+                    Label = GetGuiString ("TextAiIntegration", "AI integration"),
+                    Panel = CreateCodexSkillPanel()
                 },
                 new SettingsSectionView {
                     Label = guiStrings.TextViewer,
@@ -159,6 +166,131 @@ namespace GARbro.GUI
                     pane.Children.Add (widget);
             }
             return pane;
+        }
+
+        Panel CreateCodexSkillPanel ()
+        {
+            var pane = new StackPanel {
+                Orientation = Orientation.Vertical,
+                Margin = new Thickness (2.0),
+                MaxWidth = 320,
+            };
+            pane.Children.Add (new TextBlock {
+                Text = GetGuiString (
+                    "CodexSkillPackageDescription",
+                    "Save the complete GARbro CLI skill as a ZIP package. "
+                    + "Review or extract it locally before installing it in "
+                    + "Codex."),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness (0, 0, 0, 8),
+            });
+            m_codex_skill_status = new TextBlock {
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness (0, 0, 0, 8),
+            };
+            pane.Children.Add (m_codex_skill_status);
+            m_codex_skill_button = new Button {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                MinWidth = 140,
+                Padding = new Thickness (10, 4, 10, 4),
+            };
+            m_codex_skill_button.Click += SaveCodexSkillPackage;
+            pane.Children.Add (m_codex_skill_button);
+            RefreshCodexSkillPanel();
+            return pane;
+        }
+
+        void RefreshCodexSkillPanel ()
+        {
+            try
+            {
+                m_codex_skill_status.SetResourceReference (
+                    TextBlock.ForegroundProperty, "Gar.Brush.ControlText");
+                m_codex_skill_status.Text = string.Format (
+                    GetGuiString (
+                        "CodexSkillPackageName",
+                        "ZIP package: {0}"),
+                    CodexSkillPackage.PackageFileName);
+                m_codex_skill_button.Content = GetGuiString (
+                    "CodexSkillPackageSave", "Save SKILL ZIP...");
+                m_codex_skill_button.IsEnabled =
+                    CodexSkillPackage.IsAvailable;
+                if (!m_codex_skill_button.IsEnabled)
+                {
+                    m_codex_skill_status.SetResourceReference (
+                        TextBlock.ForegroundProperty, "Gar.Brush.Warning");
+                    m_codex_skill_status.Text = GetGuiString (
+                        "CodexSkillPackageUnavailable",
+                        "The bundled skill ZIP is missing. Reinstall the full "
+                        + "package or rebuild GARbro.");
+                }
+            }
+            catch (Exception X)
+            {
+                m_codex_skill_button.IsEnabled = false;
+                m_codex_skill_status.SetResourceReference (
+                    TextBlock.ForegroundProperty, "Gar.Brush.Error");
+                m_codex_skill_status.Text = X.Message;
+            }
+        }
+
+        void SaveCodexSkillPackage (object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dialog = new SaveFileDialog {
+                    AddExtension = true,
+                    CheckPathExists = true,
+                    DefaultExt = ".zip",
+                    FileName = CodexSkillPackage.PackageFileName,
+                    Filter = GetGuiString (
+                        "CodexSkillPackageFilter",
+                        "ZIP archives (*.zip)|*.zip|All files (*.*)|*.*"),
+                    InitialDirectory = CodexSkillPackage.DefaultSaveDirectory,
+                    OverwritePrompt = true,
+                    Title = GetGuiString (
+                        "CodexSkillPackageDialogTitle",
+                        "Save GARbro CLI SKILL package"),
+                };
+                if (dialog.ShowDialog (this) != true)
+                    return;
+
+                CodexSkillPackage.SaveTo (dialog.FileName);
+                MessageBox.Show (
+                    this,
+                    string.Format (
+                        GetGuiString (
+                            "CodexSkillPackageSaved",
+                            "GARbro CLI SKILL ZIP was saved to:\n\n{0}\n\n"
+                            + "Extract its garbro-cli folder into "
+                            + "$CODEX_HOME\\skills, or "
+                            + "%USERPROFILE%\\.codex\\skills when CODEX_HOME "
+                            + "is unset."),
+                        dialog.FileName),
+                    GetGuiString (
+                        "CodexSkillPackageCaption",
+                        "GARbro CLI SKILL package"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (
+                    X.ToString(), "[Onachi-GARbro.CodexSkillPackage]");
+                MessageBox.Show (
+                    this,
+                    string.Format (
+                        GetGuiString (
+                            "CodexSkillPackageSaveFailed",
+                            "Could not save the GARbro CLI SKILL ZIP:\n\n{0}"),
+                        X.Message),
+                    GetGuiString (
+                        "CodexSkillPackageCaption",
+                        "GARbro CLI SKILL package"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                RefreshCodexSkillPanel();
+            }
         }
 
         UIElement CreateCheckBoxWidget (IResourceSetting setting)

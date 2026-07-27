@@ -47,6 +47,9 @@ Use these repo-local skills when the task matches their trigger:
   commit, or push.
 - `$final-release-review`: review a diff before submitting or merging to the
   main branch.
+- `$garbro-cli`: recognize, list, or safely extract resources through the
+  versioned machine CLI; export supported scripts; inspect or convert images;
+  or diagnose non-interactive CLI failures.
 
 ## Project Map
 
@@ -56,6 +59,8 @@ Use these repo-local skills when the task matches their trigger:
 - `Legacy/`: older or lower-traffic visual novel formats.
 - `Experimental/`: unstable or optional format work and extra dependencies.
 - `GUI/`: WPF application, assembly `Onachi-GARbro.exe`.
+- `Cli/`: versioned non-interactive JSON/JSONL command interface, assembly
+  `Onachi-GARbro.Cli.exe`.
 - `Console/`: console archive browser and extraction utility, assembly
   `Onachi-GARbro.Console.exe`.
 - `Image.Convert/`: console image metadata/conversion utility, assembly

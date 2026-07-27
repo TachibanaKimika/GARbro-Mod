@@ -128,6 +128,7 @@ if ($LASTEXITCODE -ne 0) {
 
 if ($Smoke) {
     $smokeCommands = @(
+        @{ Path = Join-Path $repoRoot "bin\$Configuration\Onachi-GARbro.Cli.exe"; Args = @("capabilities", "--output", "json", "--non-interactive") },
         @{ Path = Join-Path $repoRoot "bin\$Configuration\Onachi-GARbro.Console.exe"; Args = @("-l") },
         @{ Path = Join-Path $repoRoot "bin\$Configuration\Onachi-GARbro.Image.Convert.exe"; Args = @("-l") }
     )
