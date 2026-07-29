@@ -193,6 +193,17 @@ namespace GARbro.GUI
         public string Tag {
             get { return null != Source ? Source.Tag : guiStrings.TextAsIs; }
         }
+        public string Label {
+            get {
+                if (null == Source)
+                    return guiStrings.TextAsIs;
+                if ("WEBP/80" == Source.Tag)
+                    return guiStrings.ImageFormatWebP80;
+                if ("WEBP/LOSSLESS" == Source.Tag)
+                    return guiStrings.ImageFormatWebPLossless;
+                return Source.Tag;
+            }
+        }
 
         public ImageFormatModel (ImageFormat impl = null)
         {

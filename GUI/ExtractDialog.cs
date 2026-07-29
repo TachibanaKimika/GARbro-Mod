@@ -60,7 +60,8 @@ namespace GARbro.GUI
         public void InitImageFormats (ComboBox image_format)
         {
             var default_format = Settings.Default.appImageFormat;
-            var formats = FormatCatalog.Instance.ImageFormats.Where (f => f.IsBuiltin);
+            var formats = FormatCatalog.Instance.ImageFormats.Where (f =>
+                f.IsBuiltin || IsWebPEncoder (f));
             ImageFormatModel[] default_model = { new ImageFormatModel() };
             var models = default_model.Concat (formats.Select (f => new ImageFormatModel (f))).ToList();
 
@@ -70,6 +71,12 @@ namespace GARbro.GUI
                 image_format.SelectedItem = selected;
             else if (models.Any())
                 image_format.SelectedIndex = 0;
+        }
+
+        static bool IsWebPEncoder (ImageFormat format)
+        {
+            return format.CanWrite
+                && ("WEBP/80" == format.Tag || "WEBP/LOSSLESS" == format.Tag);
         }
 
         public ImageFormat GetImageFormat (ComboBox image_format)

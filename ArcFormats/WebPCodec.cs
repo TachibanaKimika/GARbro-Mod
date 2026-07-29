@@ -25,9 +25,12 @@
 
 using System;
 using System.ComponentModel;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace GameRes.Formats
 {
@@ -38,6 +41,15 @@ namespace GameRes.Formats
 
         [DllImport("libwebp.dll", EntryPoint = "WebPDecodeBGRAInto", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr WebPDecodeBGRAInto ([MarshalAs(UnmanagedType.LPArray)] byte[] data, UIntPtr data_size, IntPtr output_buffer, UIntPtr output_buffer_size, int output_stride);
+
+        [DllImport("libwebp.dll", EntryPoint = "WebPEncodeBGRA", CallingConvention = CallingConvention.Cdecl)]
+        static extern UIntPtr WebPEncodeBGRA ([MarshalAs(UnmanagedType.LPArray)] byte[] bgra, int width, int height, int stride, float quality_factor, out IntPtr output);
+
+        [DllImport("libwebp.dll", EntryPoint = "WebPEncodeLosslessBGRA", CallingConvention = CallingConvention.Cdecl)]
+        static extern UIntPtr WebPEncodeLosslessBGRA ([MarshalAs(UnmanagedType.LPArray)] byte[] bgra, int width, int height, int stride, out IntPtr output);
+
+        [DllImport("libwebp.dll", EntryPoint = "WebPFree", CallingConvention = CallingConvention.Cdecl)]
+        static extern void WebPFree (IntPtr pointer);
 
         [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
         static extern IntPtr LoadLibraryEx (string lpFileName, IntPtr hReservedNull, uint dwFlags);
@@ -59,6 +71,119 @@ namespace GameRes.Formats
             if (IntPtr.Zero == lib)
                 throw new Win32Exception (Marshal.GetLastWin32Error ());
             loaded = true;
+        }
+
+        public static void Encode (Stream file, ImageData image, bool lossless)
+        {
+            if (null == file)
+                throw new ArgumentNullException ("file");
+            if (null == image || null == image.Bitmap)
+                throw new ArgumentNullException ("image");
+
+            BitmapSource bitmap = image.Bitmap;
+            if (bitmap.Format != PixelFormats.Bgra32)
+            {
+                var converted = new FormatConvertedBitmap (bitmap, PixelFormats.Bgra32, null, 0);
+                converted.Freeze();
+                bitmap = converted;
+            }
+
+            int width = bitmap.PixelWidth;
+            int height = bitmap.PixelHeight;
+            if (width <= 0 || height <= 0)
+                throw new InvalidFormatException ("Invalid WebP image dimensions.");
+            int stride = checked (width * 4);
+            var pixels = new byte[checked (stride * height)];
+            bitmap.CopyPixels (pixels, stride, 0);
+
+            Load();
+            IntPtr output;
+            UIntPtr encoded_size = lossless
+                ? WebPEncodeLosslessBGRA (pixels, width, height, stride, out output)
+                : WebPEncodeBGRA (pixels, width, height, stride, 80.0f, out output);
+            ulong size = encoded_size.ToUInt64();
+            if (0 == size || IntPtr.Zero == output || size > int.MaxValue)
+            {
+                if (IntPtr.Zero != output)
+                    WebPFree (output);
+                throw new InvalidOperationException ("WebP image encoder failed.");
+            }
+
+            try
+            {
+                int remaining = (int)size;
+                int offset = 0;
+                var buffer = new byte[Math.Min (0x10000, remaining)];
+                while (remaining > 0)
+                {
+                    int count = Math.Min (buffer.Length, remaining);
+                    Marshal.Copy (IntPtr.Add (output, offset), buffer, 0, count);
+                    file.Write (buffer, 0, count);
+                    offset += count;
+                    remaining -= count;
+                }
+            }
+            finally
+            {
+                WebPFree (output);
+            }
+        }
+    }
+
+    public abstract class WebPEncoderFormat : ImageFormat
+    {
+        readonly bool m_lossless;
+
+        protected WebPEncoderFormat (bool lossless)
+        {
+            m_lossless = lossless;
+            Extensions = new[] { "webp" };
+        }
+
+        public override uint     Signature { get { return 0; } }
+        public override bool      CanWrite { get { return true; } }
+
+        public override ImageMetaData ReadMetaData (IBinaryStream file)
+        {
+            return null;
+        }
+
+        public override ImageData Read (IBinaryStream file, ImageMetaData info)
+        {
+            throw new NotSupportedException ("WebP encoder formats are write-only.");
+        }
+
+        public override void Write (Stream file, ImageData image)
+        {
+            WebPCodec.Encode (file, image, m_lossless);
+        }
+    }
+
+    [Export(typeof(ImageFormat))]
+    [ExportMetadata("Priority", 90)]
+    public sealed class WebPQuality80Format : WebPEncoderFormat
+    {
+        public const string FormatTag = "WEBP/80";
+
+        public override string         Tag { get { return FormatTag; } }
+        public override string Description { get { return "Google WebP image format (quality 80%)"; } }
+
+        public WebPQuality80Format () : base (false)
+        {
+        }
+    }
+
+    [Export(typeof(ImageFormat))]
+    [ExportMetadata("Priority", 80)]
+    public sealed class WebPLosslessFormat : WebPEncoderFormat
+    {
+        public const string FormatTag = "WEBP/LOSSLESS";
+
+        public override string         Tag { get { return FormatTag; } }
+        public override string Description { get { return "Google WebP lossless image format"; } }
+
+        public WebPLosslessFormat () : base (true)
+        {
         }
     }
 }

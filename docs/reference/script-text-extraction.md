@@ -95,6 +95,15 @@ The PSB dump is decoded object data, not reconstructed KAG source. For text
 KiriKiri/KAG scripts, dump mode instead emits the decoded source with diagnostic
 line numbers.
 
+### BGI/Ethornell v1 scripts
+
+For scripts with the `BurikoCompiledScriptVer1.00` header, JSONL pairs the
+non-empty string argument of a directly preceding `_PlayVoice` call with the
+next displayed message. The `voice` value is the archive entry identifier, such
+as `RE_0001`; the extractor does not invent a file extension or archive path.
+Filtered output omits these identifiers, while raw and diagnostic dump output
+retain them for inspection.
+
 ## Extraction Rules
 
 - Keep extraction narrow and format-specific. Avoid broad heuristics that turn

@@ -364,6 +364,12 @@
     <value>保存するイメージは</value>
     <comment>Save images as</comment>
   </data>
+  <data name="ImageFormatWebP80" xml:space="preserve">
+    <value>WebP 80%</value>
+  </data>
+  <data name="ImageFormatWebPLossless" xml:space="preserve">
+    <value>WebP ロスレス</value>
+  </data>
   <data name="TextTitle" xml:space="preserve">
     <value>Onachi-GARbro</value>
     <comment>Onachi-GARbro</comment>

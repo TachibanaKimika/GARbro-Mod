@@ -227,7 +227,8 @@ namespace GameRes.Formats.BGI
             uint id = 0;
             foreach (var item in m_strings)
             {
-                if (!include_internal && item.Type == BgiStringType.Internal)
+                if (!include_internal
+                    && (item.Type == BgiStringType.Internal || item.Type == BgiStringType.Voice))
                     continue;
                 string text;
                 if (!TryReadString (item.TextOffset, out text) || string.IsNullOrEmpty (text))
@@ -239,6 +240,7 @@ namespace GameRes.Formats.BGI
         public IEnumerable<ScriptTextEntry> ExtractJsonEntries ()
         {
             var pending_names = new List<string>();
+            string pending_voice = null;
             foreach (var item in m_strings)
             {
                 if (item.Type == BgiStringType.Internal)
@@ -246,6 +248,11 @@ namespace GameRes.Formats.BGI
                 string text;
                 if (!TryReadString (item.TextOffset, out text) || string.IsNullOrEmpty (text))
                     continue;
+                if (item.Type == BgiStringType.Voice)
+                {
+                    pending_voice = text;
+                    continue;
+                }
                 if (item.Type == BgiStringType.CharacterName)
                 {
                     pending_names.Add (text);
@@ -254,7 +261,9 @@ namespace GameRes.Formats.BGI
 
                 var entry = new ScriptTextEntry (text);
                 entry.Names.AddRange (pending_names);
+                entry.Voice = pending_voice;
                 pending_names.Clear();
+                pending_voice = null;
                 yield return entry;
             }
         }
@@ -302,6 +311,7 @@ namespace GameRes.Formats.BGI
     {
         CharacterName,
         Message,
+        Voice,
         Internal,
     }
 
@@ -800,9 +810,21 @@ namespace GameRes.Formats.BGI
             if (m_string_stack.Count == 0)
                 return;
             var item = m_string_stack.Pop();
+            string function = ReadStringAtAddress (item.Value);
             OnStringAddressEncountered (item.Offset, item.Value, BgiStringType.Internal);
-            if ("_SelectEx" == ReadStringAtAddress (item.Value))
+            if ("_SelectEx" == function)
                 HandleChoiceScreen();
+            else if ("_PlayVoice" == function)
+                HandleVoice();
+        }
+
+        void HandleVoice ()
+        {
+            if (m_string_stack.Count == 0)
+                return;
+            var voice = m_string_stack.Pop();
+            var type = !IsEmptyString (voice.Value) ? BgiStringType.Voice : BgiStringType.Internal;
+            OnStringAddressEncountered (voice.Offset, voice.Value, type);
         }
 
         void HandleMessage ()

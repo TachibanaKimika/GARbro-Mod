@@ -367,6 +367,24 @@ namespace GARbro.GUI.Strings {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to WebP 80%.
+        /// </summary>
+        public static string ImageFormatWebP80 {
+            get {
+                return ResourceManager.GetString("ImageFormatWebP80", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to WebP lossless.
+        /// </summary>
+        public static string ImageFormatWebPLossless {
+            get {
+                return ResourceManager.GetString("ImageFormatWebPLossless", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to A_pply to all duplicate files.
         /// </summary>
         public static string LabelApplyToAll {

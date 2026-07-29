@@ -436,6 +436,27 @@
   <data name="HxNamesButton" xml:space="preserve">
     <value>手动导入 HxNames.lst...</value>
   </data>
+  <data name="HxNamesPresetLabel" xml:space="preserve">
+    <value>HxNames 预制表：</value>
+  </data>
+  <data name="HxNamesPresetAutomatic" xml:space="preserve">
+    <value>自动识别</value>
+  </data>
+  <data name="HxNamesPresetLLLJ" xml:space="preserve">
+    <value>ライムライト・レモネードジャム（LLLJ，99.97%）</value>
+  </data>
+  <data name="HxNamesPresetButton" xml:space="preserve">
+    <value>应用所选预制表</value>
+  </data>
+  <data name="HxNamesPresetNotDetected" xml:space="preserve">
+    <value>未自动识别到适用的 HxNames 预制表，请显式选择一个预制表。</value>
+  </data>
+  <data name="HxNamesPresetFileNotFound" xml:space="preserve">
+    <value>找不到所选 HxNames 预制表文件：{0}</value>
+  </data>
+  <data name="HxNamesPresetApplied" xml:space="preserve">
+    <value>已应用预制表“{0}”。{1}</value>
+  </data>
   <data name="HxNamesSameDirectory" xml:space="preserve">
     <value>应用到同目录 XP3（仅当前会话）</value>
   </data>

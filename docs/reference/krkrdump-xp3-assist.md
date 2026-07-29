@@ -6,16 +6,18 @@ when the built-in XP3 scheme list is not enough.
 ## User Flow
 
 1. Open a protected `.xp3` archive.
-2. If GARbro asks for archive parameters, choose `Use KrkrDump...` in the XP3
-   parameter dialog. If opening the archive fails before that dialog, accept the
-   fallback prompt.
-3. Confirm the game executable. The dialog auto-selects a likely `.exe` from
+2. In the XP3 parameter dialog, leave `HxNames preset` on automatic detection
+   or select a bundled title explicitly. The explicit selection is useful when
+   the game executable has been renamed.
+3. Choose `Use KrkrDump...`. If opening the archive fails before that dialog,
+   accept the fallback prompt.
+4. Confirm the game executable. The dialog auto-selects a likely `.exe` from
    the XP3 directory when possible.
-4. Start the assistant. Windows shows the normal UAC prompt because the loader
+5. Start the assistant. Windows shows the normal UAC prompt because the loader
    is launched with `runas`.
-5. Let the game reach the point where it loads the target archive, then close
+6. Let the game reach the point where it loads the target archive, then close
    the game.
-6. GARbro imports the dumped parameters and uses the generated scheme for the
+7. GARbro imports the dumped parameters and uses the generated scheme for the
    pending XP3 request without adding it to the visible scheme dropdown.
 
 After a fallback run, GARbro retries the original `.xp3` automatically. The
@@ -32,8 +34,9 @@ native first-run name-recovery pass:
    the path and file-name hashes that actually exist.
 2. Reuse names observed in KrkrDump logs and decrypt scenario PSBs from the
    game's `scn`/`scenario` archives.
-3. Generate candidates from scenario names, referenced files, voice sequences,
-   system voices, loop voices, and common resource paths.
+3. For a recognized game-specific preset, seed the pass with its known
+   mappings, then generate candidates from scenario names, referenced files,
+   voice sequences, system voices, loop voices, and common resource paths.
 4. Calculate the Hx v4 salted BLAKE2s file-name hashes and SipHash-2-4 path
    hashes, retaining only candidates found in the collected indexes.
 5. Write the matched mappings to the per-game result cache:
@@ -56,10 +59,12 @@ temporarily replace the active name mapping seen by archive browsing. On a true
 first run with no prior result, unresolved names become available when the pass
 finishes.
 
-The cache is an output of generation, not a bundled or preloaded answer table.
-It only provides a warm start for the next live rebuild. The status message
-reports scenario/candidate counts and the exact path/file-name coverage for the
-selected XP3.
+The cache is an output of generation and normally provides the warm start for
+the next live rebuild. A recognized bundled preset is applied before that cache
+and is also fed into generation, so a later rebuild retains every preset mapping
+that occurs in the current game's indexes. The status message reports
+scenario/candidate counts and the exact path/file-name coverage for the selected
+XP3.
 
 The candidate strategy is compatible with the workflow documented by
 [MLChinoo/hxv4_unhash_tools](https://github.com/MLChinoo/hxv4_unhash_tools).
@@ -70,13 +75,17 @@ decompiler.
 If native generation cannot run or produces no match for the selected archive,
 GARbro still tries compatible external tables in this order:
 
-1. A path explicitly supplied by the KrkrDump host result.
-2. The per-game cache from an earlier successful generation.
-3. `HxNames.lst` beside the selected XP3.
-4. `HxNames.lst` in the game directory reported by KrkrDump.
+1. A bundled preset explicitly selected in the XP3 parameter dialog, or a path
+   explicitly supplied by the KrkrDump host result.
+2. A bundled game-specific preset when the selected executable matches it.
+3. The per-game cache from an earlier successful generation.
+4. `HxNames.lst` beside the selected XP3.
+5. `HxNames.lst` in the game directory reported by KrkrDump.
 
-`Import HxNames.lst manually...` is also available after selecting an Hx v4 or
-KrkrDump scheme.
+`Apply selected preset` and `Import HxNames.lst manually...` are also available
+after selecting an Hx v4 or KrkrDump scheme. The first reapplies the bundled
+choice without another KrkrDump run; the second accepts an arbitrary compatible
+table.
 
 GARbro accepts UTF-8 `HASH:name` records with a 16-digit path hash or a 64-digit
 file-name hash. Blank lines and lines beginning with `#` or `;` are ignored; an
@@ -92,6 +101,27 @@ The merged scheme and optional same-directory scope last only for the current
 GARbro session. The generated UTF-8 table remains in the per-game local cache,
 but it is regenerated from the current resources on the next successful
 KrkrDump import.
+
+### Optional Limelight Lemonade Jam preset
+
+When installed, `GameData\HxNames-LLLJ.lst` is automatically selected when the
+KrkrDump game executable has a base name beginning with `limelight_lj`,
+including builds such as `limelight_lj_Crack.exe`. It is also listed explicitly as
+`ライムライト・レモネードジャム (LLLJ, 99.97%)` in the XP3 parameter dialog,
+so executable-name detection is not required. Selecting it before
+`Use KrkrDump...` feeds the table into the same live generation pass; after a
+compatible Hx v4/KrkrDump scheme exists, `Apply selected preset` can attach it
+without rerunning KrkrDump.
+
+Onachi-GARbro does not distribute this table. Download it separately from
+[MLChinoo/lllj_hxnames](https://github.com/MLChinoo/lllj_hxnames), rename it
+to `HxNames-LLLJ.lst`, and place it beside the executable under `GameData`.
+For local source builds, it can instead be placed at
+`ArcFormats\Resources\HxNames-LLLJ.lst`; the ignored local file is copied to
+the Debug build output by the ArcFormats post-build step. Non-Debug builds
+remove it from their output so it cannot enter a release package accidentally.
+If the file is absent, selecting the preset reports its expected path and other
+HxNames generation/import workflows continue to work.
 
 If the release package is missing the bundled runtime, the assistant reports
 the missing architecture and shows repair guidance. The source-page button opens

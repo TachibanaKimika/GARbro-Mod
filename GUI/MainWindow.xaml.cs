@@ -280,11 +280,13 @@ namespace GARbro.GUI
                 continue_button.Click += (s, e) => {
                     result.Continue = true;
                     result.IgnoreErrors = dialog.FooterCheckBoxChecked ?? false;
+                    dialog.Close();
                 };
                 var abort_button = new TaskDialogButton ("abort", ToNativeButtonText (guiStrings.ButtonAbort));
                 abort_button.Click += (s, e) => {
                     result.Continue = false;
                     result.IgnoreErrors = dialog.FooterCheckBoxChecked ?? false;
+                    dialog.Close();
                 };
                 dialog.Controls.Add (continue_button);
                 dialog.Controls.Add (abort_button);
@@ -304,13 +306,25 @@ namespace GARbro.GUI
                 dialog.FooterCheckBoxChecked = false;
 
                 var skip_button = new TaskDialogButton ("skip", ToNativeButtonText (guiStrings.ButtonSkip)) { Default = true };
-                skip_button.Click += (s, e) => result.Action = ExistingFileAction.Skip;
+                skip_button.Click += (s, e) => {
+                    result.Action = ExistingFileAction.Skip;
+                    dialog.Close();
+                };
                 var overwrite_button = new TaskDialogButton ("overwrite", ToNativeButtonText (guiStrings.ButtonOverwrite));
-                overwrite_button.Click += (s, e) => result.Action = ExistingFileAction.Overwrite;
+                overwrite_button.Click += (s, e) => {
+                    result.Action = ExistingFileAction.Overwrite;
+                    dialog.Close();
+                };
                 var rename_button = new TaskDialogButton ("rename", ToNativeButtonText (guiStrings.ButtonRename));
-                rename_button.Click += (s, e) => result.Action = ExistingFileAction.Rename;
+                rename_button.Click += (s, e) => {
+                    result.Action = ExistingFileAction.Rename;
+                    dialog.Close();
+                };
                 var abort_button = new TaskDialogButton ("abort", ToNativeButtonText (guiStrings.ButtonAbort));
-                abort_button.Click += (s, e) => result.Action = ExistingFileAction.Abort;
+                abort_button.Click += (s, e) => {
+                    result.Action = ExistingFileAction.Abort;
+                    dialog.Close();
+                };
 
                 dialog.Controls.Add (skip_button);
                 dialog.Controls.Add (overwrite_button);

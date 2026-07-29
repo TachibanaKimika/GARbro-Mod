@@ -33,6 +33,15 @@ namespace GameRes.Formats.GUI
                 last_selected = null;
             InitializeComponent();
             KrkrDumpButton.Content = Text ("KrkrDumpButton");
+            HxNamesPresetLabel.Text = Text ("HxNamesPresetLabel");
+            HxNamesPreset.ItemsSource = new[] {
+                new HxNamesPresetItem (null, Text ("HxNamesPresetAutomatic")),
+                new HxNamesPresetItem (
+                    KrkrDumpResultImporter.LimelightLemonadeJamPresetId,
+                    Text ("HxNamesPresetLLLJ")),
+            };
+            HxNamesPreset.SelectedIndex = 0;
+            HxNamesPresetButton.Content = Text ("HxNamesPresetButton");
             HxNamesButton.Content = Text ("HxNamesButton");
             HxNamesSameDirectoryText.Text = Text ("HxNamesSameDirectory");
             ResetSchemeSource();
@@ -111,6 +120,14 @@ namespace GameRes.Formats.GUI
 
         async void OnKrkrDumpClick (object sender, System.Windows.RoutedEventArgs e)
         {
+            string preset_file;
+            string preset_name;
+            string preset_error;
+            if (!TryResolveSelectedPreset (false, null, out preset_file, out preset_name, out preset_error))
+            {
+                KrkrDumpStatus.Text = preset_error;
+                return;
+            }
             var handler = ParameterCommandRequested;
             if (null == handler)
             {
@@ -127,16 +144,20 @@ namespace GameRes.Formats.GUI
             }
             KrkrDumpStatus.Text = Text ("HxNamesGenerating");
             KrkrDumpButton.IsEnabled = false;
+            HxNamesPreset.IsEnabled = false;
+            HxNamesPresetButton.IsEnabled = false;
             HxNamesButton.IsEnabled = false;
             var progress_reporter = m_progress_reporter;
             ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
             try
             {
                 var result = args.Result;
+                AttachPreset (result, preset_file);
                 var source_file = m_source_file;
                 var same_directory = HxNamesSameDirectory.IsChecked == true;
                 var import = await Task.Run (() => KrkrDumpResultImporter.Import (
                     result, source_file, same_directory, progress_reporter));
+                DescribeAppliedPreset (import, preset_name);
                 KrkrDumpStatus.Text = import.Message;
                 ApplyImportResult (import);
                 ReportProgress (progress_reporter, 100, import.Message, true);
@@ -149,15 +170,42 @@ namespace GameRes.Formats.GUI
             finally
             {
                 KrkrDumpButton.IsEnabled = true;
+                HxNamesPreset.IsEnabled = true;
+                HxNamesPresetButton.IsEnabled = true;
                 HxNamesButton.IsEnabled = true;
             }
         }
 
+        void OnHxNamesPresetClick (object sender, System.Windows.RoutedEventArgs e)
+        {
+            var base_scheme = GetHxNamesBaseScheme();
+            if (!(Xp3Opener.GetScheme (base_scheme) is HxCrypt))
+            {
+                KrkrDumpStatus.Text = Text ("HxNamesNeedHxScheme");
+                return;
+            }
+
+            string preset_file;
+            string preset_name;
+            string preset_error;
+            if (!TryResolveSelectedPreset (true, null, out preset_file, out preset_name, out preset_error))
+            {
+                KrkrDumpStatus.Text = preset_error;
+                return;
+            }
+
+            var result = new ResourceParameterCommandResult { Success = true };
+            result.Metadata["NamesFile"] = preset_file;
+            var import = KrkrDumpResultImporter.ImportNamesFile (
+                result, m_source_file, base_scheme, HxNamesSameDirectory.IsChecked == true);
+            DescribeAppliedPreset (import, preset_name);
+            KrkrDumpStatus.Text = import.Message;
+            ApplyImportResult (import);
+        }
+
         void OnHxNamesClick (object sender, System.Windows.RoutedEventArgs e)
         {
-            var base_scheme = !string.IsNullOrEmpty (m_imported_scheme)
-                ? m_imported_scheme
-                : Scheme.SelectedValue as string;
+            var base_scheme = GetHxNamesBaseScheme();
             if (!(Xp3Opener.GetScheme (base_scheme) is HxCrypt))
             {
                 KrkrDumpStatus.Text = Text ("HxNamesNeedHxScheme");
@@ -185,12 +233,22 @@ namespace GameRes.Formats.GUI
 
         public bool ApplyResourceToolResult (ResourceParameterCommandResult result, out string message)
         {
+            string preset_file;
+            string preset_name;
+            string preset_error;
+            if (!TryResolveSelectedPreset (false, result, out preset_file, out preset_name, out preset_error))
+            {
+                message = preset_error;
+                return false;
+            }
+            AttachPreset (result, preset_file);
             var progress_reporter = m_progress_reporter;
             ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
             try
             {
                 var import = KrkrDumpResultImporter.Import (
                     result, m_source_file, HxNamesSameDirectory.IsChecked == true, progress_reporter);
+                DescribeAppliedPreset (import, preset_name);
                 message = import.Message;
                 ReportProgress (progress_reporter, 100, import.Message, true);
                 return ApplyImportResult (import);
@@ -199,6 +257,70 @@ namespace GameRes.Formats.GUI
             {
                 ReportProgress (progress_reporter, 100, X.Message, true);
                 throw;
+            }
+        }
+
+        string GetHxNamesBaseScheme ()
+        {
+            return !string.IsNullOrEmpty (m_imported_scheme)
+                ? m_imported_scheme
+                : Scheme.SelectedValue as string;
+        }
+
+        bool TryResolveSelectedPreset (bool resolve_automatic,
+                                       ResourceParameterCommandResult result,
+                                       out string preset_file,
+                                       out string preset_name,
+                                       out string error)
+        {
+            preset_file = null;
+            preset_name = null;
+            error = null;
+            var selected = HxNamesPreset.SelectedItem as HxNamesPresetItem;
+            var preset_id = null != selected ? selected.Key : null;
+            if (string.IsNullOrEmpty (preset_id) && !resolve_automatic)
+                return true;
+
+            preset_file = KrkrDumpResultImporter.ResolveInstalledNamesPresetFile (
+                preset_id, result, m_source_file);
+            if (string.IsNullOrEmpty (preset_file))
+            {
+                error = Text ("HxNamesPresetNotDetected");
+                return false;
+            }
+            if (!System.IO.File.Exists (preset_file))
+            {
+                error = string.Format (Text ("HxNamesPresetFileNotFound"), preset_file);
+                return false;
+            }
+            if (null != selected && !string.IsNullOrEmpty (selected.Key))
+            {
+                preset_name = selected.Name;
+            }
+            else
+            {
+                var lllj_file = KrkrDumpResultImporter.ResolveInstalledNamesPresetFile (
+                    KrkrDumpResultImporter.LimelightLemonadeJamPresetId, result, m_source_file);
+                preset_name = string.Equals (
+                    preset_file, lllj_file, StringComparison.OrdinalIgnoreCase)
+                    ? Text ("HxNamesPresetLLLJ")
+                    : System.IO.Path.GetFileName (preset_file);
+            }
+            return true;
+        }
+
+        static void AttachPreset (ResourceParameterCommandResult result, string preset_file)
+        {
+            if (null != result && !string.IsNullOrEmpty (preset_file))
+                result.Metadata["HxNamesFile"] = preset_file;
+        }
+
+        static void DescribeAppliedPreset (KrkrDumpImportResult import, string preset_name)
+        {
+            if (null != import && import.Success && !string.IsNullOrEmpty (preset_name))
+            {
+                import.Message = string.Format (
+                    Text ("HxNamesPresetApplied"), preset_name, import.Message);
             }
         }
 
@@ -234,6 +356,18 @@ namespace GameRes.Formats.GUI
                 System.Diagnostics.Trace.WriteLine (
                     "HxNames progress reporter failed: " + X.Message, "[HxNames]");
             }
+        }
+    }
+
+    internal class HxNamesPresetItem
+    {
+        public string Key { get; private set; }
+        public string Name { get; private set; }
+
+        public HxNamesPresetItem (string key, string name)
+        {
+            Key = key;
+            Name = name;
         }
     }
 

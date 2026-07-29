@@ -11,8 +11,13 @@
               SelectionChanged="OnSchemeSelectionChanged"/>
     <TextBlock Name="AlgorithmName" DataContext="{Binding ElementName=Scheme, Path=SelectedItem}" Margin="0,5,0,0"
                Text="{Binding Path=Value, Mode=OneWay}"/>
+    <TextBlock Name="HxNamesPresetLabel" Margin="0,8,0,0"/>
+    <ComboBox Name="HxNamesPreset" Width="280" HorizontalAlignment="Left"
+              DisplayMemberPath="Name" SelectedValuePath="Key"/>
     <Button Name="KrkrDumpButton" Width="180" Margin="0,8,0,0"
             HorizontalAlignment="Left" Click="OnKrkrDumpClick"/>
+    <Button Name="HxNamesPresetButton" Width="180" Margin="0,6,0,0"
+            HorizontalAlignment="Left" Click="OnHxNamesPresetClick"/>
     <Button Name="HxNamesButton" Width="180" Margin="0,6,0,0"
             HorizontalAlignment="Left" Click="OnHxNamesClick"/>
     <CheckBox Name="HxNamesSameDirectory" Margin="0,6,0,0" IsChecked="True">

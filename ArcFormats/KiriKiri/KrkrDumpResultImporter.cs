@@ -21,6 +21,10 @@ namespace GameRes.Formats.KiriKiri
 
     internal static class KrkrDumpResultImporter
     {
+        internal const string LimelightLemonadeJamPresetId = "lllj";
+        const string LimelightLemonadeJamExecutablePrefix = "limelight_lj";
+        const string LimelightLemonadeJamNamesFile = "HxNames-LLLJ.lst";
+
         static readonly byte[] Xp3Header = {
             (byte)'X', (byte)'P', (byte)'3', 0x0d, 0x0a, 0x20, 0x0a, 0x1a, 0x8b, 0x67, 0x01
         };
@@ -148,6 +152,7 @@ namespace GameRes.Formats.KiriKiri
             };
 
             var logged_names = new Dictionary<string, string> (data.Names, StringComparer.OrdinalIgnoreCase);
+            SeedKnownNamesFromPreset (logged_names, result, source_file);
             FilterNamesToSourceArchive (source_file, data, crypt);
             data.NamesFile = WriteNamesFile (result, data);
             crypt.NamesFile = data.NamesFile;
@@ -263,6 +268,8 @@ namespace GameRes.Formats.KiriKiri
             var candidates = new List<string>();
             AddCandidate (candidates, GetMetadata (result, "HxNamesFile"));
 
+            AddCandidate (candidates, GetInstalledNamesFile (result, source_file));
+
             AddCandidate (candidates, GetAutomaticNamesCacheFile (result, source_file));
 
             if (!string.IsNullOrEmpty (source_file))
@@ -276,6 +283,85 @@ namespace GameRes.Formats.KiriKiri
                 AddCandidate (candidates, Path.Combine (game_directory_from_result, "HxNames.lst"));
 
             return candidates.Where (File.Exists);
+        }
+
+        static void SeedKnownNamesFromPreset (IDictionary<string, string> names,
+                                              ResourceParameterCommandResult result,
+                                              string source_file)
+        {
+            var names_file = GetMetadata (result, "HxNamesFile");
+            if (string.IsNullOrEmpty (names_file))
+                names_file = GetInstalledNamesFile (result, source_file);
+            if (string.IsNullOrEmpty (names_file) || !File.Exists (names_file))
+                return;
+
+            Dictionary<string, string> preset_names;
+            string error;
+            if (!TryReadNamesFile (names_file, out preset_names, out error))
+            {
+                Trace.WriteLine (string.Format (
+                    "HxNames preset was not used to seed generation. file='{0}', reason='{1}'",
+                    names_file, error), "[HxNames]");
+                return;
+            }
+            foreach (var pair in preset_names)
+                names[pair.Key] = pair.Value;
+            Trace.WriteLine (string.Format (
+                "Seeded HxNames generation from preset. file='{0}', entries={1}",
+                names_file, preset_names.Count), "[HxNames]");
+        }
+
+        internal static string ResolveInstalledNamesPresetFile (
+            string preset_id, ResourceParameterCommandResult result, string source_file)
+        {
+            if (string.IsNullOrEmpty (preset_id))
+                return GetInstalledNamesFile (result, source_file);
+            if (string.Equals (preset_id, LimelightLemonadeJamPresetId,
+                               StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.Combine (FormatCatalog.Instance.DataDirectory,
+                                     LimelightLemonadeJamNamesFile);
+            }
+            return null;
+        }
+
+        static string GetInstalledNamesFile (ResourceParameterCommandResult result, string source_file)
+        {
+            if (!IsLimelightLemonadeJam (result, source_file))
+                return null;
+            return ResolveInstalledNamesPresetFile (
+                LimelightLemonadeJamPresetId, result, source_file);
+        }
+
+        static bool IsLimelightLemonadeJam (ResourceParameterCommandResult result, string source_file)
+        {
+            if (IsLimelightLemonadeJamExecutable (GetMetadata (result, "GameExecutable")))
+                return true;
+
+            var game_directory = GetMetadata (result, "GameDirectory");
+            if (string.IsNullOrEmpty (game_directory) && !string.IsNullOrEmpty (source_file))
+                game_directory = Path.GetDirectoryName (source_file);
+            if (string.IsNullOrEmpty (game_directory) || !Directory.Exists (game_directory))
+                return false;
+            try
+            {
+                return Directory.EnumerateFiles (game_directory, "*.exe")
+                    .Any (IsLimelightLemonadeJamExecutable);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        static bool IsLimelightLemonadeJamExecutable (string path)
+        {
+            if (string.IsNullOrWhiteSpace (path))
+                return false;
+            var name = Path.GetFileNameWithoutExtension (path);
+            return !string.IsNullOrEmpty (name)
+                && name.StartsWith (LimelightLemonadeJamExecutablePrefix,
+                                    StringComparison.OrdinalIgnoreCase);
         }
 
         static string GetAutomaticNamesCacheFile (ResourceParameterCommandResult result, string source_file)
@@ -444,6 +530,8 @@ namespace GameRes.Formats.KiriKiri
 
         static string GetMetadata (ResourceParameterCommandResult result, string key)
         {
+            if (null == result)
+                return null;
             string value;
             if (result.Metadata.TryGetValue (key, out value))
                 return value;

@@ -1439,7 +1439,8 @@ exit 0</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PostBuildEvent>if not exist "$(TargetDir)\GameData" mkdir "$(TargetDir)\GameData"
-xcopy "$(ProjectDir)\Resources\*" "$(TargetDir)\GameData\" /D /Y &gt;NUL</PostBuildEvent>
+xcopy "$(ProjectDir)\Resources\*" "$(TargetDir)\GameData\" /D /Y &gt;NUL
+if /I not "$(Configuration)"=="Debug" if exist "$(TargetDir)\GameData\HxNames-LLLJ.lst" del /Q "$(TargetDir)\GameData\HxNames-LLLJ.lst"</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

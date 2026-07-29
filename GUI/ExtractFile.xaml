@@ -20,7 +20,7 @@
         <Grid Name="ConversionTypePanel" Margin="10,60,0,0" Height="25" Width="300" VerticalAlignment="Top" HorizontalAlignment="Left">
             <StackPanel x:Name="ImageConversionOptions" Visibility="Visible" Orientation="Horizontal">
                 <TextBlock Text="{x:Static s:guiStrings.TextSaveAs}" Margin="0,0,7,0" TextWrapping="Wrap" TextAlignment="Right"  VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                <ComboBox x:Name="ImageConversionFormat" DisplayMemberPath="Tag" Margin="0" VerticalAlignment="Center" Height="21" Width="76"/>
+                <ComboBox x:Name="ImageConversionFormat" DisplayMemberPath="Label" Margin="0" VerticalAlignment="Center" Height="21" Width="120"/>
             </StackPanel>
             <StackPanel x:Name="AudioConversionOptions" Visibility="Collapsed" Orientation="Horizontal">
                 <CheckBox x:Name="AudioConversion" Content="{x:Static s:guiStrings.TextConvertAudio}" ToolTip="{x:Static s:guiStrings.TooltipAudioFormats}" Margin="0,0,7,0" VerticalAlignment="Center" Height="21" HorizontalAlignment="Left"

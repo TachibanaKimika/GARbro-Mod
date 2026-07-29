@@ -15,6 +15,7 @@ Makefile
 packages
 .nuget
 .vs
+/ArcFormats/Resources/HxNames-LLLJ.lst
 
 !Tools/KrkrDump/
 !Tools/KrkrDump/**/

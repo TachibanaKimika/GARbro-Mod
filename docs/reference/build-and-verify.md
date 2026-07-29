@@ -243,6 +243,13 @@ Tools\KrkrDump\x86\KrkrDump.dll
 THIRD-PARTY-NOTICES.txt
 ```
 
+`GameData\HxNames-LLLJ.lst` is an optional user-installed preset and is not
+part of the repository or release package. A local source checkout may keep a
+copy at `ArcFormats\Resources\HxNames-LLLJ.lst`; that exact path is ignored by
+Git and the ArcFormats post-build resource copy places it in the Debug
+`GameData` directory. Non-Debug builds explicitly remove this optional local
+file from their output before packaging.
+
 Add `bin\<Configuration>\Tools\KrkrDump\x64\KrkrDumpLoader.exe` and
 `bin\<Configuration>\Tools\KrkrDump\x64\KrkrDump.dll` when a working x64
 KrkrDump DLL is available. A flat `Tools\KrkrDump\` directory also works, but

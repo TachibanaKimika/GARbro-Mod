@@ -306,6 +306,12 @@
   <data name="TextSaveImagesAs" xml:space="preserve">
     <value>Save images as</value>
   </data>
+  <data name="ImageFormatWebP80" xml:space="preserve">
+    <value>WebP 80%</value>
+  </data>
+  <data name="ImageFormatWebPLossless" xml:space="preserve">
+    <value>WebP lossless</value>
+  </data>
   <data name="TextTitle" xml:space="preserve">
     <value>Onachi-GARbro</value>
   </data>

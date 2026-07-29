@@ -22,6 +22,8 @@ most likely archive could not be opened by current GARbro version.
 Files could be extracted from archives by pressing 'F4', with all images and
 audio converted to common formats in the process, of course if game format
 itself is recognized.
+The image conversion selector includes `WebP 80%` for smaller lossy output and
+`WebP lossless` for exact lossless output; both modes preserve transparency.
 
 When multiple archive files are selected in the file system, 'F4' extracts
 them sequentially in the current list order using the same destination and
@@ -106,10 +108,22 @@ and can be applied to other XP3 archives in the same directory for the current
 session. Compatible external tables can still be imported manually as a
 fallback.
 
+The XP3 parameter dialog also supports an optional game-specific preset for
+*Limelight Lemonade Jam*. Automatic mode recognizes `limelight_lj*.exe`;
+selecting the title explicitly also works for executables with an unrelated
+name. The selection is applied when `Use KrkrDump...` finishes, or can be
+reapplied with `Apply selected preset` after an Hx v4/KrkrDump scheme is
+available. GARbro uses an installed `GameData\HxNames-LLLJ.lst` before the
+local generated cache and to seed subsequent live rebuilds. The table is not
+distributed with Onachi-GARbro; users can obtain it from
+[MLChinoo/lllj_hxnames](https://github.com/MLChinoo/lllj_hxnames) and install
+it locally. See `docs/reference/krkrdump-xp3-assist.md` for details.
+
 BGI/Ethornell archive script entries recognize `._bp` scripts and v1 bytecode
 with the `BurikoCompiledScriptVer1.00` header.  Filtered mode extracts
 character names, messages, and choices; raw mode also includes referenced
-internal strings.
+internal strings.  For v1 scripts, JSONL associates the directly preceding
+`_PlayVoice` identifier with its message in the optional `voice` field.
 
 AdvHD `.ws2` scripts can be opened as script archives and extracted as
 filtered text, raw text, JSONL, or diagnostic bytecode dumps.  Filtered mode
@@ -172,6 +186,10 @@ The bundled KrkrDump helper is from
 [crskycode/KrkrDump](https://github.com/crskycode/KrkrDump) and is distributed
 under GPL-3.0. See `THIRD-PARTY-NOTICES.txt` in release packages and
 `Tools/KrkrDump/LICENSE.txt` for the full license text.
+
+The optional *Limelight Lemonade Jam* HxNames preset is not distributed with
+Onachi-GARbro. Users can obtain it separately from
+[MLChinoo/lllj_hxnames](https://github.com/MLChinoo/lllj_hxnames).
 
 Korean translation by [mireado](https://github.com/mireado), [overworks](https://github.com/overworks)
 

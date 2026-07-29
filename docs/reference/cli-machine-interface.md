@@ -103,6 +103,8 @@ one command and must be parsed with different schemas.
 
 `image convert --format` accepts either a handler tag such as `PNG` or an
 extension such as `png`. The selected handler must advertise `CanWrite`.
+WebP output is available as `WEBP/80` (lossy quality 80) and
+`WEBP/LOSSLESS`; using the `webp` extension selects `WEBP/80`.
 
 ## Common options
 
