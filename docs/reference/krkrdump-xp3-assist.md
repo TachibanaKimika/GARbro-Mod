@@ -7,7 +7,7 @@ when the built-in XP3 scheme list is not enough.
 
 1. Open a protected `.xp3` archive.
 2. In the XP3 parameter dialog, leave `HxNames preset` on automatic detection
-   or select a bundled title explicitly. The explicit selection is useful when
+   or select an installed title explicitly. The explicit selection is useful when
    the game executable has been renamed.
 3. Choose `Use KrkrDump...`. If opening the archive fails before that dialog,
    accept the fallback prompt.
@@ -24,66 +24,100 @@ After a fallback run, GARbro retries the original `.xp3` automatically. The
 assistant only imports parameters; normal listing and extraction continue to be
 handled by GARbro after the archive opens.
 
+If a working Hx v4 scheme is already available, KrkrDump is not required for
+name generation. Select the scheme and choose `Generate HxNames from resources`
+in the same XP3 parameter dialog. The selected or automatically detected
+installed preset, current scheme name tables, and the previous generated cache
+are used as seeds. `Use KrkrDump...` continues to run the same native generator
+automatically after importing runtime parameters.
+
 ## Real-time Hx v4 Name Recovery
 
 An Hx v4 archive can have valid content keys while its path and file-name hashes
-remain unresolved. After KrkrDump parameters are imported, GARbro performs a
-native first-run name-recovery pass:
+remain unresolved. Once an Hx v4 scheme is available, GARbro can perform a
+native name-recovery pass:
 
-1. Decrypt the Hx v4 indexes from XP3 archives in the game directory and collect
+1. Decrypt the Hx v4 indexes from every XP3 in the game directory and collect
    the path and file-name hashes that actually exist.
-2. Reuse names observed in KrkrDump logs and decrypt scenario PSBs from the
-   game's `scn`/`scenario` archives.
-3. For a recognized game-specific preset, seed the pass with its known
-   mappings, then generate candidates from scenario names, referenced files,
-   voice sequences, system voices, loop voices, and common resource paths.
-4. Calculate the Hx v4 salted BLAKE2s file-name hashes and SipHash-2-4 path
+2. Reuse names observed in KrkrDump logs, known names already present in XP3
+   entries, and unobfuscated loose file and directory names below the game
+   directory.
+3. Open every same-directory XP3 with the imported thread-local scheme and
+   inspect bounded, name-bearing resources. The scanner recognizes:
+
+   - scenario, image, motion, and other non-encrypted PSBs, including MDF
+     entries already decompressed by the XP3 stream filter;
+   - `base.stage`;
+   - `cglist`, `soundlist`, `charvoice`, `imagediffmap`, `bgv`, `savelist`, and
+     `scenelist` CSV data, including content-based detection when the CSV's own
+     name is still hashed;
+   - `replay.ks` movie references and `.stand` PBD/SINFO references;
+   - unencrypted `TJS/ns0` and LZ4-compressed `TJS/4s0` PBD objects, including
+     character layer TLGs and character-thumbnail indexes.
+
+4. Generate additional candidates from PSB context, event/thumbnail variants,
+   movie resolutions and locales, voice sequences, system and loop voices, and
+   common resource paths. Newly matched Hx entry hashes are retained in memory,
+   so a `.stand` reference discovered after an otherwise unnamed PBD can still
+   supply that PBD's stem before layer names are finalized.
+5. Calculate the Hx v4 salted BLAKE2s file-name hashes and SipHash-2-4 path
    hashes, retaining only candidates found in the collected indexes.
-5. Write the matched mappings to the per-game result cache:
+6. Write the matched mappings to the per-game result cache:
 
    ```text
-   %LOCALAPPDATA%\Onachi\Onachi-GARbro\HxNames\<game-executable-name>\HxNames.lst
+   %LOCALAPPDATA%\Onachi\Onachi-GARbro\HxNames\<game-id>\HxNames.lst
    ```
 
+   The game ID is the KrkrDump executable base name when available; a manual
+   rebuild without KrkrDump uses the XP3 directory name.
+
 The pass runs on a worker thread so the WPF parameter dialog remains responsive.
-Large games can take one or two minutes because every scenario PSB must be
-decrypted and parsed. During the pass, the main window's bottom status bar
-temporarily shows the index, scenario-entry, candidate-expansion, and table-write
-stages with a determinate progress bar. It returns to the normal status display
-with the final result when generation finishes or fails. If the same game
-already has a result from an earlier
-successful pass, GARbro validates and applies that result immediately, including
-the optional same-directory scope, while still rebuilding it from the current
-resources. The scenario scanner uses a thread-local scheme, so it does not
+Large games can take one or two minutes because each unresolved XP3 entry must
+at least be decrypted far enough to identify its content. During the pass, the
+main window's bottom status bar temporarily shows the index, loose-resource,
+archive-entry, candidate-expansion, and table-write stages with a determinate
+progress bar. It returns to the normal status display with the final result when
+generation finishes or fails. If the same game already has a result from an
+earlier successful pass, GARbro validates and applies that result immediately,
+including the optional same-directory scope, while still rebuilding it from the
+current resources. The resource scanner uses a thread-local scheme, so it does not
 temporarily replace the active name mapping seen by archive browsing. On a true
 first run with no prior result, unresolved names become available when the pass
 finishes.
 
 The cache is an output of generation and normally provides the warm start for
-the next live rebuild. A recognized bundled preset is applied before that cache
+the next live rebuild. A recognized installed preset is applied before that cache
 and is also fed into generation, so a later rebuild retains every preset mapping
 that occurs in the current game's indexes. The status message reports
-scenario/candidate counts and the exact path/file-name coverage for the selected
-XP3.
+resource/scenario/candidate counts and the exact path/file-name coverage for the
+selected XP3.
 
 The candidate strategy is compatible with the workflow documented by
 [MLChinoo/hxv4_unhash_tools](https://github.com/MLChinoo/hxv4_unhash_tools).
 GARbro implements the standard hash algorithms and resource scanning natively;
-it does not bundle or execute that repository's Python files, hash DLL, or PSB
-decompiler.
+it does not bundle or execute that repository's Python files, hash DLL, PSB
+decompiler, or PBD converter. It never extracts or renames the game files.
+
+Resource reads are bounded: text metadata is limited to 8 MiB, PSB metadata and
+decoded TJS objects to 64 MiB, and loose-file enumeration to 100,000 files.
+Directory reparse points are not followed. Encrypted TJS objects are skipped.
+These limits prevent malformed or unrelated resources from turning name
+generation into an unbounded scan. Name recovery is still candidate-based: a
+name that is absent from logs, presets, resource metadata, and recognized naming
+patterns cannot be inferred from a one-way hash alone.
 
 If native generation cannot run or produces no match for the selected archive,
 GARbro still tries compatible external tables in this order:
 
-1. A bundled preset explicitly selected in the XP3 parameter dialog, or a path
+1. An installed preset explicitly selected in the XP3 parameter dialog, or a path
    explicitly supplied by the KrkrDump host result.
-2. A bundled game-specific preset when the selected executable matches it.
+2. An installed game-specific preset when the selected executable matches it.
 3. The per-game cache from an earlier successful generation.
 4. `HxNames.lst` beside the selected XP3.
 5. `HxNames.lst` in the game directory reported by KrkrDump.
 
 `Apply selected preset` and `Import HxNames.lst manually...` are also available
-after selecting an Hx v4 or KrkrDump scheme. The first reapplies the bundled
+after selecting an Hx v4 or KrkrDump scheme. The first reapplies the installed
 choice without another KrkrDump run; the second accepts an arbitrary compatible
 table.
 
@@ -99,8 +133,8 @@ incorrect encryption scheme.
 
 The merged scheme and optional same-directory scope last only for the current
 GARbro session. The generated UTF-8 table remains in the per-game local cache,
-but it is regenerated from the current resources on the next successful
-KrkrDump import.
+but it is regenerated from the current resources on the next manual rebuild or
+successful KrkrDump import.
 
 ### Optional Limelight Lemonade Jam preset
 
@@ -195,7 +229,7 @@ session if the same runtime-derived parameters are needed again.
 
 Debug GUI builds write existing `Trace` diagnostics to `bin\Debug\trace.log`.
 For KrkrDump-assisted XP3 opens, the trace includes the imported log count,
-`PathHash`/`NameHash` counts, scenario/candidate counts, matched index hashes,
+`PathHash`/`NameHash` counts, resource/scenario/candidate counts, matched index hashes,
 and generated `HxNames.lst` path.
 
 KrkrDump itself does not enumerate and offline-extract an arbitrary selected XP3

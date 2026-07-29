@@ -1063,6 +1063,7 @@
     <Compile Include="Liar\ArcXFL.cs" />
     <Compile Include="KiriKiri\ArcXP3.cs" />
     <Compile Include="KiriKiri\HxNameGenerator.cs" />
+    <Compile Include="KiriKiri\HxResourceNameScanner.cs" />
     <Compile Include="KiriKiri\KrkrDumpResultImporter.cs" />
     <Compile Include="KiriKiri\Script.cs" />
     <Compile Include="YuRis\ArcYPF.cs" />

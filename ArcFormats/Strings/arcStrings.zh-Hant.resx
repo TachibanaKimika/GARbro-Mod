@@ -436,6 +436,9 @@
   <data name="HxNamesButton" xml:space="preserve">
     <value>手動匯入 HxNames.lst...</value>
   </data>
+  <data name="HxNamesGenerateButton" xml:space="preserve">
+    <value>從遊戲資源產生 HxNames</value>
+  </data>
   <data name="HxNamesPresetLabel" xml:space="preserve">
     <value>HxNames 預製表：</value>
   </data>
@@ -462,6 +465,9 @@
   </data>
   <data name="HxNamesNeedHxScheme" xml:space="preserve">
     <value>請先選擇 Hx v4 加密方案，或先匯入 KrkrDump 參數。</value>
+  </data>
+  <data name="HxNamesCacheUnavailable" xml:space="preserve">
+    <value>無法為此封存確定按遊戲儲存的 HxNames 快取路徑。</value>
   </data>
   <data name="HxNamesUnavailable" xml:space="preserve">
     <value>目前宿主不支援匯入 HxNames.lst。</value>
@@ -503,7 +509,7 @@
     <value>{0} 自動匯入 HxNames 失敗：{1}</value>
   </data>
   <data name="HxNamesGenerated" xml:space="preserve">
-    <value>已從 {0} 個場景和 {1} 個候選即時產生 HxNames（命中 {2} 個路徑、{3} 個檔名）。{4}</value>
+    <value>已從 {0} 個已解析資源（其中 {1} 個場景 PSB）和 {2} 個候選即時產生 HxNames（命中 {3} 個路徑、{4} 個檔名）。{5}</value>
   </data>
   <data name="HxNamesGenerationFailed" xml:space="preserve">
     <value>{0} 即時產生 HxNames 失敗：{1}</value>
@@ -517,11 +523,14 @@
   <data name="HxNamesProgressIndexes" xml:space="preserve">
     <value>Hx v4 名稱恢復：正在讀取封存索引 {0}/{1}（成功 {2} 個）</value>
   </data>
-  <data name="HxNamesProgressScenarios" xml:space="preserve">
-    <value>Hx v4 名稱恢復：掃描 {0}（{1}/{2}），項目 {3}/{4}（已解析 {5} 個場景）</value>
+  <data name="HxNamesProgressLoose" xml:space="preserve">
+    <value>Hx v4 名稱恢復：正在檢查散裝資源（{0:N0} 個檔案，已解析 {1:N0} 個資源）</value>
   </data>
-  <data name="HxNamesProgressNoScenarios" xml:space="preserve">
-    <value>Hx v4 名稱恢復：未找到場景封存，正在使用日誌與通用名稱...</value>
+  <data name="HxNamesProgressResources" xml:space="preserve">
+    <value>Hx v4 名稱恢復：掃描 {0}（{1}/{2}），項目 {3}/{4}（已解析 {5} 個資源）</value>
+  </data>
+  <data name="HxNamesProgressNoResources" xml:space="preserve">
+    <value>Hx v4 名稱恢復：未找到 XP3 資源封存，正在使用日誌、散裝檔案與通用名稱...</value>
   </data>
   <data name="HxNamesProgressCandidates" xml:space="preserve">
     <value>Hx v4 名稱恢復：正在擴充候選（{0:N0} 個候選，命中 {1:N0} 個）</value>

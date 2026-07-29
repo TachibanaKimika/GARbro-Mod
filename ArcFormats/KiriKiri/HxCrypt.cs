@@ -148,10 +148,12 @@ namespace GameRes.Formats.KiriKiri
                     var entry_key = entry_obj[1] as long?;
                     if (null == entry_key)
                         continue;
+                    var name_hash_str = BinaryToString (entry_hash);
                     var entry_info = new HxEntry();
+                    entry_info.PathHash = path_hash_str;
+                    entry_info.NameHash = name_hash_str;
                     if (path_map.TryGetValue (path_hash_str, out string path_str))
                         entry_info.Path = path_str;
-                    var name_hash_str = BinaryToString (entry_hash);
                     if (name_map.TryGetValue (name_hash_str, out string name_str))
                         entry_info.Name = name_str;
                     entry_info.Key = (long)entry_key;
@@ -420,6 +422,8 @@ namespace GameRes.Formats.KiriKiri
     
     internal class HxEntry
     {
+        public string   PathHash;
+        public string   NameHash;
         public string   Path;
         public string   Name;
         public long     Id;

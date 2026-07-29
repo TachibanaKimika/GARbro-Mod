@@ -42,6 +42,7 @@ namespace GameRes.Formats.GUI
             };
             HxNamesPreset.SelectedIndex = 0;
             HxNamesPresetButton.Content = Text ("HxNamesPresetButton");
+            HxNamesGenerateButton.Content = Text ("HxNamesGenerateButton");
             HxNamesButton.Content = Text ("HxNamesButton");
             HxNamesSameDirectoryText.Text = Text ("HxNamesSameDirectory");
             ResetSchemeSource();
@@ -146,6 +147,7 @@ namespace GameRes.Formats.GUI
             KrkrDumpButton.IsEnabled = false;
             HxNamesPreset.IsEnabled = false;
             HxNamesPresetButton.IsEnabled = false;
+            HxNamesGenerateButton.IsEnabled = false;
             HxNamesButton.IsEnabled = false;
             var progress_reporter = m_progress_reporter;
             ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
@@ -172,6 +174,7 @@ namespace GameRes.Formats.GUI
                 KrkrDumpButton.IsEnabled = true;
                 HxNamesPreset.IsEnabled = true;
                 HxNamesPresetButton.IsEnabled = true;
+                HxNamesGenerateButton.IsEnabled = true;
                 HxNamesButton.IsEnabled = true;
             }
         }
@@ -201,6 +204,118 @@ namespace GameRes.Formats.GUI
             DescribeAppliedPreset (import, preset_name);
             KrkrDumpStatus.Text = import.Message;
             ApplyImportResult (import);
+        }
+
+        async void OnHxNamesGenerateClick (object sender, System.Windows.RoutedEventArgs e)
+        {
+            var base_scheme = GetHxNamesBaseScheme();
+            var crypt = Xp3Opener.GetScheme (base_scheme) as HxCrypt;
+            if (null == crypt)
+            {
+                KrkrDumpStatus.Text = Text ("HxNamesNeedHxScheme");
+                return;
+            }
+
+            string preset_file;
+            string preset_name;
+            string preset_error;
+            if (!TryResolveSelectedPreset (false, null, out preset_file, out preset_name, out preset_error))
+            {
+                KrkrDumpStatus.Text = preset_error;
+                return;
+            }
+            if (string.IsNullOrEmpty (preset_file))
+            {
+                var automatic_preset = KrkrDumpResultImporter.ResolveInstalledNamesPresetFile (
+                    null, null, m_source_file);
+                if (!string.IsNullOrEmpty (automatic_preset)
+                    && System.IO.File.Exists (automatic_preset))
+                    preset_file = automatic_preset;
+            }
+
+            var output_file = KrkrDumpResultImporter.GetAutomaticNamesCacheFile (
+                null, m_source_file);
+            if (string.IsNullOrEmpty (output_file))
+            {
+                KrkrDumpStatus.Text = Text ("HxNamesCacheUnavailable");
+                return;
+            }
+
+            var seeds = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+            AddNamesFileSeeds (seeds, crypt.NamesFile);
+            if (null != crypt.AdditionalNamesFiles)
+            {
+                foreach (var names_file in crypt.AdditionalNamesFiles)
+                    AddNamesFileSeeds (seeds, names_file);
+            }
+            AddNamesFileSeeds (seeds, preset_file);
+
+            KrkrDumpStatus.Text = Text ("HxNamesGenerating");
+            KrkrDumpButton.IsEnabled = false;
+            HxNamesPreset.IsEnabled = false;
+            HxNamesPresetButton.IsEnabled = false;
+            HxNamesGenerateButton.IsEnabled = false;
+            HxNamesButton.IsEnabled = false;
+            var progress_reporter = m_progress_reporter;
+            ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
+            try
+            {
+                var source_file = m_source_file;
+                var generation = await Task.Run (() => HxNameGenerator.Generate (
+                    source_file, crypt, seeds, output_file, progress_reporter));
+                if (!generation.Success)
+                {
+                    KrkrDumpStatus.Text = generation.Error;
+                    ReportProgress (progress_reporter, 100, generation.Error, true);
+                    return;
+                }
+
+                var result = new ResourceParameterCommandResult { Success = true };
+                result.Metadata["NamesFile"] = output_file;
+                var import = KrkrDumpResultImporter.ImportNamesFile (
+                    result, source_file, base_scheme, HxNamesSameDirectory.IsChecked == true);
+                if (import.Success)
+                {
+                    import.Message = string.Format (Text ("HxNamesGenerated"),
+                        generation.ResourceCount, generation.ScenarioCount,
+                        generation.CandidateCount, generation.PathMatches,
+                        generation.NameMatches, import.Message);
+                    DescribeAppliedPreset (import, preset_name);
+                    ApplyImportResult (import);
+                }
+                KrkrDumpStatus.Text = import.Message;
+                ReportProgress (progress_reporter, 100, import.Message, true);
+            }
+            catch (Exception X)
+            {
+                KrkrDumpStatus.Text = X.Message;
+                ReportProgress (progress_reporter, 100, X.Message, true);
+            }
+            finally
+            {
+                KrkrDumpButton.IsEnabled = true;
+                HxNamesPreset.IsEnabled = true;
+                HxNamesPresetButton.IsEnabled = true;
+                HxNamesGenerateButton.IsEnabled = true;
+                HxNamesButton.IsEnabled = true;
+            }
+        }
+
+        static void AddNamesFileSeeds (IDictionary<string, string> seeds, string names_file)
+        {
+            if (string.IsNullOrEmpty (names_file) || !System.IO.File.Exists (names_file))
+                return;
+            Dictionary<string, string> names;
+            string error;
+            if (!KrkrDumpResultImporter.TryReadNamesFile (names_file, out names, out error))
+            {
+                System.Diagnostics.Trace.WriteLine (string.Format (
+                    "Could not seed manual HxNames generation from '{0}': {1}",
+                    names_file, error), "[HxNames]");
+                return;
+            }
+            foreach (var pair in names)
+                seeds[pair.Key] = pair.Value;
         }
 
         void OnHxNamesClick (object sender, System.Windows.RoutedEventArgs e)

@@ -175,6 +175,11 @@ namespace GameRes.Formats.Emote
             return (T)GetObject (obj_offset);
         }
 
+        public IDictionary GetRoot ()
+        {
+            return GetDict (m_root);
+        }
+
         int m_version;
         int m_flags;
 

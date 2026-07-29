@@ -206,8 +206,9 @@ namespace GameRes.Formats.KiriKiri
                     if (generated_import.Success)
                     {
                         generated_import.Message = string.Format (Text ("HxNamesGenerated"),
-                            generation.ScenarioCount, generation.CandidateCount,
-                            generation.PathMatches, generation.NameMatches,
+                            generation.ResourceCount, generation.ScenarioCount,
+                            generation.CandidateCount, generation.PathMatches,
+                            generation.NameMatches,
                             generated_import.Message);
                         return generated_import;
                     }
@@ -364,7 +365,7 @@ namespace GameRes.Formats.KiriKiri
                                     StringComparison.OrdinalIgnoreCase);
         }
 
-        static string GetAutomaticNamesCacheFile (ResourceParameterCommandResult result, string source_file)
+        internal static string GetAutomaticNamesCacheFile (ResourceParameterCommandResult result, string source_file)
         {
             var game_executable = GetMetadata (result, "GameExecutable");
             var game_id = Path.GetFileNameWithoutExtension (game_executable);
@@ -400,7 +401,7 @@ namespace GameRes.Formats.KiriKiri
                 candidates.Add (path);
         }
 
-        static bool TryReadNamesFile (string names_file, out Dictionary<string, string> names, out string error)
+        internal static bool TryReadNamesFile (string names_file, out Dictionary<string, string> names, out string error)
         {
             names = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
             error = null;

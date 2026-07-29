@@ -438,6 +438,9 @@ It can't be read correctly from the file.</value>
   <data name="HxNamesButton" xml:space="preserve">
     <value>Import HxNames.lst manually...</value>
   </data>
+  <data name="HxNamesGenerateButton" xml:space="preserve">
+    <value>Generate HxNames from resources</value>
+  </data>
   <data name="HxNamesPresetLabel" xml:space="preserve">
     <value>HxNames preset:</value>
   </data>
@@ -464,6 +467,9 @@ It can't be read correctly from the file.</value>
   </data>
   <data name="HxNamesNeedHxScheme" xml:space="preserve">
     <value>Select an Hx v4 encryption scheme or import KrkrDump parameters first.</value>
+  </data>
+  <data name="HxNamesCacheUnavailable" xml:space="preserve">
+    <value>The per-game HxNames cache path could not be determined for this archive.</value>
   </data>
   <data name="HxNamesUnavailable" xml:space="preserve">
     <value>HxNames.lst import is not available in this host.</value>
@@ -505,7 +511,7 @@ It can't be read correctly from the file.</value>
     <value>{0} Automatic HxNames import failed: {1}</value>
   </data>
   <data name="HxNamesGenerated" xml:space="preserve">
-    <value>Generated HxNames in real time from {0} scenarios and {1} candidates ({2} path and {3} file-name matches). {4}</value>
+    <value>Generated HxNames in real time from {0} parsed resources ({1} scenario PSBs) and {2} candidates ({3} path and {4} file-name matches). {5}</value>
   </data>
   <data name="HxNamesGenerationFailed" xml:space="preserve">
     <value>{0} Real-time HxNames generation failed: {1}</value>
@@ -519,11 +525,14 @@ It can't be read correctly from the file.</value>
   <data name="HxNamesProgressIndexes" xml:space="preserve">
     <value>Hx v4 name recovery: reading archive indexes {0}/{1} ({2} readable)</value>
   </data>
-  <data name="HxNamesProgressScenarios" xml:space="preserve">
-    <value>Hx v4 name recovery: scanning {0} ({1}/{2}), entry {3}/{4} ({5} scenarios parsed)</value>
+  <data name="HxNamesProgressLoose" xml:space="preserve">
+    <value>Hx v4 name recovery: checking loose resources ({0:N0} files, {1:N0} resources parsed)</value>
   </data>
-  <data name="HxNamesProgressNoScenarios" xml:space="preserve">
-    <value>Hx v4 name recovery: no scenario archive found; using logged and common names...</value>
+  <data name="HxNamesProgressResources" xml:space="preserve">
+    <value>Hx v4 name recovery: scanning {0} ({1}/{2}), entry {3}/{4} ({5} resources parsed)</value>
+  </data>
+  <data name="HxNamesProgressNoResources" xml:space="preserve">
+    <value>Hx v4 name recovery: no XP3 resource archive found; using logged, loose, and common names...</value>
   </data>
   <data name="HxNamesProgressCandidates" xml:space="preserve">
     <value>Hx v4 name recovery: expanding candidates ({0:N0} candidates, {1:N0} matches)</value>

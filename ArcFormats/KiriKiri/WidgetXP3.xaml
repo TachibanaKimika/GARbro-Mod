@@ -18,6 +18,8 @@
             HorizontalAlignment="Left" Click="OnKrkrDumpClick"/>
     <Button Name="HxNamesPresetButton" Width="180" Margin="0,6,0,0"
             HorizontalAlignment="Left" Click="OnHxNamesPresetClick"/>
+    <Button Name="HxNamesGenerateButton" Width="180" Margin="0,6,0,0"
+            HorizontalAlignment="Left" Click="OnHxNamesGenerateClick"/>
     <Button Name="HxNamesButton" Width="180" Margin="0,6,0,0"
             HorizontalAlignment="Left" Click="OnHxNamesClick"/>
     <CheckBox Name="HxNamesSameDirectory" Margin="0,6,0,0" IsChecked="True">

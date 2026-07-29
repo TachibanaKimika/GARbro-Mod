@@ -43,6 +43,9 @@ namespace GameRes.Formats.KiriKiri
         public string NamesFile;
         public string Error;
         public int ArchiveCount;
+        public int ResourceCount;
+        public int LooseFileCount;
+        public int ScannedEntryCount;
         public int ScenarioCount;
         public int CandidateCount;
         public int PathMatches;
@@ -55,10 +58,10 @@ namespace GameRes.Formats.KiriKiri
     /// </summary>
     internal static class HxNameGenerator
     {
-        const uint PsbSignature = 0x00425350; // 'PSB'
+        internal const uint PsbSignature = 0x00425350; // 'PSB'
 
         static readonly Regex FileNameRe = new Regex (
-            @"(?<name>[^""'<>\|\r\n\t]+?\.(?:ogg|opus|wav|mp3|sli|mchx|ini|png|tlg|jpg|jpeg|webp|bmp|psd|pimg|scn|ks|tjs|csv|psb|mp4|m2v|wmv|avi))(?=$|[\s""'<>,;)\]])",
+            @"(?<name>[^""'<>\|\r\n\t]+?\.(?:ogg|opus|wav|mp3|sli|mchx|ini|png|tlg|jpg|jpeg|webp|bmp|psd|pimg|scn|ks|tjs|csv|psb|pbd|stand|sinfo|stage|mtn|asd|mp4|m2v|wmv|avi))(?=$|[\s""'<>,;)\]])",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
         static readonly Regex VoiceNameRe = new Regex (
             @"(?<![A-Za-z0-9])(?<name>[A-Za-z][A-Za-z0-9]*_[0-9]{3}_[0-9]{3,5})(?![A-Za-z0-9])",
@@ -70,10 +73,17 @@ namespace GameRes.Formats.KiriKiri
             RegexOptions.Compiled);
 
         static readonly HashSet<string> AudioContexts = new HashSet<string> (
-            new[] { "voice", "loopvoice", "loopvoicelist", "sound", "se", "sysse", "bgm", "bgv" },
+            new[] {
+                "voice", "playvoice", "loopvoice", "loopvoicelist", "sound",
+                "se", "se2", "lse", "lse2", "sysse", "bgm", "bgv", "bg_voice",
+                "live", "liveout",
+            },
             StringComparer.OrdinalIgnoreCase);
         static readonly HashSet<string> ImageContexts = new HashSet<string> (
-            new[] { "image", "event", "stand", "face", "icon", "stamp", "stage", "background", "bg" },
+            new[] {
+                "image", "event", "ev", "stand", "face", "icon", "stamp",
+                "stage", "background", "bg", "clip", "character", "msgwin",
+            },
             StringComparer.OrdinalIgnoreCase);
         static readonly HashSet<string> ScenarioContexts = new HashSet<string> (
             new[] { "scenario", "scene", "script", "storage" },
@@ -119,6 +129,7 @@ namespace GameRes.Formats.KiriKiri
                 candidates.AddPath ("/");
                 foreach (var archive in archive_files)
                     candidates.AddPath (Path.GetFileNameWithoutExtension (archive) + "/");
+                SeedNamesFile (output_file, candidates);
 
                 if (null != logged_names)
                 {
@@ -126,7 +137,10 @@ namespace GameRes.Formats.KiriKiri
                         candidates.AddKnownMapping (pair.Key, pair.Value);
                 }
 
-                ScanScenarioArchives (archive_files, crypt, candidates, result, progress_reporter);
+                var scanner = new HxResourceNameScanner (candidates);
+                ScanLooseResources (game_directory, scanner, candidates, result, progress_reporter);
+                ScanResourceArchives (archive_files, crypt, scanner, candidates, result, progress_reporter);
+                scanner.Complete();
                 ReportCandidateProgress (progress_reporter, 78, candidates);
                 candidates.ExpandVoiceSequences();
                 ReportCandidateProgress (progress_reporter, 86, candidates);
@@ -136,17 +150,21 @@ namespace GameRes.Formats.KiriKiri
 
                 ReportProgress (progress_reporter, 97, string.Format (
                     Text ("HxNamesProgressWriting"), candidates.CandidateCount, candidates.Matches.Count));
-                WriteNamesFile (output_file, candidates.Matches);
                 result.CandidateCount = candidates.CandidateCount;
                 result.PathMatches = candidates.Matches.Keys.Count (x => x.Length == 16);
                 result.NameMatches = candidates.Matches.Keys.Count (x => x.Length == 64);
                 result.Success = result.PathMatches + result.NameMatches > 0;
                 if (!result.Success)
+                {
                     result.Error = "No generated candidates matched an Hx v4 index.";
+                    return result;
+                }
+                WriteNamesFile (output_file, candidates.Matches);
 
                 Trace.WriteLine (string.Format (CultureInfo.InvariantCulture,
-                    "Generated HxNames. archives={0}, scenarios={1}, candidates={2}, pathMatches={3}, nameMatches={4}, file='{5}'",
-                    result.ArchiveCount, result.ScenarioCount, result.CandidateCount,
+                    "Generated HxNames. archives={0}, resources={1}, looseFiles={2}, entries={3}, scenarios={4}, candidates={5}, pathMatches={6}, nameMatches={7}, file='{8}'",
+                    result.ArchiveCount, result.ResourceCount, result.LooseFileCount,
+                    result.ScannedEntryCount, result.ScenarioCount, result.CandidateCount,
                     result.PathMatches, result.NameMatches, output_file), "[HxNames]");
             }
             catch (Exception X)
@@ -157,6 +175,33 @@ namespace GameRes.Formats.KiriKiri
                                                 source_file, X), "[HxNames]");
             }
             return result;
+        }
+
+        static void SeedNamesFile (string names_file, CandidateCollector candidates)
+        {
+            if (string.IsNullOrEmpty (names_file) || !File.Exists (names_file))
+                return;
+            try
+            {
+                foreach (var line in File.ReadLines (names_file))
+                {
+                    var value = line.Trim();
+                    if (0 == value.Length || value.StartsWith ("#", StringComparison.Ordinal)
+                        || value.StartsWith (";", StringComparison.Ordinal))
+                        continue;
+                    int separator = value.IndexOf (':');
+                    if (separator <= 0)
+                        continue;
+                    candidates.AddKnownMapping (
+                        value.Substring (0, separator), value.Substring (separator+1));
+                }
+            }
+            catch (Exception X)
+            {
+                Trace.WriteLine (string.Format (
+                    "Could not seed Hx name generation from previous cache '{0}': {1}",
+                    names_file, X.Message), "[HxNames]");
+            }
         }
 
         static HxIndexHashSet ReadTargetHashes (string[] archive_files, HxCrypt crypt,
@@ -185,25 +230,136 @@ namespace GameRes.Formats.KiriKiri
                                                     archive, X.Message), "[HxNames]");
                 }
                 ReportProgress (progress_reporter,
-                    2 + (archive_files.Length > 0 ? (i+1) * 13 / archive_files.Length : 13),
+                    2 + (archive_files.Length > 0 ? (i+1) * 10 / archive_files.Length : 10),
                     string.Format (Text ("HxNamesProgressIndexes"), i+1, archive_files.Length,
                                    result.ArchiveCount));
             }
             return target;
         }
 
-        static void ScanScenarioArchives (IEnumerable<string> archive_files, HxCrypt crypt,
-                                           CandidateCollector candidates, HxNameGenerationResult result,
-                                           Action<ResourceProgressInfo> progress_reporter)
+        static void ScanLooseResources (string game_directory, HxResourceNameScanner scanner,
+                                        CandidateCollector candidates, HxNameGenerationResult result,
+                                        Action<ResourceProgressInfo> progress_reporter)
         {
-            var inputs = archive_files.Where (x => {
-                var name = Path.GetFileNameWithoutExtension (x);
-                return name.IndexOf ("scn", StringComparison.OrdinalIgnoreCase) >= 0
-                    || name.IndexOf ("scenario", StringComparison.OrdinalIgnoreCase) >= 0;
-            }).ToArray();
+            const int max_files = 100000;
+            var pending = new Stack<string>();
+            pending.Push (game_directory);
+            int visited = 0;
+            while (pending.Count > 0 && visited < max_files)
+            {
+                var directory = pending.Pop();
+                try
+                {
+                    foreach (var child in Directory.EnumerateDirectories (directory))
+                    {
+                        var name = Path.GetFileName (child);
+                        if (ShouldSkipLooseDirectory (name))
+                            continue;
+                        try
+                        {
+                            if (0 != (File.GetAttributes (child) & FileAttributes.ReparsePoint))
+                                continue;
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+                        var relative_directory = child.Substring (game_directory.Length)
+                            .TrimStart (Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        if (HxResourceNameScanner.IsUsefulPlainPath (relative_directory))
+                            candidates.AddPath (relative_directory);
+                        pending.Push (child);
+                    }
+                    foreach (var file in Directory.EnumerateFiles (directory))
+                    {
+                        if (visited++ >= max_files)
+                            break;
+                        if (".xp3".Equals (Path.GetExtension (file), StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        var relative = file.Substring (game_directory.Length)
+                            .TrimStart (Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        if (HxResourceNameScanner.IsUsefulPlainName (relative))
+                        {
+                            candidates.AddName (relative);
+                            ++result.LooseFileCount;
+                        }
+                        if (!ShouldInspectLooseFile (file))
+                            continue;
+                        try
+                        {
+                            using (var input = BinaryStream.FromFile (file))
+                            {
+                                var scan = scanner.Scan (input, relative);
+                                if (scan.Parsed)
+                                    ++result.ResourceCount;
+                                if (scan.Scenario)
+                                    ++result.ScenarioCount;
+                            }
+                        }
+                        catch (Exception X)
+                        {
+                            Trace.WriteLine (string.Format (
+                                "Could not inspect loose Hx name resource '{0}': {1}",
+                                file, X.Message), "[HxNames]");
+                        }
+                        if (0 == (visited & 0xFF))
+                        {
+                            ReportProgress (progress_reporter, Math.Min (19, 12 + visited / 15000),
+                                string.Format (Text ("HxNamesProgressLoose"), visited,
+                                               result.ResourceCount));
+                        }
+                    }
+                }
+                catch (Exception X)
+                {
+                    Trace.WriteLine (string.Format (
+                        "Could not enumerate loose Hx name resources in '{0}': {1}",
+                        directory, X.Message), "[HxNames]");
+                }
+            }
+            ReportProgress (progress_reporter, 20, string.Format (
+                Text ("HxNamesProgressLoose"), visited, result.ResourceCount));
+        }
+
+        static bool ShouldSkipLooseDirectory (string name)
+        {
+            return string.IsNullOrEmpty (name)
+                || ".git".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || ".svn".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "node_modules".Equals (name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool ShouldInspectLooseFile (string file)
+        {
+            switch (Path.GetExtension (file).ToLowerInvariant())
+            {
+            case ".psb":
+            case ".scn":
+            case ".mdf":
+            case ".pbd":
+            case ".pimg":
+            case ".mtn":
+            case ".stand":
+            case ".csv":
+            case ".stage":
+            case ".ks":
+                return true;
+            default:
+                return false;
+            }
+        }
+
+        static void ScanResourceArchives (IEnumerable<string> archive_files, HxCrypt crypt,
+                                          HxResourceNameScanner scanner,
+                                          CandidateCollector candidates,
+                                          HxNameGenerationResult result,
+                                          Action<ResourceProgressInfo> progress_reporter)
+        {
+            var inputs = archive_files.OrderBy (ArchiveScanPriority)
+                .ThenBy (x => x, StringComparer.OrdinalIgnoreCase).ToArray();
             if (0 == inputs.Length)
             {
-                ReportProgress (progress_reporter, 75, Text ("HxNamesProgressNoScenarios"));
+                ReportProgress (progress_reporter, 75, Text ("HxNamesProgressNoResources"));
                 return;
             }
 
@@ -213,83 +369,109 @@ namespace GameRes.Formats.KiriKiri
                 {
                     int archive_number = i + 1;
                     var archive = inputs[i];
-                    ScanScenarioArchive (archive, candidates, result, (processed, total) => {
-                        double archive_progress = total > 0 ? (double)processed / total : 1;
-                        int percentage = 15 + (int)(60 * (i + archive_progress) / inputs.Length);
-                        ReportProgress (progress_reporter, percentage, string.Format (
-                            Text ("HxNamesProgressScenarios"), Path.GetFileName (archive),
-                            archive_number, inputs.Length, processed, total, result.ScenarioCount));
-                    });
-                }
-            }
-        }
-
-        static void ScanScenarioArchive (string archive_file, CandidateCollector candidates,
-                                          HxNameGenerationResult result,
-                                          Action<int, int> progress_reporter)
-        {
-            ArcView view = null;
-            ArcFile arc = null;
-            try
-            {
-                view = new ArcView (archive_file);
-                var opener = new Xp3Opener { ForceEncryptionQuery = true };
-                arc = opener.TryOpen (view);
-                if (null == arc)
-                    return;
-                view = null; // ArcFile owns the view.
-
-                int processed = 0;
-                int total = arc.Dir.Count;
-                if (0 == total && null != progress_reporter)
-                    progress_reporter (0, 0);
-                foreach (var entry in arc.Dir)
-                {
+                    ArcView view = null;
+                    ArcFile arc = null;
                     try
                     {
-                        using (var input = arc.OpenBinaryEntry (entry))
+                        view = new ArcView (archive);
+                        var opener = new Xp3Opener { ForceEncryptionQuery = true };
+                        arc = opener.TryOpen (view);
+                        if (null == arc)
+                            continue;
+                        view = null;
+                        int processed = 0;
+                        int total = arc.Dir.Count;
+                        foreach (var entry in arc.Dir)
                         {
-                            if (input.Signature != PsbSignature || input.Length > int.MaxValue)
-                                continue;
-                            using (var reader = new PsbReader (input))
+                            try
                             {
-                                if (!reader.ParseNonEncrypted())
+                                if (HxResourceNameScanner.IsUsefulPlainName (entry.Name))
+                                    candidates.AddName (entry.Name);
+                                var xp3_entry = entry as Xp3Entry;
+                                var hx_entry = null != xp3_entry
+                                    ? xp3_entry.Extra as HxEntry
+                                    : null;
+                                if (!ShouldInspectArchiveEntry (entry.Name, hx_entry))
                                     continue;
-                                var scenes = reader.GetRootKey<IList> ("scenes");
-                                if (null == scenes)
-                                    continue;
-                                var scenario_name = reader.GetRootKey<string> ("name");
-                                if (!string.IsNullOrWhiteSpace (scenario_name))
-                                    candidates.AddName (scenario_name + ".scn");
-                                candidates.Walk (scenes, "scenes");
-                                ++result.ScenarioCount;
+                                using (var input = arc.OpenBinaryEntry (entry))
+                                {
+                                    var scan = scanner.Scan (input, entry.Name,
+                                        null != hx_entry ? hx_entry.NameHash : null);
+                                    if (scan.Parsed)
+                                        ++result.ResourceCount;
+                                    if (scan.Scenario)
+                                        ++result.ScenarioCount;
+                                }
+                            }
+                            catch (Exception X)
+                            {
+                                Trace.WriteLine (string.Format (
+                                    "Could not inspect Hx name resource '{0}' in '{1}': {2}",
+                                    entry.Name, archive, X.Message), "[HxNames]");
+                            }
+                            finally
+                            {
+                                ++processed;
+                                ++result.ScannedEntryCount;
+                                double archive_progress = total > 0
+                                    ? (double)processed / total : 1;
+                                int percentage = 20 + (int)(55 * (i + archive_progress) / inputs.Length);
+                                ReportProgress (progress_reporter, percentage, string.Format (
+                                    Text ("HxNamesProgressResources"), Path.GetFileName (archive),
+                                    archive_number, inputs.Length, processed, total,
+                                    result.ResourceCount));
                             }
                         }
                     }
                     catch (Exception X)
                     {
-                        Trace.WriteLine (string.Format ("Could not inspect scenario entry '{0}' in '{1}': {2}",
-                                                        entry.Name, archive_file, X.Message), "[HxNames]");
+                        Trace.WriteLine (string.Format (
+                            "Could not scan Hx name resource archive '{0}': {1}",
+                            archive, X.Message), "[HxNames]");
                     }
                     finally
                     {
-                        ++processed;
-                        if (null != progress_reporter)
-                            progress_reporter (processed, total);
+                        if (null != arc)
+                            arc.Dispose();
+                        else if (null != view)
+                            view.Dispose();
                     }
                 }
             }
-            catch (Exception X)
+        }
+
+        static int ArchiveScanPriority (string archive)
+        {
+            var name = Path.GetFileNameWithoutExtension (archive);
+            if (name.IndexOf ("scn", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf ("scenario", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 0;
+            if (name.IndexOf ("config", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf ("system", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 1;
+            return 2;
+        }
+
+        static bool ShouldInspectArchiveEntry (string name, HxEntry hx_entry)
+        {
+            if (null != hx_entry && string.IsNullOrEmpty (hx_entry.Name))
+                return true;
+            switch (Path.GetExtension (name ?? string.Empty).ToLowerInvariant())
             {
-                Trace.WriteLine (string.Format ("Could not scan scenario archive '{0}': {1}",
-                                                archive_file, X.Message), "[HxNames]");
-            }
-            finally
-            {
-                if (null != arc)
-                    arc.Dispose();
-                else if (null != view)
-                    view.Dispose();
+            case ".psb":
+            case ".scn":
+            case ".mdf":
+            case ".pbd":
+            case ".pimg":
+            case ".mtn":
+            case ".stand":
+            case ".csv":
+            case ".stage":
+            case ".ks":
+            case ".tjs":
+                return true;
+            default:
+                return false;
             }
         }
 
@@ -347,7 +529,7 @@ namespace GameRes.Formats.KiriKiri
             }
         }
 
-        sealed class CandidateCollector
+        internal sealed class CandidateCollector
         {
             readonly HxIndexHashSet m_targets;
             readonly HashSet<string> m_names = new HashSet<string> (StringComparer.Ordinal);
@@ -366,6 +548,19 @@ namespace GameRes.Formats.KiriKiri
             public CandidateCollector (HxIndexHashSet targets)
             {
                 m_targets = targets;
+            }
+
+            public bool TryResolveName (string hash, out string name)
+            {
+                return Matches.TryGetValue (hash ?? string.Empty, out name);
+            }
+
+            public void AddSystemVoicePrefix (string prefix)
+            {
+                prefix = CleanCandidate (prefix);
+                if (!string.IsNullOrEmpty (prefix) && IdentifierRe.IsMatch (prefix)
+                    && prefix.Length <= 24)
+                    m_system_prefixes.Add (prefix);
             }
 
             public void AddKnownMapping (string hash, string value)
@@ -452,6 +647,14 @@ namespace GameRes.Formats.KiriKiri
                 var dict = value as IDictionary;
                 if (null != dict)
                 {
+                    string dict_context = context;
+                    if (dict.Contains ("class"))
+                    {
+                        var class_name = dict["class"] as string;
+                        if (!string.IsNullOrEmpty (class_name)
+                            && DirectiveContexts.Contains (class_name))
+                            dict_context = class_name;
+                    }
                     foreach (DictionaryEntry item in dict)
                     {
                         var key = item.Key as string;
@@ -464,8 +667,22 @@ namespace GameRes.Formats.KiriKiri
                                      && !string.IsNullOrWhiteSpace (item_text)
                                      && !"null".Equals (item_text, StringComparison.OrdinalIgnoreCase))
                                 AddName (item_text + ".png");
+                            else if ("stage".Equals (key, StringComparison.OrdinalIgnoreCase))
+                            {
+                                AddImageVariants (item_text);
+                                var stage = RemoveExtension (CleanCandidate (item_text),
+                                    new[] { ".png", ".tlg", ".jpg", ".jpeg", ".webp", ".bmp", ".psd", ".pimg" });
+                                if (!string.IsNullOrEmpty (stage))
+                                    AddName ("bgthum_" + stage + ".jpg");
+                            }
+                            else if ("file".Equals (key, StringComparison.OrdinalIgnoreCase)
+                                     || "filename".Equals (key, StringComparison.OrdinalIgnoreCase))
+                                ProcessString (item_text, dict_context);
+                            else if ("storage".Equals (key, StringComparison.OrdinalIgnoreCase)
+                                     && AudioContexts.Contains (dict_context))
+                                AddAudioVariants (item_text, false);
                         }
-                        Walk (item.Value, key ?? context);
+                        Walk (item.Value, key ?? dict_context);
                     }
                     return;
                 }
@@ -486,7 +703,7 @@ namespace GameRes.Formats.KiriKiri
                 }
             }
 
-            void ProcessString (string text, string context)
+            public void ProcessString (string text, string context)
             {
                 if (string.IsNullOrWhiteSpace (text))
                     return;
@@ -503,11 +720,32 @@ namespace GameRes.Formats.KiriKiri
                 {
                     foreach (var item in text.Split (new[] { '|', ',', ';' },
                                                      StringSplitOptions.RemoveEmptyEntries))
-                        AddAudioVariants (item, "bgm".Equals (context, StringComparison.OrdinalIgnoreCase));
+                    {
+                        bool bgm = "bgm".Equals (context, StringComparison.OrdinalIgnoreCase)
+                            || "live".Equals (context, StringComparison.OrdinalIgnoreCase)
+                            || "liveout".Equals (context, StringComparison.OrdinalIgnoreCase);
+                        AddAudioVariants (item, bgm);
+                    }
                 }
                 else if (ImageContexts.Contains (context))
                 {
                     AddImageVariants (text);
+                    if ("stand".Equals (context, StringComparison.OrdinalIgnoreCase)
+                        || "character".Equals (context, StringComparison.OrdinalIgnoreCase)
+                        || "msgwin".Equals (context, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var stand = RemoveExtension (CleanCandidate (text),
+                            new[] { ".stand", ".png", ".tlg", ".jpg", ".jpeg", ".psb", ".pimg" });
+                        if (!string.IsNullOrEmpty (stand))
+                            AddName (stand + ".stand");
+                    }
+                    if ("stage".Equals (context, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var stage = RemoveExtension (CleanCandidate (text),
+                            new[] { ".png", ".tlg", ".jpg", ".jpeg", ".psb", ".pimg" });
+                        if (!string.IsNullOrEmpty (stage))
+                            AddName ("bgthum_" + stage + ".jpg");
+                    }
                 }
                 else if (ScenarioContexts.Contains (context))
                 {
@@ -515,7 +753,7 @@ namespace GameRes.Formats.KiriKiri
                 }
             }
 
-            void AddAudioVariants (string value, bool bgm)
+            public void AddAudioVariants (string value, bool bgm)
             {
                 value = RemoveExtension (CleanCandidate (value),
                     new[] { ".ogg.sli", ".opus.sli", ".mchx.sli", ".ogg", ".opus", ".wav", ".mp3", ".sli", ".ini", ".mchx" });
@@ -536,13 +774,15 @@ namespace GameRes.Formats.KiriKiri
             void AddImageVariants (string value)
             {
                 value = RemoveExtension (CleanCandidate (value),
-                    new[] { ".png", ".tlg", ".jpg", ".jpeg", ".webp", ".bmp", ".psd", ".pimg" });
+                    new[] { ".png", ".tlg", ".jpg", ".jpeg", ".webp", ".bmp", ".psd", ".pimg", ".psb" });
                 if (string.IsNullOrEmpty (value))
                     return;
                 AddName (value + ".png");
                 AddName (value + ".tlg");
+                AddName (value + ".jpg");
                 AddName (value + ".psd");
                 AddName (value + ".pimg");
+                AddName (value + ".psb");
             }
 
             void AddScenarioVariants (string value)
@@ -557,8 +797,14 @@ namespace GameRes.Formats.KiriKiri
 
             void RememberVoiceName (string name)
             {
-                var value = RemoveExtension (name,
-                    new[] { ".ogg.sli", ".opus.sli", ".ogg", ".opus", ".wav", ".mp3", ".sli", ".ini" });
+                var audio_extensions = new[] {
+                    ".ogg.sli", ".opus.sli", ".mchx.sli", ".ogg", ".opus",
+                    ".mchx", ".wav", ".mp3", ".sli", ".ini",
+                };
+                if (!audio_extensions.Any (
+                    x => name.EndsWith (x, StringComparison.OrdinalIgnoreCase)))
+                    return;
+                var value = RemoveExtension (name, audio_extensions);
                 if (string.IsNullOrEmpty (value))
                     return;
                 var numeric = NumericVoiceRe.Match (value);

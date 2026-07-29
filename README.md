@@ -95,18 +95,26 @@ the original KrkrDump repository. Operational details are in
 `docs/reference/krkrdump-xp3-assist.md`.
 
 For Hx v4 archives whose contents decrypt but whose hashed names remain
-unresolved, GARbro can generate `HxNames.lst` itself after KrkrDump finishes.
-It decrypts Hx indexes and scenario PSBs, builds resource-name candidates,
-computes the Hx v4 hashes, and retains only candidates that occur in the game
-indexes. Generation runs in the background and its output is saved in the
-per-game local cache for inspection or reuse. On later runs, the last generated
-result is applied immediately while GARbro rebuilds it from the current
-resources in the background. The bottom status bar shows the current archive,
-scenario-entry, candidate, and write progress while this rebuild is running.
-The table is validated against the current archive
-and can be applied to other XP3 archives in the same directory for the current
-session. Compatible external tables can still be imported manually as a
-fallback.
+unresolved, GARbro can generate `HxNames.lst` itself as soon as an Hx v4
+encryption scheme is available. This can be the scheme selected in the XP3
+dialog or one imported by KrkrDump; use `Generate HxNames from resources` for a
+manual rebuild.
+It decrypts the indexes and scans every XP3 in the game directory, along with
+available loose files. The native scanner reads all name-bearing PSBs plus
+`base.stage`, CG/sound/voice/image/save/scene CSV data, `replay.ks`, `.stand`,
+and unencrypted `TJS/ns0` or LZ4-compressed `TJS/4s0` PBD metadata. It also
+expands voice sequences, system voices, movie variants, PBD layer names, and
+common resource paths. Every generated candidate is checked against a hash
+that actually occurs in the game indexes before it is written.
+
+Generation runs in the background and its output is saved in the per-game
+local cache for inspection or reuse. On later runs, the last generated result
+is applied immediately while GARbro rebuilds it from the current resources.
+The bottom status bar shows loose-file, archive-entry, candidate, and write
+progress. The table is validated against the current archive and can be applied
+to other XP3 archives in the same directory for the current session. GARbro
+does not extract or rename the source files during this process. Compatible
+external tables can still be imported manually as a fallback.
 
 The XP3 parameter dialog also supports an optional game-specific preset for
 *Limelight Lemonade Jam*. Automatic mode recognizes `limelight_lj*.exe`;
