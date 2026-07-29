@@ -57,6 +57,7 @@
     <Compile Include="ArchiveCommands.cs" />
     <Compile Include="CliApplication.cs" />
     <Compile Include="CommandLine.cs" />
+    <Compile Include="HxV4Commands.cs" />
     <Compile Include="MachineOutput.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ResourceCommands.cs" />
@@ -72,6 +73,10 @@
     <ProjectReference Include="..\GameRes\GameRes.csproj">
       <Project>{453C087F-E416-4AE9-8C03-D8760DA0574B}</Project>
       <Name>GameRes</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ArcFormats\ArcFormats.csproj">
+      <Project>{A8865685-27CC-427B-AC38-E48D2AD05DF4}</Project>
+      <Name>ArcFormats</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

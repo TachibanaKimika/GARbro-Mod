@@ -12,14 +12,14 @@ using GameRes.Formats.Strings;
 
 namespace GameRes.Formats.KiriKiri
 {
-    internal class KrkrDumpImportResult
+    public class KrkrDumpImportResult
     {
         public bool Success { get; set; }
         public string SchemeName { get; set; }
         public string Message { get; set; }
     }
 
-    internal static class KrkrDumpResultImporter
+    public static class KrkrDumpResultImporter
     {
         internal const string LimelightLemonadeJamPresetId = "lllj";
         const string LimelightLemonadeJamExecutablePrefix = "limelight_lj";
@@ -365,7 +365,7 @@ namespace GameRes.Formats.KiriKiri
                                     StringComparison.OrdinalIgnoreCase);
         }
 
-        internal static string GetAutomaticNamesCacheFile (ResourceParameterCommandResult result, string source_file)
+        public static string GetAutomaticNamesCacheFile (ResourceParameterCommandResult result, string source_file)
         {
             var game_executable = GetMetadata (result, "GameExecutable");
             var game_id = Path.GetFileNameWithoutExtension (game_executable);

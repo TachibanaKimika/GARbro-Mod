@@ -132,6 +132,78 @@ image convert IMAGE --format TAG_OR_EXTENSION --destination DIR
 `--format` accepts a writable handler tag such as `PNG` or an extension such as
 `png`. Use `formats list --kind image` and require `canWrite: true`.
 
+## Hx v4 names and KrkrDump
+
+Discovery and hashing:
+
+```text
+hxv4 schemes
+hxv4 hash VALUE --kind file|path
+```
+
+Generate from loose sources, explicit files, logs, and existing tables:
+
+```text
+hxv4 generate --destination HxNames.lst
+  [--source-dir DIR]...
+  [--source-file FILE]...
+  [--krkrdump-dir DIR]...
+  [--seed HXNAMES]...
+  [--max-files N]
+  [--include-garbro-common]
+```
+
+Generate only mappings found in real Hx indexes:
+
+```text
+hxv4 generate-archive ARCHIVE --scheme NAME --destination HxNames.lst
+  [--seed HXNAMES]...
+```
+
+Use `hxv4 schemes` first; do not guess the title or scheme name.
+
+Clean and apply tables:
+
+```text
+hxv4 clean HXNAMES --deobfuscated-dir DIR --destination CLEAN_HXNAMES
+hxv4 find-missing-voices --voice-dir DIR [--voice-dir DIR]...
+hxv4 restore-structure DIR [--recursive] [--dry-run]
+hxv4 rename DIR --names HXNAMES [--dry-run]
+```
+
+`find-missing-voices` follows the observed numeric sequences through maximum
+plus five and reports stems whose `.ogg` file is absent. JSON includes the
+bounded list; JSONL emits one `missing_voice` event per stem and a count-only
+summary.
+
+Always inspect the dry-run before a restore or rename. Paths are constrained to
+the requested root. File collisions receive `_1`, `_2`, and so on; directory
+collisions merge with identical-file deduplication and unique names for
+non-identical conflicts.
+
+Run and import KrkrDump:
+
+```text
+hxv4 krkrdump ARCHIVE
+  --game-executable EXE
+  --destination DIR
+  [--tool-directory DIR]
+  [--no-elevate]
+  [--same-directory]
+  [--run-only]
+
+hxv4 krkrdump-import ARCHIVE
+  --result-dir DIR
+  [--game-executable EXE]
+  [--same-directory]
+```
+
+The run command normally shows Windows elevation, launches the game, and waits
+for it to exit. It reads no console answers. `--no-elevate` is only for a
+prepared environment. Use a new destination for each run; an existing
+`.krkrdump` result returns `conflict` and should be handled with
+`krkrdump-import`. Canceling the wait leaves the game running.
+
 ## Help and unsupported operations
 
 ```powershell

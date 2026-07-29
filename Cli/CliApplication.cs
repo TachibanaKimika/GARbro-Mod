@@ -165,6 +165,26 @@ namespace GARbro.Cli
                 return ResourceCommands.ImageInfo (runtime, command, output);
             case "image.convert":
                 return ResourceCommands.ImageConvert (runtime, command, output);
+            case "hxv4.schemes":
+                return HxV4Commands.Schemes (runtime, command, output);
+            case "hxv4.hash":
+                return HxV4Commands.Hash (runtime, command, output);
+            case "hxv4.generate":
+                return HxV4Commands.Generate (runtime, command, output);
+            case "hxv4.generate-archive":
+                return HxV4Commands.GenerateArchive (runtime, command, output);
+            case "hxv4.clean":
+                return HxV4Commands.Clean (runtime, command, output);
+            case "hxv4.find-missing-voices":
+                return HxV4Commands.FindMissingVoices (runtime, command, output);
+            case "hxv4.restore-structure":
+                return HxV4Commands.RestoreStructure (runtime, command, output);
+            case "hxv4.rename":
+                return HxV4Commands.Rename (runtime, command, output);
+            case "hxv4.krkrdump":
+                return HxV4Commands.KrkrDump (runtime, command, output);
+            case "hxv4.krkrdump-import":
+                return HxV4Commands.KrkrDumpImport (runtime, command, output);
             default:
                 throw CliException.Usage ("unknown_action",
                     "Unknown command or action: " + command.CommandName);
@@ -206,6 +226,16 @@ namespace GARbro.Cli
               + "  script extract PATH --destination DIR [--entry ARCHIVE_ENTRY] --mode MODE\n"
               + "  image info IMAGE\n"
               + "  image convert IMAGE --format TAG_OR_EXTENSION --destination DIR\n"
+              + "  hxv4 schemes\n"
+              + "  hxv4 hash NAME --kind file|path\n"
+              + "  hxv4 generate --destination FILE [--source-dir DIR] [--source-file FILE] [--krkrdump-dir DIR] [--seed FILE]\n"
+              + "  hxv4 generate-archive ARCHIVE --scheme NAME --destination FILE [--seed FILE]\n"
+              + "  hxv4 clean HXNAMES --deobfuscated-dir DIR --destination FILE\n"
+              + "  hxv4 find-missing-voices --voice-dir DIR [--voice-dir DIR]\n"
+              + "  hxv4 restore-structure DIR [--recursive] [--dry-run]\n"
+              + "  hxv4 rename DIR --names HXNAMES [--dry-run]\n"
+              + "  hxv4 krkrdump ARCHIVE --game-executable EXE --destination DIR [--run-only] [--same-directory]\n"
+              + "  hxv4 krkrdump-import ARCHIVE --result-dir DIR [--game-executable EXE] [--same-directory]\n"
               + "Global options: --output json|jsonl|text --verbose --non-interactive";
             if (output.IsText)
             {

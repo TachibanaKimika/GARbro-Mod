@@ -191,6 +191,43 @@ Release packages must keep `Tools\KrkrDump\LICENSE.txt` with the runtime and
 include `THIRD-PARTY-NOTICES.txt` at the application root. KrkrDump is from
 `crskycode/KrkrDump` and is distributed under GPL-3.0.
 
+## Machine CLI
+
+The same shared runner and importer are available without the WPF assistant:
+
+```powershell
+& $cli hxv4 krkrdump "C:\game\data.xp3" `
+  --game-executable "C:\game\game.exe" `
+  --destination "C:\work\dump" `
+  --output jsonl
+```
+
+By default this prepares the architecture-matched runtime, requests Windows
+elevation, launches the game, waits for it to exit, collects the log and Cxdec
+files, imports the scheme, and runs native HxNames generation. Add `--run-only`
+to stop after collection or `--same-directory` to apply the imported scheme to
+sibling XP3 archives. `--tool-directory` selects an explicit runtime and
+`--no-elevate` is available to already elevated or specially prepared callers.
+Use a fresh destination for each run. If it already contains `.krkrdump`, the
+CLI returns a conflict and directs the caller to `krkrdump-import`, preventing
+stale logs or Cxdec files from being mistaken for the new run.
+If the game exits without producing any log or Cxdec output, the command returns
+`krkrdump_no_output` instead of reporting collection success.
+
+An existing result can be imported without launching the game:
+
+```powershell
+& $cli hxv4 krkrdump-import "C:\game\data.xp3" `
+  --result-dir "C:\work\dump\.krkrdump" `
+  --game-executable "C:\game\game.exe" `
+  --output json
+```
+
+The run remains a visible runtime workflow even though the CLI reads no console
+input: Windows can show UAC and the game itself opens normally. Ctrl+C cancels
+GARbro's wait and returns `operation_canceled`; it deliberately leaves the game
+process running.
+
 ## Imported Data
 
 The assistant writes `KrkrDump.json` automatically with KrkrDump extraction

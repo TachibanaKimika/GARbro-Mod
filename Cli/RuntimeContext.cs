@@ -66,6 +66,32 @@ namespace GARbro.Cli
             return full_path;
         }
 
+        public string RequireDirectory (string path)
+        {
+            if (string.IsNullOrWhiteSpace (path))
+                throw CliException.Invalid ("empty_path", "Input path cannot be empty.");
+            string full_path;
+            try
+            {
+                full_path = Path.GetFullPath (path);
+            }
+            catch (Exception exception)
+            {
+                if (exception is ArgumentException || exception is NotSupportedException
+                    || exception is PathTooLongException)
+                {
+                    throw CliException.Invalid ("invalid_path",
+                        "Input path is invalid: " + path);
+                }
+                throw;
+            }
+            if (!Directory.Exists (full_path))
+                throw CliException.Invalid ("directory_not_found",
+                    "Input directory does not exist: " + full_path,
+                    new Dictionary<string, object> { { "path", full_path } });
+            return full_path;
+        }
+
         public void BeginRecognition ()
         {
             m_parameter_request = null;

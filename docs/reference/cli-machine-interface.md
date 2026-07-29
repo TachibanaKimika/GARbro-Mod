@@ -90,6 +90,16 @@ can state that requirement explicitly.
 | `script extract PATH --mode MODE --destination DIR [--entry EXACT_NAME]` | Convert a physical script, or one exact entry from an archive. |
 | `image info IMAGE` | Report the selected image handler and metadata. |
 | `image convert IMAGE --format TAG_OR_EXTENSION --destination DIR` | Convert one image with a writable GARbro image handler. |
+| `hxv4 schemes` | List installed Hx v4 schemes usable by archive-filtered generation. |
+| `hxv4 hash VALUE --kind file\|path` | Calculate a native Hx v4 file-name or path hash. |
+| `hxv4 generate --destination FILE [SOURCE_OPTIONS]` | Build an unfiltered `HxNames.lst` from loose sources, seeds, and KrkrDump logs. |
+| `hxv4 generate-archive ARCHIVE --scheme NAME --destination FILE` | Scan the game and retain candidates that occur in actual Hx indexes. |
+| `hxv4 clean HXNAMES --deobfuscated-dir DIR --destination FILE` | Reduce a table to names observed in an extracted tree. |
+| `hxv4 find-missing-voices --voice-dir DIR` | Report sequence-derived voice stems whose `.ogg` file is absent. |
+| `hxv4 restore-structure DIR [--recursive] [--dry-run]` | Restore flattened underscore-separated directory components. |
+| `hxv4 rename DIR --names HXNAMES [--dry-run]` | Rename hashed files and directories from a table. |
+| `hxv4 krkrdump ARCHIVE --game-executable EXE --destination DIR` | Launch, collect, and optionally import KrkrDump runtime data. |
+| `hxv4 krkrdump-import ARCHIVE --result-dir DIR` | Import previously collected KrkrDump data without launching a game. |
 
 Script `MODE` is required and is one of `filtered`, `raw`, `dump`, or `jsonl`.
 It creates `<base>.txt`, `<base>.raw.txt`, `<base>.dump.txt`, or
@@ -105,6 +115,25 @@ one command and must be parsed with different schemas.
 extension such as `png`. The selected handler must advertise `CanWrite`.
 WebP output is available as `WEBP/80` (lossy quality 80) and
 `WEBP/LOSSLESS`; using the `webp` extension selects `WEBP/80`.
+
+Hx v4 generation accepts repeatable `--source-dir`, `--source-file`,
+`--krkrdump-dir`, and `--seed` options. The source scanner natively handles the
+PSB, MDF, stage, CSV, stand, replay, and PBD sources used by
+`hxv4_unhash_tools`. See
+[`hxv4-unhash-tools-parity.md`](hxv4-unhash-tools-parity.md) for the exact
+operation map, candidate compatibility definition, conflict handling, and
+verification oracle.
+
+`hxv4 krkrdump` is the one runtime-assisted command: it can display a UAC
+prompt, launches the selected game, and waits for that game to exit. Use
+`--run-only` to collect without importing, `--same-directory` to apply the
+imported scheme to sibling XP3 archives, or `hxv4 krkrdump-import` for an
+already collected result. `--no-elevate` is only for a prepared environment.
+The CLI itself still does not read console answers. Each run requires a fresh
+destination; an existing `.krkrdump` result returns
+`krkrdump_destination_exists` instead of reusing possibly stale output. A game
+run that produces no log, Cxdec table, or Cxdec order returns
+`krkrdump_no_output` rather than a false success.
 
 ## Common options
 
@@ -268,6 +297,15 @@ Run the deterministic synthetic protocol and safety suite:
 
 ```powershell
 .\tests\Cli\Invoke-CliTests.ps1 -Configuration Debug
+```
+
+Add the separately checked-out upstream Hx v4 project to run the complete
+candidate differential:
+
+```powershell
+.\tests\Cli\Invoke-CliTests.ps1 `
+  -Configuration Debug `
+  -HxV4UpstreamRoot "C:\path\to\hxv4_unhash_tools"
 ```
 
 Validate installer PATH handling without changing the user or machine PATH:

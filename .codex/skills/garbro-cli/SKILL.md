@@ -1,6 +1,6 @@
 ---
 name: garbro-cli
-description: Use GARbro's versioned non-interactive CLI to recognize, inspect, list, or safely extract visual novel archives; export supported game scripts as filtered, raw, diagnostic dump, or structured JSONL text; inspect or convert GARbro-supported images; and diagnose format recognition, required-parameter, conflict, safety-limit, protocol, or extraction failures. Use for GARbro automation and AI workflows that need stable JSON/JSONL results instead of GUI interaction or legacy human-readable console output.
+description: Use GARbro's versioned machine CLI to recognize, inspect, list, or safely extract visual novel archives; export supported game scripts; inspect or convert images; generate, clean, restore, or apply Hx v4 name tables; run or import KrkrDump results; and diagnose structured protocol failures. Use for GARbro automation and AI workflows that need stable JSON/JSONL results instead of legacy human-readable console output.
 ---
 
 # GARbro CLI
@@ -58,6 +58,9 @@ Do not parse `Onachi-GARbro.Console.exe` or
   stdout, JSONL events, statuses, errors, or exit codes.
 - Read [extraction-safety.md](references/extraction-safety.md) before any
   archive extraction or other multi-file write.
+- Read [command-reference.md](references/command-reference.md) before an Hx v4
+  or KrkrDump workflow; these commands have operation-specific safety and
+  runtime requirements.
 
 ## Follow the workflow
 
@@ -76,6 +79,9 @@ Do not parse `Onachi-GARbro.Console.exe` or
 8. Parse machine fields, not localized messages. Report the output destination,
    status, counts, bytes, skips, failures, warnings, and whether the result was
    only a dry-run.
+9. For `hxv4 restore-structure` and `hxv4 rename`, inspect a `--dry-run` first.
+   For `hxv4 krkrdump`, explain that Windows elevation and the launched game
+   are visible runtime interactions even though the CLI reads no console input.
 
 ## Preserve the two JSONL meanings
 

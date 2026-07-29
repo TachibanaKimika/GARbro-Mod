@@ -34,6 +34,7 @@ using System.Text.RegularExpressions;
 using GameRes.Compression;
 using GameRes.Formats.Emote;
 using K4os.Compression.LZ4;
+using Newtonsoft.Json.Linq;
 
 namespace GameRes.Formats.KiriKiri
 {
@@ -208,10 +209,196 @@ namespace GameRes.Formats.KiriKiri
                     var scenario_name = reader.GetRootKey<string> ("name");
                     if (!string.IsNullOrWhiteSpace (scenario_name))
                         m_candidates.AddName (scenario_name + ".scn");
+                    ScanScenarioTree (root);
                 }
                 m_candidates.Walk (root, info.Scenario ? "scenes" : "psb");
             }
             return info;
+        }
+
+        void ScanScenarioTree (object value)
+        {
+            var dict = value as IDictionary;
+            if (null != dict)
+            {
+                ScanScenarioItem (dict);
+                var voice = GetString (dict, "voice");
+                if (!string.IsNullOrWhiteSpace (voice))
+                    m_candidates.AddAudioVariants (voice, false);
+
+                var phonechat = GetValue (dict, "phonechat") as IList;
+                if (null != phonechat)
+                {
+                    foreach (var item in phonechat)
+                    {
+                        var chat = item as IDictionary;
+                        if (null == chat)
+                            continue;
+                        var icon = GetString (chat, "icon");
+                        if (!string.IsNullOrWhiteSpace (icon))
+                            m_candidates.AddName ("chaticon_" + icon + ".png");
+                        var stamp = GetString (chat, "stamp");
+                        m_candidates.AddName (
+                            string.IsNullOrWhiteSpace (stamp)
+                                ? "None.png" : stamp + ".png");
+                    }
+                }
+
+                var loop_voices = GetValue (dict, "loopVoiceList") as IList;
+                if (null != loop_voices)
+                {
+                    foreach (var item in loop_voices)
+                    {
+                        var loop_voice = item as IDictionary;
+                        var name = null != loop_voice ? GetString (loop_voice, "voice") : null;
+                        if (!string.IsNullOrWhiteSpace (name))
+                            m_candidates.AddAudioVariants (name, false);
+                    }
+                }
+                foreach (DictionaryEntry item in dict)
+                    ScanScenarioTree (item.Value);
+                return;
+            }
+
+            var list = value as IList;
+            if (null == list)
+                return;
+            for (int i = 0; i < list.Count; ++i)
+            {
+                var directive = list[i] as string;
+                if (("voice".Equals (directive, StringComparison.OrdinalIgnoreCase)
+                     || "playvoice".Equals (directive, StringComparison.OrdinalIgnoreCase))
+                    && i+1 < list.Count)
+                {
+                    var voice = list[i+1] as string;
+                    if (!string.IsNullOrWhiteSpace (voice))
+                        m_candidates.AddAudioVariants (voice, false);
+                }
+                ScanScenarioTree (list[i]);
+            }
+        }
+
+        void ScanScenarioItem (IDictionary item)
+        {
+            var name = GetString (item, "name");
+            var class_name = GetString (item, "class");
+            var redraw = GetValue (item, "redraw") as IDictionary;
+            var replay = GetValue (item, "replay") as IDictionary;
+
+            if (IsOneOf (name, "bgm", "live", "liveout") && null != replay)
+            {
+                var file = GetString (replay, "filename");
+                if (!string.IsNullOrWhiteSpace (file))
+                    m_candidates.AddAudioVariants (file, true);
+            }
+            else if (IsOneOf (name, "lse", "lse2", "se", "se2") && null != replay)
+            {
+                var file = GetString (replay, "filename");
+                if (!string.IsNullOrWhiteSpace (file))
+                {
+                    foreach (var part in file.Split ('|'))
+                        m_candidates.AddAudioVariants (part, false);
+                }
+            }
+            else if ("stage".Equals (name, StringComparison.OrdinalIgnoreCase)
+                     && null != redraw)
+            {
+                var file = GetNestedString (redraw, "imageFile", "file");
+                if (!string.IsNullOrWhiteSpace (file))
+                {
+                    m_candidates.AddName (file + ".png");
+                    m_candidates.AddName ("bgthum_" + file + ".jpg");
+                }
+            }
+
+            if (IsOneOf (class_name, "msgwin", "character"))
+            {
+                var stand = null != redraw
+                    ? GetNestedString (redraw, "imageFile", "file")
+                    : GetNestedString (item, "stand", "file");
+                if (!string.IsNullOrWhiteSpace (stand)
+                    && stand.EndsWith (".stand", StringComparison.OrdinalIgnoreCase))
+                    m_candidates.AddName (stand);
+                var clip = null != redraw ? GetNestedString (redraw, "clip", "image") : null;
+                if (!string.IsNullOrWhiteSpace (clip))
+                    m_candidates.AddName (clip + ".png");
+            }
+            else if ("event".Equals (class_name, StringComparison.OrdinalIgnoreCase)
+                     && null != redraw)
+            {
+                if ("ev".Equals (name, StringComparison.OrdinalIgnoreCase))
+                {
+                    var file = GetNestedString (redraw, "imageFile", "file");
+                    if (!string.IsNullOrWhiteSpace (file))
+                        m_candidates.AddName (file + ".png");
+                }
+                else if ("bg_voice".Equals (name, StringComparison.OrdinalIgnoreCase))
+                {
+                    var storage = GetNestedString (redraw, "imageFile", "file", "storage");
+                    if (!string.IsNullOrWhiteSpace (storage))
+                        m_candidates.AddName (storage);
+                }
+            }
+            else if ("phonechat".Equals (class_name, StringComparison.OrdinalIgnoreCase)
+                     && "phonescreen".Equals (name, StringComparison.OrdinalIgnoreCase)
+                     && null != redraw)
+            {
+                var file = GetNestedString (redraw, "imageFile", "file");
+                if (!string.IsNullOrWhiteSpace (file))
+                    m_candidates.AddName (file + ".tlg");
+            }
+            else if ("sdlayer".Equals (class_name, StringComparison.OrdinalIgnoreCase)
+                     && null != redraw)
+            {
+                var file = GetNestedString (redraw, "imageFile", "file");
+                if (!string.IsNullOrWhiteSpace (file))
+                    m_candidates.AddName (file + ".png");
+            }
+            else if (IsOneOf (class_name, "event2", "stage2") && null != redraw)
+            {
+                var file = GetNestedString (redraw, "clip", "image")
+                    ?? GetNestedString (redraw, "imageFile", "file");
+                if (!string.IsNullOrWhiteSpace (file))
+                    m_candidates.AddName (file + ".png");
+            }
+        }
+
+        static bool IsOneOf (string value, params string[] candidates)
+        {
+            return !string.IsNullOrEmpty (value)
+                && candidates.Any (x => x.Equals (value, StringComparison.OrdinalIgnoreCase));
+        }
+
+        static object GetValue (IDictionary dict, string key)
+        {
+            if (null == dict || string.IsNullOrEmpty (key))
+                return null;
+            if (dict.Contains (key))
+                return dict[key];
+            foreach (DictionaryEntry item in dict)
+            {
+                if (key.Equals (item.Key as string, StringComparison.OrdinalIgnoreCase))
+                    return item.Value;
+            }
+            return null;
+        }
+
+        static string GetString (IDictionary dict, string key)
+        {
+            return GetValue (dict, key) as string;
+        }
+
+        static string GetNestedString (IDictionary dict, params string[] keys)
+        {
+            object value = dict;
+            foreach (var key in keys)
+            {
+                var current = value as IDictionary;
+                if (null == current)
+                    return null;
+                value = GetValue (current, key);
+            }
+            return value as string;
         }
 
         static bool HasReasonablePsbMetadata (IBinaryStream input)
@@ -304,6 +491,26 @@ namespace GameRes.Formats.KiriKiri
 
         void ScanBaseStage (string text)
         {
+            JObject root;
+            if (TryParseBaseStage (text, out root))
+            {
+                var parsed_times = ReadPrefixes (root["times"]);
+                var parsed_seasons = ReadPrefixes (root["seasons"]);
+                parsed_times.Add (string.Empty);
+                parsed_seasons.Add (string.Empty);
+                var stages = root["stages"] as JObject;
+                if (null != stages)
+                {
+                    foreach (var stage in stages.Properties())
+                    {
+                        var image = Convert.ToString (stage.Value["image"],
+                                                      CultureInfo.InvariantCulture);
+                        AddStageImages (image, parsed_times, parsed_seasons);
+                    }
+                    return;
+                }
+            }
+
             var time_section = SliceSection (text, "times", "seasons", "stages");
             var season_section = SliceSection (text, "seasons", "stages");
             var stage_section = SliceSection (text, "stages");
@@ -316,22 +523,151 @@ namespace GameRes.Formats.KiriKiri
             seasons.Add (string.Empty);
 
             foreach (var image_template in images.Take (512))
+                AddStageImages (image_template, times, seasons);
+        }
+
+        void AddStageImages (string image_template, IEnumerable<string> times,
+                             IEnumerable<string> seasons)
+        {
+            if (string.IsNullOrWhiteSpace (image_template))
+                return;
+            int combinations = 0;
+            foreach (var time in times.Take (64))
             {
-                int combinations = 0;
-                foreach (var time in times.Take (64))
+                foreach (var season in seasons.Take (64))
                 {
-                    foreach (var season in seasons.Take (64))
-                    {
-                        if (++combinations > 4096)
-                            break;
-                        var image = image_template.Replace ("TIME", time).Replace ("SEASON", season);
-                        m_candidates.AddName (image + ".png");
-                        m_candidates.AddName ("bgthum_" + image + ".jpg");
-                    }
-                    if (combinations > 4096)
+                    if (++combinations > 4096)
                         break;
+                    if (null == time || null == season)
+                        continue;
+                    var image = image_template.Replace ("TIME", time).Replace ("SEASON", season);
+                    m_candidates.AddName (image + ".png");
+                    m_candidates.AddName ("bgthum_" + image + ".jpg");
                 }
+                if (combinations > 4096)
+                    break;
             }
+        }
+
+        static HashSet<string> ReadPrefixes (JToken value)
+        {
+            var result = new HashSet<string> (StringComparer.Ordinal);
+            var dict = value as JObject;
+            if (null == dict)
+                return result;
+            foreach (var item in dict.Properties())
+            {
+                var prefix = item.Value["prefix"];
+                if (null != prefix && JTokenType.Null != prefix.Type)
+                    result.Add (Convert.ToString (prefix, CultureInfo.InvariantCulture));
+            }
+            return result;
+        }
+
+        static bool TryParseBaseStage (string text, out JObject root)
+        {
+            root = null;
+            try
+            {
+                var converted = ConvertBaseStageToJson (text);
+                root = JObject.Parse (converted);
+                return null != root;
+            }
+            catch
+            {
+                root = null;
+                return false;
+            }
+        }
+
+        static string ConvertBaseStageToJson (string text)
+        {
+            var output = new StringBuilder (text.Length);
+            var stack = new Stack<bool>();
+            bool quoted = false;
+            bool escaped = false;
+            for (int i = 0; i < text.Length; ++i)
+            {
+                char c = text[i];
+                if (quoted)
+                {
+                    output.Append (c);
+                    if (escaped)
+                        escaped = false;
+                    else if ('\\' == c)
+                        escaped = true;
+                    else if ('"' == c)
+                        quoted = false;
+                    continue;
+                }
+                if ('"' == c)
+                {
+                    quoted = true;
+                    output.Append (c);
+                    continue;
+                }
+                if ('/' == c && i+1 < text.Length && '/' == text[i+1])
+                {
+                    while (i < text.Length && '\r' != text[i] && '\n' != text[i])
+                        ++i;
+                    if (i < text.Length)
+                        output.Append (text[i]);
+                    continue;
+                }
+                if ('%' == c && i+1 < text.Length && '[' == text[i+1])
+                {
+                    output.Append ('{');
+                    stack.Push (true);
+                    ++i;
+                    continue;
+                }
+                if ('[' == c)
+                {
+                    output.Append ('[');
+                    stack.Push (false);
+                    continue;
+                }
+                if (']' == c)
+                {
+                    if (0 == stack.Count)
+                        throw new FormatException ("Unmatched base.stage bracket.");
+                    output.Append (stack.Pop() ? '}' : ']');
+                    continue;
+                }
+                if ('=' == c && i+1 < text.Length && '>' == text[i+1])
+                {
+                    output.Append (':');
+                    ++i;
+                    continue;
+                }
+                if (IsWordAt (text, i, "void"))
+                {
+                    output.Append ("null");
+                    i += 3;
+                    continue;
+                }
+                output.Append (c);
+            }
+            if (0 != stack.Count || quoted)
+                throw new FormatException ("Incomplete base.stage expression.");
+            var converted = Regex.Replace (
+                output.ToString(), @"(:\s*)([A-Za-z_]\w*)\b",
+                match => match.Groups[1].Value + "\"" + match.Groups[2].Value + "\"");
+            return Regex.Replace (
+                converted, @"(?<=[{,])(\s*)([A-Za-z_]\w*)(\s*):",
+                match => match.Groups[1].Value + "\"" + match.Groups[2].Value
+                    + "\"" + match.Groups[3].Value + ":");
+        }
+
+        static bool IsWordAt (string text, int index, string word)
+        {
+            if (index < 0 || index + word.Length > text.Length
+                || 0 != string.CompareOrdinal (text, index, word, 0, word.Length))
+                return false;
+            bool left = 0 == index || !IsIdentifierChar (text[index-1]);
+            int end = index + word.Length;
+            bool right = end == text.Length || !IsIdentifierChar (text[end]);
+            return left && right;
         }
 
         static string SliceSection (string text, string start_name, params string[] end_names)
@@ -570,14 +906,21 @@ namespace GameRes.Formats.KiriKiri
             {
                 if (string.IsNullOrWhiteSpace (name))
                     continue;
-                m_candidates.AddName (name + ".pimg");
-                m_candidates.AddName (name + "_censored.pimg");
-                m_candidates.AddName ("savethum_" + name + ".jpg");
-                m_candidates.AddName ("savethum_" + name + ".png");
-                m_candidates.AddName (name + ".psb");
-                m_candidates.AddName (name + "_censored.psb");
-                m_candidates.AddName ("savethum_" + name + ".psb");
+                AddImageDiffStem (name);
             }
+            if (value.IndexOf ('|') >= 0)
+                AddImageDiffStem (value);
+        }
+
+        void AddImageDiffStem (string name)
+        {
+            m_candidates.AddName (name + ".pimg");
+            m_candidates.AddName (name + "_censored.pimg");
+            m_candidates.AddName ("savethum_" + name + ".jpg");
+            m_candidates.AddName ("savethum_" + name + ".png");
+            m_candidates.AddName (name + ".psb");
+            m_candidates.AddName (name + "_censored.psb");
+            m_candidates.AddName ("savethum_" + name + ".psb");
         }
 
         void AddSaveListRow (string name)
@@ -618,7 +961,7 @@ namespace GameRes.Formats.KiriKiri
             return separator >= 0 && separator < Math.Min (text.Length, newline + 1024);
         }
 
-        static List<List<string>> ParseCsv (string text)
+        internal static List<List<string>> ParseCsv (string text)
         {
             var rows = new List<List<string>>();
             var row = new List<string>();
@@ -666,7 +1009,7 @@ namespace GameRes.Formats.KiriKiri
             return rows;
         }
 
-        static string CleanCell (string value)
+        internal static string CleanCell (string value)
         {
             return (value ?? string.Empty).Trim().TrimStart ('\uFEFF');
         }
@@ -855,7 +1198,7 @@ namespace GameRes.Formats.KiriKiri
                 root = null;
                 try
                 {
-                    if (null == data || data.Length < 24
+                    if (null == data || data.Length < 22
                         || data[0] != 'T' || data[1] != 'J' || data[2] != 'S' || data[3] != '/'
                         || (data[4] != 'n' && data[4] != '4')
                         || data[5] != 's' || data[6] != '0' || 0 != data[7])
@@ -863,33 +1206,134 @@ namespace GameRes.Formats.KiriKiri
                     if (ReadUInt16 (data, 12) != 0 || ReadUInt16 (data, 14) != 0)
                         return false;
 
+                    uint seed = ReadUInt32 (data, 8);
                     byte[] object_data;
                     if ('4' == data[4])
                     {
-                        int unpacked_size = ReadInt32 (data, 16);
-                        if (unpacked_size <= 0 || unpacked_size > MaxTjsObjectLength)
-                            return false;
-                        object_data = new byte[unpacked_size];
-                        int packed_length = data.Length - 24;
-                        if (packed_length <= 0)
-                            return false;
-                        int decoded = LZ4Codec.Decode (
-                            data, 20, packed_length, object_data, 0, object_data.Length);
-                        if (decoded != object_data.Length)
+                        if (!TryDecodeLz4Stream (data, out object_data)
+                            && !TryDecodeSizePrefixedLz4 (data, out object_data))
                             return false;
                     }
                     else
                     {
-                        object_data = new byte[data.Length-20];
+                        object_data = new byte[data.Length-16];
                         Buffer.BlockCopy (data, 16, object_data, 0, object_data.Length);
                     }
-                    var reader = new ValueReader (object_data);
+                    var reader = new ValueReader (object_data, seed);
                     root = reader.ReadValue (0);
-                    return null != root;
+                    return reader.VerifyChecksum() && null != root;
                 }
                 catch
                 {
                     root = null;
+                    return false;
+                }
+            }
+
+            static bool TryDecodeLz4Stream (byte[] data, out byte[] output_data)
+            {
+                output_data = null;
+                try
+                {
+                    const int dictionary_capacity = 0x10000;
+                    var dictionary = new byte[dictionary_capacity];
+                    int dictionary_length = 0;
+                    int position = 16;
+                    using (var output = new MemoryStream())
+                    {
+                        while (position < data.Length)
+                        {
+                            if (position > data.Length-2)
+                                return false;
+                            int packed_length = ReadUInt16 (data, position);
+                            position += 2;
+                            if (packed_length <= 0 || packed_length > data.Length-position)
+                                return false;
+
+                            var block = new byte[dictionary_capacity];
+                            int decoded;
+                            if (dictionary_length > 0)
+                            {
+                                decoded = LZ4Codec.Decode (
+                                    data, position, packed_length,
+                                    block, 0, block.Length,
+                                    dictionary, 0, dictionary_length);
+                            }
+                            else
+                            {
+                                decoded = LZ4Codec.Decode (
+                                    data, position, packed_length,
+                                    block, 0, block.Length);
+                            }
+                            if (decoded <= 0 || output.Length > MaxTjsObjectLength-decoded)
+                                return false;
+                            output.Write (block, 0, decoded);
+                            UpdateDictionary (
+                                dictionary, ref dictionary_length, block, decoded);
+                            position += packed_length;
+                        }
+                        if (output.Length < 6)
+                            return false;
+                        output_data = output.ToArray();
+                        return true;
+                    }
+                }
+                catch
+                {
+                    output_data = null;
+                    return false;
+                }
+            }
+
+            static void UpdateDictionary (
+                byte[] dictionary, ref int dictionary_length, byte[] block, int block_length)
+            {
+                if (block_length >= dictionary.Length)
+                {
+                    Buffer.BlockCopy (
+                        block, block_length-dictionary.Length,
+                        dictionary, 0, dictionary.Length);
+                    dictionary_length = dictionary.Length;
+                    return;
+                }
+
+                int retained = Math.Min (dictionary_length, dictionary.Length-block_length);
+                if (retained > 0)
+                {
+                    Buffer.BlockCopy (
+                        dictionary, dictionary_length-retained,
+                        dictionary, 0, retained);
+                }
+                Buffer.BlockCopy (block, 0, dictionary, retained, block_length);
+                dictionary_length = retained+block_length;
+            }
+
+            static bool TryDecodeSizePrefixedLz4 (byte[] data, out byte[] output_data)
+            {
+                output_data = null;
+                try
+                {
+                    if (data.Length < 22)
+                        return false;
+                    int unpacked_size = ReadInt32 (data, 16);
+                    if (unpacked_size < 6 || unpacked_size > MaxTjsObjectLength)
+                        return false;
+                    int packed_length = data.Length-20;
+                    if (packed_length <= 0)
+                        return false;
+                    output_data = new byte[unpacked_size];
+                    int decoded = LZ4Codec.Decode (
+                        data, 20, packed_length, output_data, 0, output_data.Length);
+                    if (decoded != output_data.Length)
+                    {
+                        output_data = null;
+                        return false;
+                    }
+                    return true;
+                }
+                catch
+                {
+                    output_data = null;
                     return false;
                 }
             }
@@ -905,14 +1349,22 @@ namespace GameRes.Formats.KiriKiri
                     | data[offset+2] << 16 | data[offset+3] << 24;
             }
 
+            static uint ReadUInt32 (byte[] data, int offset)
+            {
+                return (uint)(data[offset] | data[offset+1] << 8
+                    | data[offset+2] << 16 | data[offset+3] << 24);
+            }
+
             sealed class ValueReader
             {
                 readonly byte[] m_data;
+                uint m_seed;
                 int m_position;
 
-                public ValueReader (byte[] data)
+                public ValueReader (byte[] data, uint seed)
                 {
                     m_data = data;
+                    m_seed = seed;
                 }
 
                 public object ReadValue (int depth)
@@ -920,7 +1372,11 @@ namespace GameRes.Formats.KiriKiri
                     if (depth > 128)
                         throw new InvalidFormatException ("TJS/ns0 object nesting is too deep.");
                     ushort type = ReadUInt16();
-                    switch (type & 0xFF)
+                    byte type_code = (byte)(type & 0xFF);
+                    byte actual_check = (byte)(type >> 8);
+                    if (actual_check != GetCheckByte (type_code))
+                        throw new InvalidFormatException ("TJS/ns0 value check failed.");
+                    switch (type_code)
                     {
                     case 0:
                         return null;
@@ -951,6 +1407,14 @@ namespace GameRes.Formats.KiriKiri
                     }
                 }
 
+                public bool VerifyChecksum ()
+                {
+                    if (m_position != m_data.Length-4)
+                        return false;
+                    uint expected = GetFinalChecksum();
+                    return expected == ReadUInt32() && m_position == m_data.Length;
+                }
+
                 string ReadString ()
                 {
                     int length = ReadCount();
@@ -959,6 +1423,43 @@ namespace GameRes.Formats.KiriKiri
                     var value = Encoding.Unicode.GetString (m_data, m_position, byte_length);
                     m_position += byte_length;
                     return value;
+                }
+
+                byte GetCheckByte (byte type_code)
+                {
+                    var seed = BitConverter.GetBytes (m_seed);
+                    if (0 != type_code)
+                    {
+                        CalculateRound (seed);
+                        m_seed = BitConverter.ToUInt32 (seed, 0);
+                    }
+                    return seed[2];
+                }
+
+                uint GetFinalChecksum ()
+                {
+                    var seed = BitConverter.GetBytes (m_seed);
+                    CalculateRound (seed);
+                    CalculateRound (seed);
+                    CalculateRound (seed);
+                    byte tmp = seed[0];
+                    seed[0] = seed[2];
+                    seed[2] = tmp;
+                    return BitConverter.ToUInt32 (seed, 0);
+                }
+
+                static void CalculateRound (byte[] seed)
+                {
+                    byte a = (byte)(seed[0] ^ (byte)(seed[0] * 2));
+                    byte b = a;
+                    b >>= 2;
+                    b ^= seed[2];
+                    b >>= 3;
+                    b ^= seed[2];
+                    b ^= a;
+                    seed[0] = seed[1];
+                    seed[1] = seed[2];
+                    seed[2] = b;
                 }
 
                 int ReadCount ()

@@ -1,0 +1,131 @@
+{
+  "name": "fixture_scenario",
+  "scenes": [
+    {
+      "texts": [
+        [
+          {
+            "voice": "hero_001_0001.ogg"
+          },
+          {
+            "phonechat": [
+              {
+                "icon": "smile",
+                "stamp": "stamp_happy"
+              }
+            ],
+            "loopVoiceList": [
+              {
+                "voice": "hero_loop_03"
+              }
+            ]
+          }
+        ]
+      ],
+      "lines": [
+        [
+          "playvoice",
+          "hero_001_0002"
+        ],
+        [
+          {
+            "data": [
+              [
+                {
+                  "name": "bgm",
+                  "replay": {
+                    "filename": "theme_main"
+                  }
+                },
+                {
+                  "name": "stage",
+                  "redraw": {
+                    "imageFile": {
+                      "file": "bg_school"
+                    }
+                  }
+                },
+                {
+                  "class": "event",
+                  "name": "ev",
+                  "redraw": {
+                    "imageFile": {
+                      "file": "ev001"
+                    }
+                  }
+                },
+                {
+                  "name": "lse",
+                  "replay": {
+                    "filename": "se_click|se_hover"
+                  }
+                },
+                {
+                  "class": "msgwin",
+                  "redraw": {
+                    "imageFile": {
+                      "file": "hero.stand"
+                    },
+                    "clip": {
+                      "image": "hero_face"
+                    }
+                  }
+                },
+                {
+                  "class": "character",
+                  "stand": {
+                    "file": "hero_alt.stand"
+                  }
+                },
+                {
+                  "class": "event",
+                  "name": "bg_voice",
+                  "redraw": {
+                    "imageFile": {
+                      "file": {
+                        "storage": "bgv001.csv"
+                      }
+                    }
+                  }
+                },
+                {
+                  "class": "phonechat",
+                  "name": "phonescreen",
+                  "redraw": {
+                    "imageFile": {
+                      "file": "phone_bg"
+                    }
+                  }
+                },
+                {
+                  "class": "sdlayer",
+                  "redraw": {
+                    "imageFile": {
+                      "file": "sd_layer"
+                    }
+                  }
+                },
+                {
+                  "class": "event2",
+                  "redraw": {
+                    "clip": {
+                      "image": "event_clip"
+                    }
+                  }
+                },
+                {
+                  "class": "stage2",
+                  "redraw": {
+                    "imageFile": {
+                      "file": "stage_second"
+                    }
+                  }
+                }
+              ]
+            ]
+          }
+        ]
+      ]
+    }
+  ]
+}

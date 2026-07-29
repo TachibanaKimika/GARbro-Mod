@@ -37,7 +37,7 @@ using GameRes.Formats.Strings;
 
 namespace GameRes.Formats.KiriKiri
 {
-    internal sealed class HxNameGenerationResult
+    public sealed class HxNameGenerationResult
     {
         public bool Success;
         public string NamesFile;
@@ -56,7 +56,7 @@ namespace GameRes.Formats.KiriKiri
     /// Builds an HxNames table by hashing names found in decrypted game resources
     /// and retaining only candidates present in an Hx v4 archive index.
     /// </summary>
-    internal static class HxNameGenerator
+    public static class HxNameGenerator
     {
         internal const uint PsbSignature = 0x00425350; // 'PSB'
 
@@ -69,7 +69,7 @@ namespace GameRes.Formats.KiriKiri
         static readonly Regex IdentifierRe = new Regex (
             @"^[A-Za-z0-9_@+\-./\\]+$", RegexOptions.Compiled);
         static readonly Regex NumericVoiceRe = new Regex (
-            @"^(?<prefix>[A-Za-z][A-Za-z0-9]*_[0-9]{3}_)(?<number>[0-9]{3,5})$",
+            @"^(?<prefix>.+_)(?<number>[0-9]+)",
             RegexOptions.Compiled);
 
         static readonly HashSet<string> AudioContexts = new HashSet<string> (
@@ -166,6 +166,10 @@ namespace GameRes.Formats.KiriKiri
                     result.ArchiveCount, result.ResourceCount, result.LooseFileCount,
                     result.ScannedEntryCount, result.ScenarioCount, result.CandidateCount,
                     result.PathMatches, result.NameMatches, output_file), "[HxNames]");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception X)
             {
@@ -329,7 +333,7 @@ namespace GameRes.Formats.KiriKiri
                 || "node_modules".Equals (name, StringComparison.OrdinalIgnoreCase);
         }
 
-        static bool ShouldInspectLooseFile (string file)
+        internal static bool ShouldInspectLooseFile (string file)
         {
             switch (Path.GetExtension (file).ToLowerInvariant())
             {
@@ -494,6 +498,10 @@ namespace GameRes.Formats.KiriKiri
                     Message = message,
                 });
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception X)
             {
                 Trace.WriteLine ("HxNames progress reporter failed: " + X.Message, "[HxNames]");
@@ -505,7 +513,7 @@ namespace GameRes.Formats.KiriKiri
             return arcStrings.ResourceManager.GetString (name) ?? name;
         }
 
-        static void WriteNamesFile (string output_file, IDictionary<string, string> names)
+        internal static void WriteNamesFile (string output_file, IDictionary<string, string> names)
         {
             var directory = Path.GetDirectoryName (Path.GetFullPath (output_file));
             Directory.CreateDirectory (directory);
@@ -544,6 +552,8 @@ namespace GameRes.Formats.KiriKiri
                 new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
 
             public int CandidateCount { get { return m_names.Count + m_paths.Count; } }
+            public IEnumerable<string> Names { get { return m_names; } }
+            public IEnumerable<string> Paths { get { return m_paths; } }
 
             public CandidateCollector (HxIndexHashSet targets)
             {
@@ -568,13 +578,20 @@ namespace GameRes.Formats.KiriKiri
                 if (string.IsNullOrWhiteSpace (hash))
                     return;
                 hash = hash.Trim().ToUpperInvariant();
-                if (hash.Length == 16 && m_targets.PathHashes.Contains (hash))
+                if (hash.Length == 16
+                    && (null == m_targets || m_targets.PathHashes.Contains (hash)))
                 {
-                    Matches[hash] = value ?? string.Empty;
-                    if (!string.IsNullOrEmpty (value))
-                        AddPath (value);
+                    var path = value ?? string.Empty;
+                    if (string.IsNullOrEmpty (path)
+                        && hash.Equals (HxV4Hash.GetPathHash ("/"),
+                                        StringComparison.OrdinalIgnoreCase))
+                        path = "/";
+                    Matches[hash] = path;
+                    if (!string.IsNullOrEmpty (path))
+                        AddPath (path);
                 }
-                else if (hash.Length == 64 && m_targets.NameHashes.Contains (hash)
+                else if (hash.Length == 64
+                         && (null == m_targets || m_targets.NameHashes.Contains (hash))
                          && !string.IsNullOrEmpty (value))
                 {
                     Matches[hash] = value;
@@ -607,7 +624,8 @@ namespace GameRes.Formats.KiriKiri
                 if (!m_names.Add (name))
                     return;
                 var hash = m_file_hasher.GetHash (name);
-                if (m_targets.NameHashes.Contains (hash) && !Matches.ContainsKey (hash))
+                if ((null == m_targets || m_targets.NameHashes.Contains (hash))
+                    && !Matches.ContainsKey (hash))
                     Matches[hash] = name;
             }
 
@@ -632,8 +650,9 @@ namespace GameRes.Formats.KiriKiri
                 if (!m_paths.Add (path))
                     return;
                 var hash = HxV4Hash.GetPathHash (path);
-                if (m_targets.PathHashes.Contains (hash) && !Matches.ContainsKey (hash))
-                    Matches[hash] = "/" == path ? string.Empty : path;
+                if ((null == m_targets || m_targets.PathHashes.Contains (hash))
+                    && !Matches.ContainsKey (hash))
+                    Matches[hash] = path;
             }
 
             public void Walk (object value, string context)
@@ -755,7 +774,8 @@ namespace GameRes.Formats.KiriKiri
 
             public void AddAudioVariants (string value, bool bgm)
             {
-                value = RemoveExtension (CleanCandidate (value),
+                var explicit_name = CleanCandidate (value);
+                value = RemoveExtension (explicit_name,
                     new[] { ".ogg.sli", ".opus.sli", ".mchx.sli", ".ogg", ".opus", ".wav", ".mp3", ".sli", ".ini", ".mchx" });
                 if (string.IsNullOrEmpty (value))
                     return;
@@ -769,6 +789,9 @@ namespace GameRes.Formats.KiriKiri
                     AddName (value + ".mchx");
                     AddName (value + ".mchx.sli");
                 }
+                if (!string.IsNullOrEmpty (explicit_name)
+                    && Path.GetFileName (explicit_name).IndexOf ('.') >= 0)
+                    AddName (explicit_name);
             }
 
             void AddImageVariants (string value)
@@ -840,10 +863,8 @@ namespace GameRes.Formats.KiriKiri
             {
                 foreach (var pair in m_voice_sequences.ToArray())
                 {
-                    if (pair.Value.Observed < 2)
-                        continue;
                     var limit = Math.Min (pair.Value.Maximum + 5, 99999);
-                    for (int i = 0; i <= limit; ++i)
+                    for (int i = 1; i <= limit; ++i)
                     {
                         var stem = pair.Key + i.ToString ("D" + pair.Value.Width, CultureInfo.InvariantCulture);
                         AddNumericVoiceVariants (stem);
@@ -925,7 +946,7 @@ namespace GameRes.Formats.KiriKiri
     /// <summary>
     /// Hx v4 salted file-name and path hashes.
     /// </summary>
-    internal static class HxV4Hash
+    public static class HxV4Hash
     {
         const string Salt = "xp3hnp";
 

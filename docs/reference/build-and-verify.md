@@ -313,13 +313,18 @@ and optional local YPF/JPEG samples:
   -Configuration Debug `
   -SampleRoot "I:\TempDays\[Whirlpool][201903]pieces／渡り鳥のソムニウム"
 
+.\tests\Cli\Invoke-CliTests.ps1 `
+  -Configuration Debug `
+  -HxV4UpstreamRoot "C:\path\to\hxv4_unhash_tools"
+
 .\tests\Installer\Invoke-PathRegistrationTests.ps1
 ```
 
 The test script creates output only below a unique system temporary directory.
 The external sample path is read-only test input and no sample data is added to
-the repository. See `docs/reference/cli-machine-interface.md` for the command
-and protocol contract.
+the repository. `-HxV4UpstreamRoot` uses a separate checkout as a behavioral
+oracle and does not copy its source or binaries into GARbro. See
+`docs/reference/cli-machine-interface.md` for the command and protocol contract.
 
 Validated on 2026-05-23 after NuGet restore and MSBuild Debug build:
 
@@ -340,6 +345,17 @@ Validated on 2026-07-27 for the machine CLI:
   source/package content equality, required multi-document references, safe ZIP
   paths, save-to-disk behavior, and atomic replacement under a temporary
   directory. It did not change the real Codex home.
+
+Validated on 2026-07-30 for native Hx v4 CLI parity:
+
+- Visual Studio MSBuild package restore and the complete Debug solution build
+  passed with version stamping suppressed.
+- CLI E2E passed 1,087 assertions, including all advertised Hx v4 commands,
+  hash vectors, source/seed generation, clean/restore/rename safety, KrkrDump
+  discovery and import, native PSB/PBD fixtures, and the optional upstream
+  candidate differential.
+- An actual elevated KrkrDump game launch was not automated because it requires
+  an installed compatible game and visible UAC/game interaction.
 
 For a changed archive handler:
 

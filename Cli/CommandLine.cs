@@ -53,7 +53,8 @@ namespace GARbro.Cli
             else if ("formats".Equals (first, StringComparison.OrdinalIgnoreCase)
                      || "archive".Equals (first, StringComparison.OrdinalIgnoreCase)
                      || "script".Equals (first, StringComparison.OrdinalIgnoreCase)
-                     || "image".Equals (first, StringComparison.OrdinalIgnoreCase))
+                     || "image".Equals (first, StringComparison.OrdinalIgnoreCase)
+                     || "hxv4".Equals (first, StringComparison.OrdinalIgnoreCase))
             {
                 if (args.Length < 2 || args[1].StartsWith ("--", StringComparison.Ordinal))
                     throw CliException.Usage ("missing_action",
@@ -232,7 +233,12 @@ namespace GARbro.Cli
             return "verbose".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "non-interactive".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "help".Equals (name, StringComparison.OrdinalIgnoreCase)
-                || "dry-run".Equals (name, StringComparison.OrdinalIgnoreCase);
+                || "dry-run".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "recursive".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "include-garbro-common".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "no-elevate".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "same-directory".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "run-only".Equals (name, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

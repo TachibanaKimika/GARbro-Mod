@@ -13,6 +13,10 @@ namespace GARbro.Cli
         static readonly string[] s_commands = {
             "capabilities", "formats.list", "probe", "archive.list",
             "archive.extract", "script.extract", "image.info", "image.convert",
+            "hxv4.schemes", "hxv4.hash", "hxv4.generate", "hxv4.generate-archive",
+            "hxv4.clean", "hxv4.find-missing-voices",
+            "hxv4.restore-structure", "hxv4.rename",
+            "hxv4.krkrdump", "hxv4.krkrdump-import",
         };
 
         public static ExitCode Capabilities (
@@ -22,6 +26,11 @@ namespace GARbro.Cli
             command.RequirePositionalCount (0);
             string assembly_dir = Path.GetDirectoryName (
                 Assembly.GetExecutingAssembly().Location);
+            var krkrdump_runner = new HxV4KrkrDumpRunner();
+            var krkrdump_x86 = krkrdump_runner.ResolveToolDirectory (
+                null, "x86");
+            var krkrdump_x64 = krkrdump_runner.ResolveToolDirectory (
+                null, "x64");
             var data = new Dictionary<string, object> {
                 { "protocolVersions", new[] { MachineOutput.SchemaVersion } },
                 { "outputFormats", new[] { "json", "jsonl", "text" } },
@@ -49,6 +58,18 @@ namespace GARbro.Cli
                         { "name", "ArcExtra" },
                         { "available", File.Exists (Path.Combine (assembly_dir, "ArcExtra.dll")) },
                         { "path", Path.Combine (assembly_dir, "ArcExtra.dll") },
+                    },
+                    new Dictionary<string, object> {
+                        { "name", "KrkrDump-x86" },
+                        { "available", !string.IsNullOrEmpty (krkrdump_x86) },
+                        { "path", krkrdump_x86 ?? Path.Combine (
+                            assembly_dir, "Tools", "KrkrDump", "x86") },
+                    },
+                    new Dictionary<string, object> {
+                        { "name", "KrkrDump-x64" },
+                        { "available", !string.IsNullOrEmpty (krkrdump_x64) },
+                        { "path", krkrdump_x64 ?? Path.Combine (
+                            assembly_dir, "Tools", "KrkrDump", "x64") },
                     },
                 } },
             };

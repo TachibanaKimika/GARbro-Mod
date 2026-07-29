@@ -53,6 +53,16 @@ writes, file/byte/depth limits, and dry-run planning. Formats that require a GUI
 password or scheme return a structured `needs_input` result instead of opening
 a dialog or guessing a value.
 
+The CLI also exposes the complete native Hx v4 workflow: scheme discovery and
+hashing; name-table generation from loose files, PSB/MDF, stage/CSV, stand,
+replay, PBD, seed-table, and KrkrDump-log sources; index-filtered archive
+generation; clean-table creation; safe directory restoration and hashed-tree
+rename; missing-voice diagnostics; plus KrkrDump launch or import. The candidate
+rules are differentially tested against every public source in
+`MLChinoo/hxv4_unhash_tools` commit `0ce7793`. See
+`docs/reference/hxv4-unhash-tools-parity.md` for the operation matrix and
+verification contract.
+
 The Windows installer offers an optional, initially unchecked component that
 adds the selected installation directory to the system `PATH`. Open a new
 terminal after selecting it. The uninstaller removes only the entry that the
