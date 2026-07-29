@@ -375,19 +375,7 @@ namespace GARbro.Cli
             bool include_same_directory)
         {
             var import = KrkrDumpResultImporter.Import (
-                dump_result, archive, include_same_directory,
-                progress => {
-                    CancellationState.ThrowIfRequested();
-                    if (output.IsJsonLines)
-                    {
-                        output.WriteEvent (
-                            command.CommandName, "progress", "running",
-                            new Dictionary<string, object> {
-                                { "percentage", progress.Percentage },
-                                { "message", progress.Message },
-                            });
-                    }
-                });
+                dump_result, archive, include_same_directory);
             if (!import.Success)
                 throw CliException.Invalid (
                     "krkrdump_import_failed", import.Message,
@@ -433,7 +421,12 @@ namespace GARbro.Cli
                 data["message"] = import.Message;
                 string source_archive;
                 dump.Metadata.TryGetValue ("SourceArchive", out source_archive);
-                data["generatedNamesFile"] =
+                string names_file;
+                if (!dump.Metadata.TryGetValue ("ImportedNamesFile", out names_file))
+                    dump.Metadata.TryGetValue ("KrkrDumpNamesFile", out names_file);
+                if (!string.IsNullOrEmpty (names_file))
+                    data["namesFile"] = names_file;
+                data["namesCacheFile"] =
                     KrkrDumpResultImporter.GetAutomaticNamesCacheFile (
                         dump, source_archive);
             }

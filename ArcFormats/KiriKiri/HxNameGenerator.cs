@@ -123,10 +123,12 @@ namespace GameRes.Formats.KiriKiri
                     .OrderBy (x => x, StringComparer.OrdinalIgnoreCase).ToArray();
                 var target_hashes = ReadTargetHashes (archive_files, crypt, result, progress_reporter);
                 if (0 == target_hashes.PathHashes.Count && 0 == target_hashes.NameHashes.Count)
-                    throw new InvalidFormatException ("No readable Hx v4 indexes were found.");
+                    throw new InvalidFormatException (Text ("HxNamesIndexReadFailed"));
 
                 var candidates = new CandidateCollector (target_hashes);
                 candidates.AddPath ("/");
+                foreach (var name in HxV4Tools.InitialNames)
+                    candidates.AddName (name);
                 foreach (var archive in archive_files)
                     candidates.AddPath (Path.GetFileNameWithoutExtension (archive) + "/");
                 SeedNamesFile (output_file, candidates);

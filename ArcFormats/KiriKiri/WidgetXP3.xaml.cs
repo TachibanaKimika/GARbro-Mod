@@ -143,14 +143,14 @@ namespace GameRes.Formats.GUI
                 KrkrDumpStatus.Text = Text ("KrkrDumpRequestUnhandled");
                 return;
             }
-            KrkrDumpStatus.Text = Text ("HxNamesGenerating");
+            KrkrDumpStatus.Text = Text ("KrkrDumpImporting");
             KrkrDumpButton.IsEnabled = false;
             HxNamesPreset.IsEnabled = false;
             HxNamesPresetButton.IsEnabled = false;
             HxNamesGenerateButton.IsEnabled = false;
             HxNamesButton.IsEnabled = false;
             var progress_reporter = m_progress_reporter;
-            ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
+            ReportProgress (progress_reporter, 0, Text ("KrkrDumpImporting"));
             try
             {
                 var result = args.Result;
@@ -158,7 +158,7 @@ namespace GameRes.Formats.GUI
                 var source_file = m_source_file;
                 var same_directory = HxNamesSameDirectory.IsChecked == true;
                 var import = await Task.Run (() => KrkrDumpResultImporter.Import (
-                    result, source_file, same_directory, progress_reporter));
+                    result, source_file, same_directory));
                 DescribeAppliedPreset (import, preset_name);
                 KrkrDumpStatus.Text = import.Message;
                 ApplyImportResult (import);
@@ -358,11 +358,11 @@ namespace GameRes.Formats.GUI
             }
             AttachPreset (result, preset_file);
             var progress_reporter = m_progress_reporter;
-            ReportProgress (progress_reporter, 0, Text ("HxNamesGenerating"));
+            ReportProgress (progress_reporter, 0, Text ("KrkrDumpImporting"));
             try
             {
                 var import = KrkrDumpResultImporter.Import (
-                    result, m_source_file, HxNamesSameDirectory.IsChecked == true, progress_reporter);
+                    result, m_source_file, HxNamesSameDirectory.IsChecked == true);
                 DescribeAppliedPreset (import, preset_name);
                 message = import.Message;
                 ReportProgress (progress_reporter, 100, import.Message, true);

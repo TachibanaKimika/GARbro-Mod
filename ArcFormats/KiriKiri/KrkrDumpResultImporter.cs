@@ -151,11 +151,11 @@ namespace GameRes.Formats.KiriKiri
                 IndexKeyDict = data.IndexKeys.Count > 0 ? data.IndexKeys : null,
             };
 
-            var logged_names = new Dictionary<string, string> (data.Names, StringComparer.OrdinalIgnoreCase);
-            SeedKnownNamesFromPreset (logged_names, result, source_file);
             FilterNamesToSourceArchive (source_file, data, crypt);
             data.NamesFile = WriteNamesFile (result, data);
             crypt.NamesFile = data.NamesFile;
+            if (!string.IsNullOrEmpty (data.NamesFile))
+                result.Metadata["KrkrDumpNamesFile"] = data.NamesFile;
             TraceDumpData (data);
 
             var scheme_name = CreateSchemeName (result, source_file);
@@ -168,79 +168,11 @@ namespace GameRes.Formats.KiriKiri
                 Message = string.Format (Text ("KrkrDumpSchemeImported"), scheme_name),
             };
 
-            // Make the last generated result available immediately while a fresh
-            // scenario scan runs in the background. HxCrypt reads this path when
-            // opening an index, so the atomic replacement performed by the
-            // generator also refreshes subsequent archive opens.
-            foreach (var existing_names_file in FindAutomaticNamesFiles (result, source_file))
-            {
-                var existing_result = new ResourceParameterCommandResult { Success = true };
-                existing_result.Metadata["NamesFile"] = existing_names_file;
-                var existing_import = ImportNamesFile (
-                    existing_result, source_file, scheme_name, include_same_directory);
-                if (existing_import.Success)
-                {
-                    Trace.WriteLine (string.Format (
-                        "Applied existing HxNames result before live regeneration. file='{0}', archive='{1}'",
-                        existing_names_file, source_file), "[HxNames]");
-                    break;
-                }
-                Trace.WriteLine (string.Format (
-                    "Existing HxNames result was not applicable before regeneration. file='{0}', reason='{1}'",
-                    existing_names_file, existing_import.Message), "[HxNames]");
-            }
-
-            var generated_names_file = GetAutomaticNamesCacheFile (result, source_file);
-            HxNameGenerationResult generation = null;
-            KrkrDumpImportResult generated_import_failure = null;
-            if (!string.IsNullOrEmpty (generated_names_file))
-            {
-                generation = HxNameGenerator.Generate (
-                    source_file, crypt, logged_names, generated_names_file, progress_reporter);
-                if (generation.Success)
-                {
-                    var generated_result = new ResourceParameterCommandResult { Success = true };
-                    generated_result.Metadata["NamesFile"] = generated_names_file;
-                    var generated_import = ImportNamesFile (
-                        generated_result, source_file, scheme_name, include_same_directory);
-                    if (generated_import.Success)
-                    {
-                        generated_import.Message = string.Format (Text ("HxNamesGenerated"),
-                            generation.ResourceCount, generation.ScenarioCount,
-                            generation.CandidateCount, generation.PathMatches,
-                            generation.NameMatches,
-                            generated_import.Message);
-                        return generated_import;
-                    }
-                    generated_import_failure = generated_import;
-                    Trace.WriteLine (string.Format (
-                        "Generated HxNames did not match the selected archive. file='{0}', reason='{1}'",
-                        generated_names_file, generated_import.Message), "[HxNames]");
-                }
-            }
-
             var automatic_names_files = FindAutomaticNamesFiles (result, source_file).ToList();
-            if (generation != null && generation.Success)
-            {
-                automatic_names_files.RemoveAll (x => string.Equals (
-                    x, generated_names_file, StringComparison.OrdinalIgnoreCase));
-            }
             if (0 == automatic_names_files.Count)
-            {
-                if (generation != null && !generation.Success)
-                {
-                    import.Message = string.Format (Text ("HxNamesGenerationFailed"),
-                                                    import.Message, generation.Error);
-                }
-                else if (null != generated_import_failure)
-                {
-                    import.Message = string.Format (Text ("HxNamesAutoImportFailed"),
-                                                    import.Message, generated_import_failure.Message);
-                }
                 return import;
-            }
 
-            KrkrDumpImportResult last_failure = generated_import_failure;
+            KrkrDumpImportResult last_failure = null;
             foreach (var automatic_names_file in automatic_names_files)
             {
                 var names_result = new ResourceParameterCommandResult { Success = true };
@@ -248,6 +180,7 @@ namespace GameRes.Formats.KiriKiri
                 var names_import = ImportNamesFile (names_result, source_file, scheme_name, include_same_directory);
                 if (names_import.Success)
                 {
+                    result.Metadata["ImportedNamesFile"] = automatic_names_file;
                     names_import.Message = string.Format (Text ("HxNamesAutoImported"), names_import.Message);
                     Trace.WriteLine (string.Format ("Automatically imported HxNames cache '{0}'.",
                                                     automatic_names_file), "[HxNames]");
@@ -259,8 +192,6 @@ namespace GameRes.Formats.KiriKiri
             }
             if (null != last_failure)
                 import.Message = string.Format (Text ("HxNamesAutoImportFailed"), import.Message, last_failure.Message);
-            if (generation != null && !generation.Success)
-                import.Message = string.Format (Text ("HxNamesGenerationFailed"), import.Message, generation.Error);
             return import;
         }
 
@@ -284,32 +215,6 @@ namespace GameRes.Formats.KiriKiri
                 AddCandidate (candidates, Path.Combine (game_directory_from_result, "HxNames.lst"));
 
             return candidates.Where (File.Exists);
-        }
-
-        static void SeedKnownNamesFromPreset (IDictionary<string, string> names,
-                                              ResourceParameterCommandResult result,
-                                              string source_file)
-        {
-            var names_file = GetMetadata (result, "HxNamesFile");
-            if (string.IsNullOrEmpty (names_file))
-                names_file = GetInstalledNamesFile (result, source_file);
-            if (string.IsNullOrEmpty (names_file) || !File.Exists (names_file))
-                return;
-
-            Dictionary<string, string> preset_names;
-            string error;
-            if (!TryReadNamesFile (names_file, out preset_names, out error))
-            {
-                Trace.WriteLine (string.Format (
-                    "HxNames preset was not used to seed generation. file='{0}', reason='{1}'",
-                    names_file, error), "[HxNames]");
-                return;
-            }
-            foreach (var pair in preset_names)
-                names[pair.Key] = pair.Value;
-            Trace.WriteLine (string.Format (
-                "Seeded HxNames generation from preset. file='{0}', entries={1}",
-                names_file, preset_names.Count), "[HxNames]");
         }
 
         internal static string ResolveInstalledNamesPresetFile (

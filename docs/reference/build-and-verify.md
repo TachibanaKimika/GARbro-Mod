@@ -350,9 +350,10 @@ Validated on 2026-07-30 for native Hx v4 CLI parity:
 
 - Visual Studio MSBuild package restore and the complete Debug solution build
   passed with version stamping suppressed.
-- CLI E2E passed 1,087 assertions, including all advertised Hx v4 commands,
+- CLI E2E passed 1,102 assertions, including all advertised Hx v4 commands,
   hash vectors, source/seed generation, clean/restore/rename safety, KrkrDump
-  discovery and import, native PSB/PBD fixtures, and the optional upstream
+  discovery and import without implicit resource generation, native PSB/PBD
+  fixtures (including encrypted PackinOne `TJS/4s0`), and the optional upstream
   candidate differential.
 - An actual elevated KrkrDump game launch was not automated because it requires
   an installed compatible game and visible UAC/game interaction.

@@ -412,6 +412,9 @@
   <data name="KrkrDumpStarting" xml:space="preserve">
     <value>正在啟動 KrkrDump...</value>
   </data>
+  <data name="KrkrDumpImporting" xml:space="preserve">
+    <value>正在匯入 KrkrDump 解密參數...</value>
+  </data>
   <data name="KrkrDumpRequestUnhandled" xml:space="preserve">
     <value>KrkrDump 請求未被處理。</value>
   </data>
@@ -440,10 +443,10 @@
     <value>從遊戲資源產生 HxNames</value>
   </data>
   <data name="HxNamesPresetLabel" xml:space="preserve">
-    <value>HxNames 預製表：</value>
+    <value>HxNames 預製表（可選）：</value>
   </data>
   <data name="HxNamesPresetAutomatic" xml:space="preserve">
-    <value>自動識別</value>
+    <value>自動識別（可不使用）</value>
   </data>
   <data name="HxNamesPresetLLLJ" xml:space="preserve">
     <value>ライムライト・レモネードジャム（LLLJ，99.97%）</value>
@@ -491,7 +494,7 @@
     <value>HxNames.lst 中沒有有效的名稱映射。</value>
   </data>
   <data name="HxNamesIndexReadFailed" xml:space="preserve">
-    <value>無法使用目前方案讀取 Hx v4 索引，請檢查封存檔金鑰和加密方案。</value>
+    <value>無法使用目前方案讀取任何同目錄 XP3 的 Hx v4 索引。「自動識別」只控制可選的 HxNames 預製表，不能識別解密參數；請先使用 KrkrDump，或選擇正確的 Hx v4 加密方案。</value>
   </data>
   <data name="HxNamesNoMatches" xml:space="preserve">
     <value>HxNames.lst 與目前封存檔中的路徑或檔名雜湊均不相符。</value>

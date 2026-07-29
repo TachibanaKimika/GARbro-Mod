@@ -414,6 +414,9 @@ It can't be read correctly from the file.</value>
   <data name="KrkrDumpStarting" xml:space="preserve">
     <value>Starting KrkrDump...</value>
   </data>
+  <data name="KrkrDumpImporting" xml:space="preserve">
+    <value>Importing KrkrDump decryption parameters...</value>
+  </data>
   <data name="KrkrDumpRequestUnhandled" xml:space="preserve">
     <value>KrkrDump request was not handled.</value>
   </data>
@@ -442,10 +445,10 @@ It can't be read correctly from the file.</value>
     <value>Generate HxNames from resources</value>
   </data>
   <data name="HxNamesPresetLabel" xml:space="preserve">
-    <value>HxNames preset:</value>
+    <value>HxNames preset (optional):</value>
   </data>
   <data name="HxNamesPresetAutomatic" xml:space="preserve">
-    <value>Detect automatically</value>
+    <value>Auto-detect (optional)</value>
   </data>
   <data name="HxNamesPresetLLLJ" xml:space="preserve">
     <value>ライムライト・レモネードジャム (LLLJ, 99.97%)</value>
@@ -493,7 +496,7 @@ It can't be read correctly from the file.</value>
     <value>HxNames.lst does not contain any valid mappings.</value>
   </data>
   <data name="HxNamesIndexReadFailed" xml:space="preserve">
-    <value>Could not read the Hx v4 index with the selected scheme. Check the archive keys and encryption scheme.</value>
+    <value>Could not read any same-folder Hx v4 index with the current scheme. Automatic mode only controls the optional HxNames preset; it cannot detect decryption parameters. Run KrkrDump first or select the correct Hx v4 scheme.</value>
   </data>
   <data name="HxNamesNoMatches" xml:space="preserve">
     <value>HxNames.lst does not match any path or file-name hashes in the current archive.</value>

@@ -128,7 +128,9 @@ verification oracle.
 prompt, launches the selected game, and waits for that game to exit. Use
 `--run-only` to collect without importing, `--same-directory` to apply the
 imported scheme to sibling XP3 archives, or `hxv4 krkrdump-import` for an
-already collected result. `--no-elevate` is only for a prepared environment.
+already collected result. Import parses and installs the KrkrDump decryption
+parameters and logged names; it does not implicitly run the separate
+`generate-archive` resource scan. `--no-elevate` is only for a prepared environment.
 The CLI itself still does not read console answers. Each run requires a fresh
 destination; an existing `.krkrdump` result returns
 `krkrdump_destination_exists` instead of reusing possibly stale output. A game

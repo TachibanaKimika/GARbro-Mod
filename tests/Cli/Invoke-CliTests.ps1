@@ -558,8 +558,22 @@ try {
         "filename:'hero'", [Text.Encoding]::Unicode)
     $hxLayerPbd = Join-Path $hxForeground "hero.pbd"
     $hxThumbnailPbd = Join-Path $hxForeground "_chthum_index.pbd"
+    $hxEncryptedPbd = Join-Path $hxForeground "encrypted.pbd"
+    $hxEncryptedIvPbd = Join-Path $hxForeground "encrypted_iv.pbd"
     New-TjsPbdFixture -Path $hxLayerPbd -Kind "4s0-layer"
     New-TjsPbdFixture -Path $hxThumbnailPbd -Kind "ns0-thumbnail"
+    $hxEncryptedPbdBase64 = Join-Path (
+        Join-Path $PSScriptRoot "Fixtures") "hxv4-pbd-crypt1.base64"
+    [IO.File]::WriteAllBytes(
+        $hxEncryptedPbd,
+        [Convert]::FromBase64String(
+            [IO.File]::ReadAllText($hxEncryptedPbdBase64).Trim()))
+    $hxEncryptedIvPbdBase64 = Join-Path (
+        Join-Path $PSScriptRoot "Fixtures") "hxv4-pbd-crypt6-iv.base64"
+    [IO.File]::WriteAllBytes(
+        $hxEncryptedIvPbd,
+        [Convert]::FromBase64String(
+            [IO.File]::ReadAllText($hxEncryptedIvPbdBase64).Trim()))
     $hxScenario = Join-Path $hxSource "scn"
     New-Item -ItemType Directory -Path $hxScenario | Out-Null
     $hxPsbFixtureBase64 = Join-Path (
@@ -582,6 +596,14 @@ try {
             -Executable $pbd2json -InputPath $hxThumbnailPbd
         Assert-Equal "thumb_chara" $upstreamThumbnail.hero (
             "upstream pbd2json reads generated TJS/ns0 fixture")
+        $upstreamEncrypted = Invoke-UpstreamPbd2Json `
+            -Executable $pbd2json -InputPath $hxEncryptedPbd
+        Assert-Equal 7 $upstreamEncrypted[0].layer_id (
+            "upstream pbd2json reads encrypted TJS/4s0 fixture")
+        $upstreamEncryptedIv = Invoke-UpstreamPbd2Json `
+            -Executable $pbd2json -InputPath $hxEncryptedIvPbd
+        Assert-Equal 7 $upstreamEncryptedIv[0].layer_id (
+            "upstream pbd2json reads encrypted TJS/4s0 IV fixture")
     }
 
     $hxKrkrDump = Join-Path $testRoot "hxv4-krkrdump-source"
@@ -642,6 +664,8 @@ try {
         "hero.sinfo",
         "hero_0.pbd",
         "hero_7.tlg",
+        "encrypted_7.tlg",
+        "encrypted_iv_7.tlg",
         "explicit_hero.pbd",
         "explicit_hero.sinfo",
         "explicit_voice.wav",
@@ -897,6 +921,9 @@ PathHash: "voice/" "" "$($hxVoiceHash.data.hash)"
     Assert-True (-not [string]::IsNullOrWhiteSpace(
         $hxKrkrDumpImport.data.schemeName)) (
         "Hx v4 existing KrkrDump scheme name")
+    Assert-True (-not [string]::IsNullOrWhiteSpace(
+        $hxKrkrDumpImport.data.namesFile)) (
+        "Hx v4 existing KrkrDump imported names file")
     $hxImportedNames = Join-Path $hxExistingDump "HxNames.lst"
     Assert-True (Test-Path -LiteralPath $hxImportedNames -PathType Leaf) (
         "Hx v4 existing KrkrDump names file")
@@ -908,6 +935,17 @@ PathHash: "voice/" "" "$($hxVoiceHash.data.hash)"
         "Hx v4 existing KrkrDump imports file name")
     Assert-True ($hxImportedValues -ccontains "voice/") (
         "Hx v4 existing KrkrDump imports path name")
+    $hxKrkrDumpImportJsonlResult = Invoke-Cli -Arguments @(
+        "hxv4", "krkrdump-import", $hxFakeArchive,
+        "--result-dir", $hxExistingDump,
+        "--game-executable", $hxFakeExe,
+        "--output", "jsonl")
+    Assert-Equal 0 $hxKrkrDumpImportJsonlResult.ExitCode (
+        "Hx v4 existing KrkrDump JSONL import exit code")
+    $hxKrkrDumpImportEvents = Read-JsonLines $hxKrkrDumpImportJsonlResult
+    Assert-Equal 0 @(
+        $hxKrkrDumpImportEvents | Where-Object event -eq "progress"
+    ).Count "KrkrDump import must not start HxNames resource generation"
 
     $hxExistingRunDestination = Join-Path $testRoot "existing-krkrdump-run"
     New-Item -ItemType Directory -Path (

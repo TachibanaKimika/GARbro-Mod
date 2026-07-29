@@ -83,7 +83,7 @@ Relevant local entry points:
   upstream `0ce7793`; strict parity is not yet achieved.
 - 2026-07-30: Implemented the native Hx v4 service and all CLI operations.
   Differential fixtures invoke every upstream plaintext source and assert that
-  GARbro's candidate table is a superset. Debug CLI E2E passed 1,087 assertions.
+  GARbro's candidate table is a superset. Debug CLI E2E passed 1,102 assertions.
 - 2026-07-30: Restored packages with Visual Studio MSBuild and completed a
   Debug full-solution build with version stamping suppressed. The actual
   elevated KrkrDump/game launch remains an explicit manual boundary; runtime
@@ -109,7 +109,7 @@ Relevant local entry points:
 ## Outcomes
 
 Completed with a GO release review. Every audited upstream operation has a
-native API/CLI mapping, the candidate differential and 1,087 CLI assertions
+native API/CLI mapping, the candidate differential and 1,102 CLI assertions
 pass, the full Debug solution and packaged skill build cleanly, and the GUI
 startup smoke remains alive for three seconds. Runtime discovery/import are
 automated; an actual elevated KrkrDump/game session remains an explicitly

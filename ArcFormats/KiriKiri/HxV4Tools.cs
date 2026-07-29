@@ -133,9 +133,10 @@ namespace GameRes.Formats.KiriKiri
         const int MaxMissingVoiceFiles = 100000;
         const int MaxMissingVoiceCandidates = 1000000;
 
-        static readonly string[] InitialNames = {
+        internal static readonly string[] InitialNames = {
             "base.stage", "cglist.csv", "soundlist.csv", "charvoice.csv",
             "imagediffmap.csv", "savelist.csv", "scenelist.csv", "replay.ks",
+            "emotion.csv", "facethumbpos.csv", "facezoom.csv",
             "_chthum_index.pbd",
         };
 

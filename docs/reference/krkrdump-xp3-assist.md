@@ -28,8 +28,10 @@ If a working Hx v4 scheme is already available, KrkrDump is not required for
 name generation. Select the scheme and choose `Generate HxNames from resources`
 in the same XP3 parameter dialog. The selected or automatically detected
 installed preset, current scheme name tables, and the previous generated cache
-are used as seeds. `Use KrkrDump...` continues to run the same native generator
-automatically after importing runtime parameters.
+are used as seeds. `Use KrkrDump...` only imports the runtime decryption
+parameters and directly logged or compatible cached names. It returns control
+to the XP3 dialog immediately after import; start the resource scan explicitly
+with `Generate HxNames from resources` when it is wanted.
 
 ## Real-time Hx v4 Name Recovery
 
@@ -52,8 +54,9 @@ native name-recovery pass:
      `scenelist` CSV data, including content-based detection when the CSV's own
      name is still hashed;
    - `replay.ks` movie references and `.stand` PBD/SINFO references;
-   - unencrypted `TJS/ns0` and LZ4-compressed `TJS/4s0` PBD objects, including
-     character layer TLGs and character-thumbnail indexes.
+   - plaintext or PackinOne-encrypted `TJS/ns0` and LZ4-compressed `TJS/4s0`
+     PBD objects, including character layer TLGs and character-thumbnail
+     indexes.
 
 4. Generate additional candidates from PSB context, event/thumbnail variants,
    movie resolutions and locales, voice sequences, system and loop voices, and
@@ -71,7 +74,8 @@ native name-recovery pass:
    The game ID is the KrkrDump executable base name when available; a manual
    rebuild without KrkrDump uses the XP3 directory name.
 
-The pass runs on a worker thread so the WPF parameter dialog remains responsive.
+The manually requested pass runs on a worker thread so the WPF parameter dialog
+remains responsive.
 Large games can take one or two minutes because each unresolved XP3 entry must
 at least be decrypted far enough to identify its content. During the pass, the
 main window's bottom status bar temporarily shows the index, loose-resource,
@@ -132,9 +136,9 @@ matches is rejected, which helps catch a table from the wrong title or an
 incorrect encryption scheme.
 
 The merged scheme and optional same-directory scope last only for the current
-GARbro session. The generated UTF-8 table remains in the per-game local cache,
-but it is regenerated from the current resources on the next manual rebuild or
-successful KrkrDump import.
+GARbro session. The generated UTF-8 table remains in the per-game local cache
+and is regenerated from the current resources only when a manual rebuild is
+requested.
 
 ### Optional Limelight Lemonade Jam preset
 
@@ -143,9 +147,9 @@ KrkrDump game executable has a base name beginning with `limelight_lj`,
 including builds such as `limelight_lj_Crack.exe`. It is also listed explicitly as
 `ライムライト・レモネードジャム (LLLJ, 99.97%)` in the XP3 parameter dialog,
 so executable-name detection is not required. Selecting it before
-`Use KrkrDump...` feeds the table into the same live generation pass; after a
-compatible Hx v4/KrkrDump scheme exists, `Apply selected preset` can attach it
-without rerunning KrkrDump.
+`Use KrkrDump...` attaches the table to the imported scheme without starting a
+resource scan; after a compatible Hx v4/KrkrDump scheme exists,
+`Apply selected preset` can attach it without rerunning KrkrDump.
 
 Onachi-GARbro does not distribute this table. Download it separately from
 [MLChinoo/lllj_hxnames](https://github.com/MLChinoo/lllj_hxnames), rename it
@@ -204,13 +208,15 @@ The same shared runner and importer are available without the WPF assistant:
 
 By default this prepares the architecture-matched runtime, requests Windows
 elevation, launches the game, waits for it to exit, collects the log and Cxdec
-files, imports the scheme, and runs native HxNames generation. Add `--run-only`
-to stop after collection or `--same-directory` to apply the imported scheme to
-sibling XP3 archives. `--tool-directory` selects an explicit runtime and
-`--no-elevate` is available to already elevated or specially prepared callers.
-Use a fresh destination for each run. If it already contains `.krkrdump`, the
-CLI returns a conflict and directs the caller to `krkrdump-import`, preventing
-stale logs or Cxdec files from being mistaken for the new run.
+files, and imports the scheme plus directly logged names. Add `--run-only` to
+stop after collection or `--same-directory` to apply the imported scheme to
+sibling XP3 archives. Run `hxv4 generate-archive` explicitly when an
+index-filtered resource scan is wanted. `--tool-directory` selects an explicit
+runtime and `--no-elevate` is available to already elevated or specially
+prepared callers. Use a fresh destination for each run. If it already contains
+`.krkrdump`, the CLI returns a conflict and directs the caller to
+`krkrdump-import`, preventing stale logs or Cxdec files from being mistaken for
+the new run.
 If the game exits without producing any log or Cxdec output, the command returns
 `krkrdump_no_output` instead of reporting collection success.
 

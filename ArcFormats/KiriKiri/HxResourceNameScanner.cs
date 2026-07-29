@@ -1203,22 +1203,34 @@ namespace GameRes.Formats.KiriKiri
                         || (data[4] != 'n' && data[4] != '4')
                         || data[5] != 's' || data[6] != '0' || 0 != data[7])
                         return false;
-                    if (ReadUInt16 (data, 12) != 0 || ReadUInt16 (data, 14) != 0)
-                        return false;
-
                     uint seed = ReadUInt32 (data, 8);
+                    ushort crypt = ReadUInt16 (data, 12);
+                    int iv_length = ReadUInt16 (data, 14);
+                    int payload_offset = 16+iv_length;
+                    if (payload_offset > data.Length || payload_offset == data.Length)
+                        return false;
+                    var iv = new byte[iv_length];
+                    if (iv_length > 0)
+                        Buffer.BlockCopy (data, 16, iv, 0, iv.Length);
+                    var payload = new byte[data.Length-payload_offset];
+                    Buffer.BlockCopy (data, payload_offset, payload, 0, payload.Length);
+                    if (0 != crypt)
+                    {
+                        byte[] decrypted;
+                        if (!TjsNs0Crypt.TryDecrypt (payload, seed, crypt, iv, out decrypted))
+                            return false;
+                        payload = decrypted;
+                    }
+
                     byte[] object_data;
                     if ('4' == data[4])
                     {
-                        if (!TryDecodeLz4Stream (data, out object_data)
-                            && !TryDecodeSizePrefixedLz4 (data, out object_data))
+                        if (!TryDecodeLz4Stream (payload, out object_data)
+                            && !TryDecodeSizePrefixedLz4 (payload, out object_data))
                             return false;
                     }
                     else
-                    {
-                        object_data = new byte[data.Length-16];
-                        Buffer.BlockCopy (data, 16, object_data, 0, object_data.Length);
-                    }
+                        object_data = payload;
                     var reader = new ValueReader (object_data, seed);
                     root = reader.ReadValue (0);
                     return reader.VerifyChecksum() && null != root;
@@ -1238,7 +1250,7 @@ namespace GameRes.Formats.KiriKiri
                     const int dictionary_capacity = 0x10000;
                     var dictionary = new byte[dictionary_capacity];
                     int dictionary_length = 0;
-                    int position = 16;
+                    int position = 0;
                     using (var output = new MemoryStream())
                     {
                         while (position < data.Length)
@@ -1313,17 +1325,17 @@ namespace GameRes.Formats.KiriKiri
                 output_data = null;
                 try
                 {
-                    if (data.Length < 22)
+                    if (data.Length < 6)
                         return false;
-                    int unpacked_size = ReadInt32 (data, 16);
+                    int unpacked_size = ReadInt32 (data, 0);
                     if (unpacked_size < 6 || unpacked_size > MaxTjsObjectLength)
                         return false;
-                    int packed_length = data.Length-20;
+                    int packed_length = data.Length-4;
                     if (packed_length <= 0)
                         return false;
                     output_data = new byte[unpacked_size];
                     int decoded = LZ4Codec.Decode (
-                        data, 20, packed_length, output_data, 0, output_data.Length);
+                        data, 4, packed_length, output_data, 0, output_data.Length);
                     if (decoded != output_data.Length)
                     {
                         output_data = null;
@@ -1364,7 +1376,7 @@ namespace GameRes.Formats.KiriKiri
                 public ValueReader (byte[] data, uint seed)
                 {
                     m_data = data;
-                    m_seed = seed;
+                    m_seed = (seed ^ seed >> 24) & 0x00FFFFFFu;
                 }
 
                 public object ReadValue (int depth)

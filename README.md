@@ -108,18 +108,22 @@ For Hx v4 archives whose contents decrypt but whose hashed names remain
 unresolved, GARbro can generate `HxNames.lst` itself as soon as an Hx v4
 encryption scheme is available. This can be the scheme selected in the XP3
 dialog or one imported by KrkrDump; use `Generate HxNames from resources` for a
-manual rebuild.
+manual rebuild. KrkrDump import only installs the recovered decryption
+parameters and any directly logged or already cached names; it does not start
+the full resource scan automatically.
 It decrypts the indexes and scans every XP3 in the game directory, along with
 available loose files. The native scanner reads all name-bearing PSBs plus
 `base.stage`, CG/sound/voice/image/save/scene CSV data, `replay.ks`, `.stand`,
-and unencrypted `TJS/ns0` or LZ4-compressed `TJS/4s0` PBD metadata. It also
-expands voice sequences, system voices, movie variants, PBD layer names, and
-common resource paths. Every generated candidate is checked against a hash
-that actually occurs in the game indexes before it is written.
+and PackinOne `TJS/ns0` or LZ4-compressed `TJS/4s0` PBD metadata, including
+the encrypted ChaCha8/12/20 stream variants. It also expands voice sequences,
+system voices, movie variants, PBD layer names, and common resource paths.
+Every generated candidate is checked against a hash that actually occurs in
+the game indexes before it is written.
 
-Generation runs in the background and its output is saved in the per-game
-local cache for inspection or reuse. On later runs, the last generated result
-is applied immediately while GARbro rebuilds it from the current resources.
+Manual generation runs in the background and its output is saved in the
+per-game local cache for inspection or reuse. On later manual rebuilds, the last
+generated result is applied immediately while GARbro scans the current
+resources.
 The bottom status bar shows loose-file, archive-entry, candidate, and write
 progress. The table is validated against the current archive and can be applied
 to other XP3 archives in the same directory for the current session. GARbro

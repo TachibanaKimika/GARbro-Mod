@@ -28,8 +28,8 @@ used only as a behavioral reference and optional test oracle.
 | `find_missing_voices` | numeric sequence expansion plus optional existing-file diagnostics | automatic generation; `hxv4 find-missing-voices --voice-dir DIR` for the diagnostic list |
 | `add_movies` | replay movie names, locales, resolutions, MP4, and WMV expansion | automatic |
 | `from_stand_files` | stand PBD/SINFO reference scan | automatic |
-| `from_pbd_files` | native `TJS/4s0` framed LZ4 reader with rolling dictionary | automatic |
-| `from_chthum_index_pbd` | native `TJS/ns0` object reader | automatic |
+| `from_pbd_files` | native PackinOne `TJS/4s0` decryptor plus framed LZ4 reader with rolling dictionary | automatic |
+| `from_chthum_index_pbd` | native PackinOne `TJS/ns0` object reader and decryptor | automatic |
 | hash, merge, and `HxNames.lst` write | native salted BLAKE2s/SipHash, seed merge, and atomic UTF-8 writer | `hxv4 hash`, `hxv4 generate --seed FILE` |
 | `generate_clean_hxnames` | observed extracted-tree filter | `hxv4 clean` |
 | `restore_dir_structure` | contained flat-name directory restoration | `hxv4 restore-structure` |
@@ -42,9 +42,10 @@ workflow but are outside the upstream script's public `PlainDict` methods:
 - `hxv4 generate-archive` decrypts real Hx indexes and writes only candidates
   whose hashes occur in the selected game.
 - `hxv4 krkrdump` prepares, launches, collects, and optionally imports the
-  bundled KrkrDump runtime result.
+  bundled KrkrDump runtime result without implicitly starting a resource scan.
 - `hxv4 krkrdump-import` imports an already collected KrkrDump result without
-  launching a game.
+  launching a game; `generate-archive` remains the explicit index-filtered name
+  generation operation.
 
 ## Candidate Compatibility
 
@@ -61,7 +62,7 @@ The deterministic CLI suite creates independently authored fixtures for:
 - `base.stage` and every supported CSV source;
 - replay movies and stand metadata;
 - scenario PSB data covering the upstream scenario branches;
-- `TJS/ns0` and multi-block `TJS/4s0` PBD objects;
+- plaintext and encrypted `TJS/ns0` plus multi-block `TJS/4s0` PBD objects;
 - missing numeric voices, system voices, image variants, and localized movies.
 
 When `-HxV4UpstreamRoot` is supplied, the suite invokes every upstream source
@@ -78,8 +79,9 @@ The optional oracle imports the separate checkout at test time. It is not used
 by a normal build or distributed package.
 
 Fixed file/path hash vectors are also compared with the upstream
-`KrkrHxv4Hash.dll`. PBD fixtures are accepted by upstream `pbd2json.exe`, while
-the same objects are parsed by GARbro's native reader.
+`KrkrHxv4Hash.dll`. Plaintext and encrypted PBD fixtures are accepted by
+upstream `pbd2json.exe`, while the same objects are parsed by GARbro's native
+reader.
 
 Loose-source generation is limited to 100,000 files by default and the limit is
 configurable with `--max-files`. KrkrDump seed scanning is separately bounded
