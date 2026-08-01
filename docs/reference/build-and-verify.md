@@ -329,6 +329,30 @@ and optional local YPF/JPEG samples:
 .\tests\Installer\Invoke-PathRegistrationTests.ps1
 ```
 
+For a `Formats.dat` conflict, first keep Git stages 1/2/3 intact and build
+`SchemeTool`. Analyze the database semantically, review every decision, and
+bind the write to the reviewed report hash:
+
+```powershell
+.\scripts\Merge-FormatsDatabase.ps1 -Mode Analyze -Configuration Debug
+
+.\scripts\Merge-FormatsDatabase.ps1 `
+  -Mode Merge `
+  -Configuration Debug `
+  -ApprovedReportSha256 <reviewed-report-sha256>
+
+.\tests\SchemeTool\Invoke-SchemeDatabaseMergeTests.ps1 -Configuration Debug
+```
+
+The script extracts binary conflict stages with `git cat-file`, never through a
+text pipeline. Analysis does not change the worktree binary. Merge mode reruns
+the deterministic analysis and refuses to write if the approved SHA-256 no
+longer matches. It also refuses semantic conflicts and never runs `git add`.
+Inputs must be trusted repository artifacts because the legacy database uses
+`BinaryFormatter`. The complete Agent review and explicit three-file form are
+documented in
+`.codex/skills/garbro-format-authoring/references/scheme-database-merge.md`.
+
 When invoked from PowerShell Core, the CLI E2E script relaunches itself under
 Windows PowerShell 5.1. The generated XP3 fixtures exercise legacy .NET
 Framework serialization behavior that newer PowerShell runtimes no longer
@@ -361,6 +385,18 @@ Validated on 2026-08-01 for CLI large-workflow hardening:
   protected XP3 without modifying its Cx inputs, planned and dry-ran a
   51,248-entry voice XP3 without creating output, and recognized an
   extensionless 2,120-by-1,280 PNG in batch signature-detection mode.
+
+Validated on 2026-08-01 for the upstream semantic database merge workflow:
+
+- A real three-way `Formats.dat` conflict produced a deterministic 44-change,
+  zero-conflict report; a second analysis produced the same approval SHA-256.
+- Agent review preserved three fork decisions and 41 upstream decisions. The
+  merged database round-tripped at version 153 with 80 schemes and 1,151 game
+  mappings, and its semantic hash matched the approved report.
+- The scheme merge E2E passed 40 assertions, including stale/wrong approval,
+  path-collision rejection, and conflict no-output behavior. The full CLI E2E
+  passed 2,289 assertions, the packaged-skill test passed 96 assertions, and Console,
+  Image.Convert, and CLI capability smoke checks exited 0.
 
 Validated on 2026-05-23 after NuGet restore and MSBuild Debug build:
 

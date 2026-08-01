@@ -18,6 +18,8 @@ abstractions.
    - `GameRes/FormatCatalog.cs`
 3. Two or three nearby handlers in the target directory.
 4. `references/format-implementation-checklist.md`
+5. For `Formats.dat` edits or merge conflicts,
+   `references/scheme-database-merge.md`
 
 ## Placement
 
@@ -67,3 +69,7 @@ abstractions.
   scope or the update workflow is known.
 - If a format requires game-specific keys or schemes, document the boundary and
   update scheme data only when authorized.
+- Never resolve `ArcFormats/Resources/Formats.dat` by choosing an opaque binary
+  side when both branches changed it. Use the semantic three-way analysis,
+  Agent review, report-hash approval, round-trip inspection, and E2E workflow in
+  `references/scheme-database-merge.md`.

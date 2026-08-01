@@ -93,8 +93,11 @@ not actively developed, but it is still useful for smoke checks.
 `Image.Convert/` builds `Onachi-GARbro.Image.Convert.exe`, a command-line image
 metadata and conversion utility. It is also described as a testing playground.
 
-`SchemeTool/` edits serialized scheme data under `GameData`, especially format
-schemes used by engines such as KiriKiri.
+`SchemeTool/` owns trusted maintenance operations for serialized scheme data,
+including inspection and deterministic semantic three-way merging of
+`ArcFormats/Resources/Formats.dat`. `scripts/Merge-FormatsDatabase.ps1` binds a
+reviewed JSON report hash to the exact Git conflict stages before it permits a
+merged database to be written; it deliberately leaves staging to the Agent.
 
 ## Documentation
 

@@ -529,7 +529,7 @@ namespace GameRes.Formats.Purple
             }
         }
 
-        void DecryptPb3 (byte[] data)
+        internal static void DecryptPb3 (byte[] data)
         {
             byte key1 = data[data.Length-3];
             byte key2 = data[data.Length-2];
@@ -541,9 +541,9 @@ namespace GameRes.Formats.Purple
                 data[i+1] ^= key2;
                 data[i+1] -= data[src++];
             }
-		}
+        }
 
-        void EncryptPb3 (byte[] data)
+        internal static void EncryptPb3 (byte[] data)
         {
             byte key1 = data[data.Length - 3];
             byte key2 = data[data.Length - 2];
