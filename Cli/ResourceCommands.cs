@@ -12,7 +12,9 @@ namespace GARbro.Cli
     {
         static readonly string[] s_commands = {
             "capabilities", "formats.list", "probe", "archive.list",
-            "archive.extract", "script.extract", "image.info", "image.convert",
+            "archive.plan", "archive.extract", "archive.schemes",
+            "archive.scheme-info", "archive.scheme-check",
+            "script.extract", "image.info", "image.convert", "image.convert-batch",
             "hxv4.schemes", "hxv4.hash", "hxv4.generate", "hxv4.generate-archive",
             "hxv4.clean", "hxv4.find-missing-voices",
             "hxv4.restore-structure", "hxv4.rename",
@@ -47,6 +49,13 @@ namespace GARbro.Cli
                     { "atomicWrites", true },
                     { "actualByteCounting", true },
                     { "dryRun", true },
+                    { "duplicatePolicies", new[] { "error", "suffix-index" } },
+                    { "resumeModes", new[] { "verify-size", "verify-hash" } },
+                    { "imageBatchResumeModes", new[] { "verify-header", "verify-decode" } },
+                    { "extractionManifestSchema", ExtractionManifestState.SchemaVersion },
+                    { "automaticFiniteBudget", true },
+                    { "summaryOnly", true },
+                    { "explicitXp3SchemeOptions", true },
                     { "defaultOverwrite", "never" },
                     { "defaultMaxFiles", ExtractionPolicy.DefaultMaxFiles },
                     { "defaultMaxTotalBytes", ExtractionPolicy.DefaultMaxTotalBytes },
@@ -119,7 +128,7 @@ namespace GARbro.Cli
         public static ExitCode Probe (
             RuntimeContext runtime, ParsedCommand command, MachineOutput output)
         {
-            command.RejectUnknownOptions();
+            command.RejectUnknownOptions ("scheme", "hx-names", "cx-dump-dir");
             command.RequirePositionalCount (1);
             string path = runtime.RequireFile (
                 command.RequirePositional (0, "input path"));
@@ -131,13 +140,21 @@ namespace GARbro.Cli
                 runtime.ThrowRecognitionFailure (path);
                 return ExitCode.Unrecognized;
             }
-            using (var archive = ArcFile.TryOpen (path))
+            ArchiveSchemeResolution scheme_resolution =
+                ArchiveSchemeOptions.Resolve (runtime, command, path);
+            using (var archive = null != scheme_resolution
+                ? runtime.OpenArchive (path, scheme_resolution)
+                : ArcFile.TryOpen (path))
             {
                 if (null != archive)
                 {
+                    scheme_resolution = ArchiveSchemeOptions.FinalizeAfterOpen (
+                        archive, scheme_resolution, path);
                     var data = DetectionData (
                         path, "archive", archive.Tag, archive.Description);
                     data["entryCount"] = archive.Dir.Count;
+                    if (null != scheme_resolution)
+                        data["schemeResolution"] = scheme_resolution.ToDictionary();
                     CompleteDetection (command, output, data, candidates);
                     return ExitCode.Success;
                 }

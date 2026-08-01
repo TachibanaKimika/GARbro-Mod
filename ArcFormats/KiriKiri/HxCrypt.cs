@@ -60,6 +60,9 @@ namespace GameRes.Formats.KiriKiri
         public string[] AdditionalNamesFiles;
         public Dictionary<string, HxIndexKey> IndexKeyDict;
 
+        [NonSerialized]
+        Dictionary<string, string> m_inlineNames;
+
         public HxCrypt (CxScheme scheme) : base (scheme)
         {
         }
@@ -120,6 +123,21 @@ namespace GameRes.Formats.KiriKiri
                     else if (hash.Length == 64)
                         name_map[hash] = value;
                 });
+                if (null != m_inlineNames)
+                {
+                    foreach (var pair in m_inlineNames)
+                    {
+                        if (pair.Key.Length == 16)
+                        {
+                            var value = pair.Value;
+                            if ("/" == value || "\\" == value)
+                                value = string.Empty;
+                            path_map[pair.Key] = value;
+                        }
+                        else if (pair.Key.Length == 64)
+                            name_map[pair.Key] = pair.Value;
+                    }
+                }
             }
             catch (Exception) { }
             var entry_info_map = new Dictionary<string, HxEntry> ();
@@ -246,7 +264,7 @@ namespace GameRes.Formats.KiriKiri
             {
                 names_files.Add (names_file);
             }
-            return new HxCrypt (scheme)
+            var clone = new HxCrypt (scheme)
             {
                 IndexKey1 = IndexKey1,
                 IndexKey2 = IndexKey2,
@@ -256,6 +274,44 @@ namespace GameRes.Formats.KiriKiri
                 AdditionalNamesFiles = names_files.ToArray(),
                 IndexKeyDict = IndexKeyDict,
             };
+            clone.SetInlineNames (m_inlineNames);
+            return clone;
+        }
+
+        internal HxCrypt CloneWithInlineNames (
+            IDictionary<string, string> names)
+        {
+            var clone = CloneWithAdditionalNamesFile (null);
+            var merged = new Dictionary<string, string> (
+                StringComparer.OrdinalIgnoreCase);
+            if (null != clone.m_inlineNames)
+            {
+                foreach (var pair in clone.m_inlineNames)
+                    merged[pair.Key] = pair.Value;
+            }
+            if (null != names)
+            {
+                foreach (var pair in names)
+                    merged[pair.Key] = pair.Value;
+            }
+            clone.SetInlineNames (merged);
+            return clone;
+        }
+
+        internal void SetInlineNames (IDictionary<string, string> names)
+        {
+            m_inlineNames = null == names || 0 == names.Count
+                ? null
+                : new Dictionary<string, string> (
+                    names, StringComparer.OrdinalIgnoreCase);
+        }
+
+        internal void CopyInlineNamesTo (IDictionary<string, string> names)
+        {
+            if (null == names || null == m_inlineNames)
+                return;
+            foreach (var pair in m_inlineNames)
+                names[pair.Key] = pair.Value;
         }
 
         void ReadNamesFile (Action<string> process_line)

@@ -59,6 +59,18 @@ namespace GameRes.Formats.KiriKiri
         public object              Extra { get; set; }
     }
 
+    public sealed class Xp3Archive : ArcFile
+    {
+        public ICrypt EffectiveScheme { get; private set; }
+
+        public Xp3Archive (ArcView file, ArchiveFormat format,
+                           ICollection<Entry> directory, ICrypt effective_scheme)
+            : base (file, format, directory)
+        {
+            EffectiveScheme = effective_scheme;
+        }
+    }
+
     public class Xp3Options : ResourceOptions
     {
         public int              Version { get; set; }
@@ -102,6 +114,21 @@ namespace GameRes.Formats.KiriKiri
         public bool ForceEncryptionQuery = true;
 
         internal static readonly ICrypt NoCryptAlgorithm = new NoCrypt();
+
+        /// <summary>
+        /// Open an XP3 archive with an explicitly selected encryption scheme.
+        /// The supplied scheme is scoped to this call and does not modify the
+        /// process-wide transient scheme used by the interactive importer.
+        /// </summary>
+        public ArcFile TryOpenWithScheme (ArcView file, ICrypt scheme)
+        {
+            if (null == file)
+                throw new ArgumentNullException ("file");
+            if (null == scheme)
+                throw new ArgumentNullException ("scheme");
+            using (PushThreadTransientScheme (scheme, file.Name, false))
+                return TryOpen (file);
+        }
 
         public override ArcFile TryOpen (ArcView file)
         {
@@ -342,11 +369,13 @@ NextEntry:
             }
             if (0 == dir.Count)
                 return null;
-            var arc = new ArcFile (file, this, dir);
+            var effective_scheme = crypt_algorithm.IsValueCreated
+                ? crypt_algorithm.Value : null;
+            var arc = new Xp3Archive (file, this, dir, effective_scheme);
             try
             {
-                if (crypt_algorithm.IsValueCreated)
-                    crypt_algorithm.Value.Init (arc);
+                if (null != effective_scheme)
+                    effective_scheme.Init (arc);
                 return arc;
             }
             catch

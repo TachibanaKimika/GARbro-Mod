@@ -44,14 +44,32 @@ Machine CLI
 
 `Onachi-GARbro.Cli.exe` provides a versioned, non-interactive command interface
 for automation and AI agents. It can report capabilities and formats, probe and
-list resources, safely extract selected archive entries, export supported
-scripts in four text modes, and inspect or convert images.
+list resources, discover and validate XP3 schemes, plan deterministic archive
+outputs, safely extract selected entries with resumable manifests, export
+supported scripts in four text modes, and inspect or batch-convert images.
 
-Machine output uses `garbro.cli/v1` JSON or JSONL on standard output. Extraction
-defaults to no overwrite and enforces destination containment, atomic temporary
-writes, file/byte/depth limits, and dry-run planning. Formats that require a GUI
-password or scheme return a structured `needs_input` result instead of opening
-a dialog or guessing a value.
+Machine output remains `garbro.cli/v1` JSON or JSONL on standard output. Large
+lists, plans, extraction runs, Hx scans, and image batches should use
+`--output jsonl`. On archive list/plan/extract and image batches, add
+`--summary-only` when only bounded totals are needed.
+Extraction defaults to no overwrite and enforces destination containment,
+atomic temporary writes, actual-byte limits, deterministic duplicate handling,
+and dry-run planning. `--budget auto` derives finite limits from a plan, while
+`garbro.extraction-manifest/v1` JSONL manifests add SHA-256 output records by
+default (unless `--checksum none` opts out) and `verify-size`/`verify-hash`
+resume checks. Formats that still require an
+unsupported GUI parameter return a structured `needs_input` result instead of
+opening a dialog or guessing a value.
+
+For protected XP3 archives, use the typed headless flow: list or filter
+`archive schemes`, validate a base `--scheme` and/or `--cx-dump-dir` with
+`archive scheme-check`, and optionally overlay `--hx-names`; a names table is
+not a valid base by itself. Then run `archive plan`, a dry-run, and extraction
+with the same options. The scheme resolution and artifact hashes are included
+in machine results and the extraction plan identity. Duplicate logical names
+can stay a hard error or be mapped
+deterministically with `--duplicate-policy suffix-index` and stable zero-based
+`--entry-index` selectors.
 
 The CLI also exposes the complete native Hx v4 workflow: scheme discovery and
 hashing; name-table generation from loose files, PSB/MDF, stage/CSV, stand,
@@ -72,8 +90,9 @@ The full package also bundles `garbro-cli-skill.zip`. Open
 `Preferences -> AI integration` and choose `Save SKILL ZIP...` to save a copy
 where you want it. The ZIP contains one top-level `garbro-cli` directory with a
 short `SKILL.md`, Codex UI metadata, and separate references for commands,
-script text modes, the machine protocol, and extraction safety. Review it, then
-extract that directory to `$CODEX_HOME\skills` or
+script text modes, the machine protocol, extraction safety, large-library
+ingest, and content-semanticization boundaries. Review it, then extract that
+directory to `$CODEX_HOME\skills` or
 `%USERPROFILE%\.codex\skills`. GARbro does not modify the Codex skills
 directory itself.
 

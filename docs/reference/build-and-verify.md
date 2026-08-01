@@ -195,7 +195,16 @@ garbro-cli\references\command-reference.md
 garbro-cli\references\script-text-modes.md
 garbro-cli\references\machine-protocol.md
 garbro-cli\references\extraction-safety.md
+garbro-cli\references\large-library-ingest.md
+garbro-cli\references\content-semanticization.md
 ```
+
+`large-library-ingest.md` owns the scheme-check, archive-plan, deterministic
+duplicate, finite auto-budget, manifest/resume, and batch-image workflow.
+`content-semanticization.md` states the boundary between GARbro's decoding and
+provenance responsibilities and downstream OCR, transcription, translation,
+classification, linking, or embedding systems. Keep both references in the ZIP
+when any of those workflows change.
 
 `GARbro.nsi` installs the ZIP next to the executables. The settings page saves
 an atomic copy to a user-selected path; it does not inspect or modify the
@@ -320,11 +329,38 @@ and optional local YPF/JPEG samples:
 .\tests\Installer\Invoke-PathRegistrationTests.ps1
 ```
 
+When invoked from PowerShell Core, the CLI E2E script relaunches itself under
+Windows PowerShell 5.1. The generated XP3 fixtures exercise legacy .NET
+Framework serialization behavior that newer PowerShell runtimes no longer
+enable; this relaunch is expected and does not change the requested test scope.
+
 The test script creates output only below a unique system temporary directory.
 The external sample path is read-only test input and no sample data is added to
 the repository. `-HxV4UpstreamRoot` uses a separate checkout as a behavioral
 oracle and does not copy its source or binaries into GARbro. See
 `docs/reference/cli-machine-interface.md` for the command and protocol contract.
+
+Validated on 2026-08-01 for CLI large-workflow hardening:
+
+- The complete Debug solution build passed under Visual Studio MSBuild with
+  version stamping suppressed. The only warning was the pre-existing unresolved
+  `Microsoft.Win32.Primitives` reference in `Experimental`; there were no build
+  errors.
+- The comprehensive CLI E2E passed 2,289 assertions in 195.4 seconds without
+  external samples. It included a 50,001-entry XP3 JSONL workflow below the
+  512 MiB peak-working-set ceiling, duplicate/path/budget enforcement,
+  extraction-manifest crash/resume/repair cases, image batch conversion, Hx/Cx
+  validation, GUI inline-name precedence, and explicit plus auto-detected lazy
+  TPM fresh/resume/change-rejection cases.
+- The repo-local skill passed `quick_validate.py`; the Debug packaged-skill test
+  passed 96 assertions, confirmed exact source/ZIP content, atomic save/replace,
+  and did not change the real Codex home.
+- CLI capabilities, Console listing (659 lines), and Image.Convert listing
+  (442 lines) smoke checks all exited 0.
+- Read-only commercial-sample checks opened and content-validated a 118-entry
+  protected XP3 without modifying its Cx inputs, planned and dry-ran a
+  51,248-entry voice XP3 without creating output, and recognized an
+  extensionless 2,120-by-1,280 PNG in batch signature-detection mode.
 
 Validated on 2026-05-23 after NuGet restore and MSBuild Debug build:
 

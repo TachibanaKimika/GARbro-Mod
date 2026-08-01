@@ -42,6 +42,8 @@ namespace GameRes.Formats.KiriKiri
         public bool Success;
         public string NamesFile;
         public string Error;
+        public string FailureReason;
+        public int IndexArchivesTried;
         public int ArchiveCount;
         public int ResourceCount;
         public int LooseFileCount;
@@ -110,7 +112,8 @@ namespace GameRes.Formats.KiriKiri
             var result = new HxNameGenerationResult { NamesFile = output_file };
             try
             {
-                ReportProgress (progress_reporter, 2, Text ("HxNamesProgressPreparing"));
+                ReportProgress (progress_reporter, 2, Text ("HxNamesProgressPreparing"),
+                    "prepare", new Dictionary<string, object>());
                 if (string.IsNullOrEmpty (source_file) || !File.Exists (source_file))
                     throw new FileNotFoundException ("Source XP3 was not found.", source_file);
                 if (null == crypt)
@@ -121,9 +124,14 @@ namespace GameRes.Formats.KiriKiri
                 var game_directory = Path.GetDirectoryName (Path.GetFullPath (source_file));
                 var archive_files = Directory.GetFiles (game_directory, "*.xp3")
                     .OrderBy (x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+                result.IndexArchivesTried = archive_files.Length;
                 var target_hashes = ReadTargetHashes (archive_files, crypt, result, progress_reporter);
                 if (0 == target_hashes.PathHashes.Count && 0 == target_hashes.NameHashes.Count)
-                    throw new InvalidFormatException (Text ("HxNamesIndexReadFailed"));
+                {
+                    result.FailureReason = "no_readable_index";
+                    result.Error = Text ("HxNamesIndexReadFailed");
+                    return result;
+                }
 
                 var candidates = new CandidateCollector (target_hashes);
                 candidates.AddPath ("/");
@@ -143,21 +151,31 @@ namespace GameRes.Formats.KiriKiri
                 ScanLooseResources (game_directory, scanner, candidates, result, progress_reporter);
                 ScanResourceArchives (archive_files, crypt, scanner, candidates, result, progress_reporter);
                 scanner.Complete();
-                ReportCandidateProgress (progress_reporter, 78, candidates);
+                ReportCandidateProgress (
+                    progress_reporter, 78, "voice_sequences", candidates, result);
                 candidates.ExpandVoiceSequences();
-                ReportCandidateProgress (progress_reporter, 86, candidates);
+                ReportCandidateProgress (
+                    progress_reporter, 86, "system_voices", candidates, result);
                 candidates.ExpandSystemVoices();
-                ReportCandidateProgress (progress_reporter, 93, candidates);
+                ReportCandidateProgress (
+                    progress_reporter, 93, "common_paths", candidates, result);
                 candidates.AddCommonPaths();
 
                 ReportProgress (progress_reporter, 97, string.Format (
-                    Text ("HxNamesProgressWriting"), candidates.CandidateCount, candidates.Matches.Count));
+                    Text ("HxNamesProgressWriting"), candidates.CandidateCount, candidates.Matches.Count),
+                    "write", new Dictionary<string, object> {
+                        { "candidateCount", candidates.CandidateCount },
+                        { "matchCount", candidates.Matches.Count },
+                        { "scannedEntryCount", result.ScannedEntryCount },
+                        { "parsedResourceCount", result.ResourceCount },
+                    });
                 result.CandidateCount = candidates.CandidateCount;
                 result.PathMatches = candidates.Matches.Keys.Count (x => x.Length == 16);
                 result.NameMatches = candidates.Matches.Keys.Count (x => x.Length == 64);
                 result.Success = result.PathMatches + result.NameMatches > 0;
                 if (!result.Success)
                 {
+                    result.FailureReason = "no_name_matches";
                     result.Error = "No generated candidates matched an Hx v4 index.";
                     return result;
                 }
@@ -176,6 +194,8 @@ namespace GameRes.Formats.KiriKiri
             catch (Exception X)
             {
                 result.Success = false;
+                if (string.IsNullOrEmpty (result.FailureReason))
+                    result.FailureReason = "generation_failed";
                 result.Error = X.Message;
                 Trace.WriteLine (string.Format ("HxNames generation failed for '{0}': {1}",
                                                 source_file, X), "[HxNames]");
@@ -221,14 +241,17 @@ namespace GameRes.Formats.KiriKiri
                 try
                 {
                     var index = KrkrDumpResultImporter.ReadHxIndex (archive);
-                    if (null == index)
-                        continue;
-                    var hashes = crypt.ReadIndexHashes (Path.GetFileName (archive), index);
-                    if (null == hashes)
-                        continue;
-                    target.PathHashes.UnionWith (hashes.PathHashes);
-                    target.NameHashes.UnionWith (hashes.NameHashes);
-                    ++result.ArchiveCount;
+                    if (null != index)
+                    {
+                        var hashes = crypt.ReadIndexHashes (
+                            Path.GetFileName (archive), index);
+                        if (null != hashes)
+                        {
+                            target.PathHashes.UnionWith (hashes.PathHashes);
+                            target.NameHashes.UnionWith (hashes.NameHashes);
+                            ++result.ArchiveCount;
+                        }
+                    }
                 }
                 catch (Exception X)
                 {
@@ -238,7 +261,12 @@ namespace GameRes.Formats.KiriKiri
                 ReportProgress (progress_reporter,
                     2 + (archive_files.Length > 0 ? (i+1) * 10 / archive_files.Length : 10),
                     string.Format (Text ("HxNamesProgressIndexes"), i+1, archive_files.Length,
-                                   result.ArchiveCount));
+                                   result.ArchiveCount),
+                    "read_indexes", new Dictionary<string, object> {
+                        { "archiveIndex", i+1 },
+                        { "archiveCount", archive_files.Length },
+                        { "readableIndexCount", result.ArchiveCount },
+                    });
             }
             return target;
         }
@@ -312,7 +340,12 @@ namespace GameRes.Formats.KiriKiri
                         {
                             ReportProgress (progress_reporter, Math.Min (19, 12 + visited / 15000),
                                 string.Format (Text ("HxNamesProgressLoose"), visited,
-                                               result.ResourceCount));
+                                               result.ResourceCount),
+                                "scan_loose", new Dictionary<string, object> {
+                                    { "scannedFileCount", visited },
+                                    { "parsedResourceCount", result.ResourceCount },
+                                    { "candidateCount", candidates.CandidateCount },
+                                });
                         }
                     }
                 }
@@ -324,7 +357,12 @@ namespace GameRes.Formats.KiriKiri
                 }
             }
             ReportProgress (progress_reporter, 20, string.Format (
-                Text ("HxNamesProgressLoose"), visited, result.ResourceCount));
+                Text ("HxNamesProgressLoose"), visited, result.ResourceCount),
+                "scan_loose", new Dictionary<string, object> {
+                    { "scannedFileCount", visited },
+                    { "parsedResourceCount", result.ResourceCount },
+                    { "candidateCount", candidates.CandidateCount },
+                });
         }
 
         static bool ShouldSkipLooseDirectory (string name)
@@ -365,7 +403,14 @@ namespace GameRes.Formats.KiriKiri
                 .ThenBy (x => x, StringComparer.OrdinalIgnoreCase).ToArray();
             if (0 == inputs.Length)
             {
-                ReportProgress (progress_reporter, 75, Text ("HxNamesProgressNoResources"));
+                ReportProgress (progress_reporter, 75, Text ("HxNamesProgressNoResources"),
+                    "scan_entries", new Dictionary<string, object> {
+                        { "archiveIndex", 0 },
+                        { "archiveCount", 0 },
+                        { "scannedEntryCount", result.ScannedEntryCount },
+                        { "parsedResourceCount", result.ResourceCount },
+                        { "candidateCount", candidates.CandidateCount },
+                    });
                 return;
             }
 
@@ -425,7 +470,18 @@ namespace GameRes.Formats.KiriKiri
                                 ReportProgress (progress_reporter, percentage, string.Format (
                                     Text ("HxNamesProgressResources"), Path.GetFileName (archive),
                                     archive_number, inputs.Length, processed, total,
-                                    result.ResourceCount));
+                                    result.ResourceCount),
+                                    "scan_entries", new Dictionary<string, object> {
+                                        { "archiveName", Path.GetFileName (archive) },
+                                        { "archiveIndex", archive_number },
+                                        { "archiveCount", inputs.Length },
+                                        { "entryIndex", processed },
+                                        { "entryCount", total },
+                                        { "scannedEntryCount", result.ScannedEntryCount },
+                                        { "parsedResourceCount", result.ResourceCount },
+                                        { "candidateCount", candidates.CandidateCount },
+                                        { "matchCount", candidates.Matches.Count },
+                                    });
                             }
                         }
                     }
@@ -482,14 +538,24 @@ namespace GameRes.Formats.KiriKiri
         }
 
         static void ReportCandidateProgress (Action<ResourceProgressInfo> progress_reporter,
-                                              int percentage, CandidateCollector candidates)
+                                              int percentage, string stage,
+                                              CandidateCollector candidates,
+                                              HxNameGenerationResult result)
         {
             ReportProgress (progress_reporter, percentage, string.Format (
-                Text ("HxNamesProgressCandidates"), candidates.CandidateCount, candidates.Matches.Count));
+                Text ("HxNamesProgressCandidates"), candidates.CandidateCount, candidates.Matches.Count),
+                "expand_candidates", new Dictionary<string, object> {
+                    { "stage", stage },
+                    { "candidateCount", candidates.CandidateCount },
+                    { "matchCount", candidates.Matches.Count },
+                    { "scannedEntryCount", result.ScannedEntryCount },
+                    { "parsedResourceCount", result.ResourceCount },
+                });
         }
 
         static void ReportProgress (Action<ResourceProgressInfo> progress_reporter,
-                                    int percentage, string message)
+                                    int percentage, string message, string phase,
+                                    IDictionary<string, object> details)
         {
             if (null == progress_reporter)
                 return;
@@ -498,6 +564,8 @@ namespace GameRes.Formats.KiriKiri
                 progress_reporter (new ResourceProgressInfo {
                     Percentage = percentage,
                     Message = message,
+                    Phase = phase,
+                    Details = details,
                 });
             }
             catch (OperationCanceledException)

@@ -56,14 +56,26 @@ namespace GARbro.Cli
                      || "image".Equals (first, StringComparison.OrdinalIgnoreCase)
                      || "hxv4".Equals (first, StringComparison.OrdinalIgnoreCase))
             {
-                if (args.Length < 2 || args[1].StartsWith ("--", StringComparison.Ordinal))
+                if (args.Length < 2)
                     throw CliException.Usage ("missing_action",
                         string.Format (CultureInfo.InvariantCulture,
                             "Command '{0}' requires an action.", first));
                 command.Group = first.ToLowerInvariant();
-                command.Action = args[1].ToLowerInvariant();
-                command.CommandName = command.Group + "." + command.Action;
-                index = 2;
+                if ("--help".Equals (args[1], StringComparison.OrdinalIgnoreCase))
+                {
+                    command.CommandName = command.Group;
+                    index = 1;
+                }
+                else
+                {
+                    if (args[1].StartsWith ("--", StringComparison.Ordinal))
+                        throw CliException.Usage ("missing_action",
+                            string.Format (CultureInfo.InvariantCulture,
+                                "Command '{0}' requires an action.", first));
+                    command.Action = args[1].ToLowerInvariant();
+                    command.CommandName = command.Group + "." + command.Action;
+                    index = 2;
+                }
             }
             else if ("help".Equals (first, StringComparison.OrdinalIgnoreCase)
                      || "--help".Equals (first, StringComparison.OrdinalIgnoreCase)
@@ -92,17 +104,26 @@ namespace GARbro.Cli
                 if (0 == name.Length)
                     throw CliException.Usage ("invalid_option", "Invalid option '--'.");
 
-                string value = "true";
+                string value;
                 int equals = name.IndexOf ('=');
                 if (equals >= 0)
                 {
                     value = name.Substring (equals+1);
                     name = name.Substring (0, equals);
+                    if (!IsFlagOption (name) && 0 == value.Length)
+                        throw MissingOptionValue (name);
                 }
-                else if (!IsFlagOption (name)
-                         && index < args.Length
-                         && !args[index].StartsWith ("--", StringComparison.Ordinal))
+                else if (IsFlagOption (name))
                 {
+                    value = "true";
+                }
+                else
+                {
+                    if (index >= args.Length
+                        || args[index].StartsWith ("--", StringComparison.Ordinal))
+                    {
+                        throw MissingOptionValue (name);
+                    }
                     value = args[index++];
                 }
                 command.AddOption (name, value);
@@ -228,6 +249,15 @@ namespace GARbro.Cli
             return "json" == value || "jsonl" == value || "text" == value;
         }
 
+        static CliException MissingOptionValue (string name)
+        {
+            return CliException.Usage (
+                "missing_option_value",
+                string.Format (
+                    CultureInfo.InvariantCulture,
+                    "Option '--{0}' requires a value.", name));
+        }
+
         static bool IsFlagOption (string name)
         {
             return "verbose".Equals (name, StringComparison.OrdinalIgnoreCase)
@@ -235,6 +265,8 @@ namespace GARbro.Cli
                 || "help".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "dry-run".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "recursive".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "detect-by-signature".Equals (name, StringComparison.OrdinalIgnoreCase)
+                || "summary-only".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "include-garbro-common".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "no-elevate".Equals (name, StringComparison.OrdinalIgnoreCase)
                 || "same-directory".Equals (name, StringComparison.OrdinalIgnoreCase)

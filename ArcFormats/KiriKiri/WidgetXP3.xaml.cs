@@ -248,6 +248,7 @@ namespace GameRes.Formats.GUI
                 foreach (var names_file in crypt.AdditionalNamesFiles)
                     AddNamesFileSeeds (seeds, names_file);
             }
+            crypt.CopyInlineNamesTo (seeds);
             AddNamesFileSeeds (seeds, preset_file);
 
             KrkrDumpStatus.Text = Text ("HxNamesGenerating");

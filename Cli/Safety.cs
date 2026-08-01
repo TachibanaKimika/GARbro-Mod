@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace GARbro.Cli
@@ -26,8 +28,15 @@ namespace GARbro.Cli
         public int MaxDepth { get; private set; }
         public OverwriteMode Overwrite { get; private set; }
         public bool DryRun { get; private set; }
+        public string BudgetSource { get; private set; }
 
         public static ExtractionPolicy FromCommand (ParsedCommand command)
+        {
+            return FromCommand (command, null);
+        }
+
+        public static ExtractionPolicy FromCommand (
+            ParsedCommand command, ExtractionLimits automatic_limits)
         {
             string overwrite = command.GetSingle ("overwrite", "never").ToLowerInvariant();
             OverwriteMode mode;
@@ -40,17 +49,39 @@ namespace GARbro.Cli
                 throw CliException.Usage ("invalid_overwrite_mode",
                     "--overwrite must be one of: never, skip, replace.");
             }
+            string budget = command.GetSingle ("budget");
+            bool automatic = !string.IsNullOrEmpty (budget);
+            if (automatic && !"auto".Equals (budget, StringComparison.OrdinalIgnoreCase))
+            {
+                throw CliException.Usage (
+                    "invalid_budget_mode", "--budget currently accepts only: auto.");
+            }
+            if (automatic && null == automatic_limits)
+            {
+                throw CliException.Usage (
+                    "automatic_budget_unavailable",
+                    "--budget auto is available only for archive operations with a completed plan.");
+            }
+            long default_max_files = automatic
+                ? automatic_limits.MaxFiles : DefaultMaxFiles;
+            long default_max_total = automatic
+                ? automatic_limits.MaxTotalBytes : DefaultMaxTotalBytes;
+            long default_max_entry = automatic
+                ? automatic_limits.MaxEntryBytes : DefaultMaxEntryBytes;
+            int default_max_depth = automatic
+                ? automatic_limits.MaxDepth : DefaultMaxDepth;
             return new ExtractionPolicy {
                 MaxFiles = command.GetInt64 (
-                    "max-files", DefaultMaxFiles, 1, int.MaxValue),
+                    "max-files", default_max_files, 1, int.MaxValue),
                 MaxTotalBytes = command.GetInt64 (
-                    "max-total-bytes", DefaultMaxTotalBytes, 1, long.MaxValue),
+                    "max-total-bytes", default_max_total, 1, long.MaxValue),
                 MaxEntryBytes = command.GetInt64 (
-                    "max-entry-bytes", DefaultMaxEntryBytes, 1, long.MaxValue),
+                    "max-entry-bytes", default_max_entry, 1, long.MaxValue),
                 MaxDepth = (int)command.GetInt64 (
-                    "max-depth", DefaultMaxDepth, 1, 1024),
+                    "max-depth", default_max_depth, 1, 1024),
                 Overwrite = mode,
                 DryRun = command.HasFlag ("dry-run"),
+                BudgetSource = automatic ? "archivePlan" : "explicitOrDefault",
             };
         }
 
@@ -63,7 +94,22 @@ namespace GARbro.Cli
                 { "maxDepth", MaxDepth },
                 { "overwrite", Overwrite.ToString().ToLowerInvariant() },
                 { "dryRun", DryRun },
+                { "budgetSource", BudgetSource },
             };
+        }
+    }
+
+    internal sealed class ResolvedOutputPath
+    {
+        public string RelativePath { get; private set; }
+        public string FullPath { get; private set; }
+        public int Depth { get; private set; }
+
+        public ResolvedOutputPath (string relative_path, string full_path, int depth)
+        {
+            RelativePath = relative_path;
+            FullPath = full_path;
+            Depth = depth;
         }
     }
 
@@ -81,6 +127,8 @@ namespace GARbro.Cli
         readonly string m_root_prefix;
         readonly int m_max_depth;
         readonly HashSet<string> m_destinations =
+            new HashSet<string> (StringComparer.OrdinalIgnoreCase);
+        readonly HashSet<string> m_destination_parents =
             new HashSet<string> (StringComparer.OrdinalIgnoreCase);
 
         public string Root { get { return m_root; } }
@@ -111,6 +159,7 @@ namespace GARbro.Cli
                 }
                 throw;
             }
+            ValidateDestinationRoot (root);
             string path_root = Path.GetPathRoot (m_root);
             if (string.Equals (m_root, path_root,
                                StringComparison.OrdinalIgnoreCase))
@@ -125,6 +174,13 @@ namespace GARbro.Cli
         }
 
         public string Resolve (string entry_name)
+        {
+            ResolvedOutputPath result = NormalizeAndValidate (entry_name);
+            Reserve (result, entry_name);
+            return result.FullPath;
+        }
+
+        public ResolvedOutputPath NormalizeAndValidate (string entry_name)
         {
             if (string.IsNullOrWhiteSpace (entry_name))
                 throw UnsafePath (entry_name, "empty_name");
@@ -151,20 +207,103 @@ namespace GARbro.Cli
                 throw UnsafePath (entry_name, "path_escape");
             }
             ValidateExistingPathComponents (entry_name, segments);
-            if (!m_destinations.Add (destination))
-                throw UnsafePath (entry_name, "duplicate_destination");
-            return destination;
+            return new ResolvedOutputPath (relative, destination, segments.Length);
+        }
+
+        public void Reserve (ResolvedOutputPath output, string entry_name)
+        {
+            if (null == output)
+                throw new ArgumentNullException ("output");
+            if (!TryReserve (output))
+                throw UnsafePath (entry_name, "destination_collision");
+        }
+
+        public bool TryReserve (ResolvedOutputPath output)
+        {
+            if (null == output)
+                throw new ArgumentNullException ("output");
+            if (m_destinations.Contains (output.FullPath)
+                || m_destination_parents.Contains (output.FullPath))
+            {
+                return false;
+            }
+
+            string parent = Path.GetDirectoryName (output.FullPath);
+            while (!string.IsNullOrEmpty (parent)
+                   && !string.Equals (parent, m_root,
+                                      StringComparison.OrdinalIgnoreCase))
+            {
+                if (m_destinations.Contains (parent))
+                    return false;
+                parent = Path.GetDirectoryName (parent);
+            }
+
+            m_destinations.Add (output.FullPath);
+            parent = Path.GetDirectoryName (output.FullPath);
+            while (!string.IsNullOrEmpty (parent)
+                   && !string.Equals (parent, m_root,
+                                      StringComparison.OrdinalIgnoreCase))
+            {
+                m_destination_parents.Add (parent);
+                parent = Path.GetDirectoryName (parent);
+            }
+            return true;
         }
 
         void ValidateExistingPathComponents (
-            string entry_name, IEnumerable<string> segments)
+            string entry_name, IList<string> segments)
         {
             string current = m_root;
             RejectReparsePoint (entry_name, current);
-            foreach (string segment in segments)
+            for (int i = 0; i < segments.Count; ++i)
             {
-                current = Path.Combine (current, segment);
+                current = Path.Combine (current, segments[i]);
                 RejectReparsePoint (entry_name, current);
+                if (i + 1 < segments.Count && File.Exists (current))
+                    throw UnsafePath (entry_name, "parent_is_file");
+            }
+        }
+
+        void ValidateDestinationRoot (string original_root)
+        {
+            string current = m_root;
+            while (!string.IsNullOrEmpty (current))
+            {
+                if (File.Exists (current))
+                {
+                    throw CliException.Invalid (
+                        "invalid_destination",
+                        "Destination path traverses an existing file: "
+                            + original_root,
+                        new Dictionary<string, object> {
+                            { "path", m_root },
+                            { "component", current },
+                            { "reason", "component_is_file" },
+                        });
+                }
+                if (Directory.Exists (current))
+                {
+                    FileAttributes attributes = File.GetAttributes (current);
+                    if (0 != (attributes & FileAttributes.ReparsePoint))
+                    {
+                        throw CliException.Invalid (
+                            "invalid_destination",
+                            "Destination path traverses a reparse point: "
+                                + original_root,
+                            new Dictionary<string, object> {
+                                { "path", m_root },
+                                { "component", current },
+                                { "reason", "reparse_point" },
+                            });
+                    }
+                }
+                string parent = Path.GetDirectoryName (current);
+                if (string.Equals (parent, current,
+                                   StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+                current = parent;
             }
         }
 
@@ -212,7 +351,8 @@ namespace GARbro.Cli
     {
         readonly ExtractionPolicy m_policy;
 
-        public long TotalBytes { get; private set; }
+        public long ObservedBytes { get; private set; }
+        public long TotalBytes { get { return ObservedBytes; } }
 
         public ExtractionBudget (ExtractionPolicy policy)
         {
@@ -224,20 +364,37 @@ namespace GARbro.Cli
             if (size > m_policy.MaxEntryBytes)
                 throw LimitExceeded ("entry_size_limit_exceeded", size,
                                      m_policy.MaxEntryBytes);
-            if (size > m_policy.MaxTotalBytes - TotalBytes)
+            if (TotalBytes > m_policy.MaxTotalBytes
+                || size > m_policy.MaxTotalBytes - TotalBytes)
                 throw LimitExceeded ("total_size_limit_exceeded",
-                                     TotalBytes + size, m_policy.MaxTotalBytes);
+                                     AddSaturating (TotalBytes, size),
+                                     m_policy.MaxTotalBytes);
         }
 
         public void AddActual (long entry_bytes, int count)
         {
-            if (entry_bytes > m_policy.MaxEntryBytes - count)
+            long entry_observed = AddSaturating (entry_bytes, count);
+            long total_observed = AddSaturating (ObservedBytes, count);
+
+            // Charge bytes as soon as a decoder or encoder presents them to a
+            // materialization stream.  Failed atomic writes deliberately keep
+            // their charge so repeated late failures cannot bypass max-total.
+            ObservedBytes = total_observed;
+
+            if (entry_observed > m_policy.MaxEntryBytes)
                 throw LimitExceeded ("entry_size_limit_exceeded",
-                                     entry_bytes + count, m_policy.MaxEntryBytes);
-            if (TotalBytes > m_policy.MaxTotalBytes - count)
+                                     entry_observed,
+                                     m_policy.MaxEntryBytes);
+            if (total_observed > m_policy.MaxTotalBytes)
                 throw LimitExceeded ("total_size_limit_exceeded",
-                                     TotalBytes + count, m_policy.MaxTotalBytes);
-            TotalBytes += count;
+                                     total_observed,
+                                     m_policy.MaxTotalBytes);
+        }
+
+        static long AddSaturating (long value, long count)
+        {
+            return value > long.MaxValue - count
+                ? long.MaxValue : value + count;
         }
 
         static CliException LimitExceeded (string code, long observed, long limit)
@@ -251,17 +408,71 @@ namespace GARbro.Cli
         }
     }
 
+    internal sealed class FileWriteResult
+    {
+        public long BytesWritten { get; private set; }
+        public string Sha256 { get; private set; }
+
+        public FileWriteResult (long bytes_written, string sha256)
+        {
+            BytesWritten = bytes_written;
+            Sha256 = sha256;
+        }
+    }
+
+    internal static class Sha256Utility
+    {
+        public static string ComputeFile (string path)
+        {
+            using (var input = new FileStream (
+                path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var sha256 = SHA256.Create())
+            {
+                var buffer = new byte[0x10000];
+                for (;;)
+                {
+                    CancellationState.ThrowIfRequested();
+                    int read = input.Read (buffer, 0, buffer.Length);
+                    if (0 == read)
+                        break;
+                    sha256.TransformBlock (buffer, 0, read, buffer, 0);
+                }
+                sha256.TransformFinalBlock (new byte[0], 0, 0);
+                return ToHex (sha256.Hash);
+            }
+        }
+
+        public static string ToHex (byte[] value)
+        {
+            if (null == value)
+                return null;
+            var text = new StringBuilder (value.Length * 2);
+            foreach (byte item in value)
+                text.Append (item.ToString ("x2", System.Globalization.CultureInfo.InvariantCulture));
+            return text.ToString();
+        }
+    }
+
     internal static class SafeFileWriter
     {
         public static long CopyToFile (Stream input, string destination,
                                        OverwriteMode overwrite,
                                        ExtractionBudget budget)
         {
+            return CopyToFile (
+                input, destination, overwrite, budget, false).BytesWritten;
+        }
+
+        public static FileWriteResult CopyToFile (
+            Stream input, string destination, OverwriteMode overwrite,
+            ExtractionBudget budget, bool compute_sha256)
+        {
             string directory = Path.GetDirectoryName (destination);
             Directory.CreateDirectory (directory);
             string temporary = destination + ".garbro-"
                 + Guid.NewGuid().ToString ("N") + ".partial";
             long entry_bytes = 0;
+            HashAlgorithm sha256 = compute_sha256 ? SHA256.Create() : null;
             try
             {
                 using (var output = new FileStream (
@@ -275,10 +486,19 @@ namespace GARbro.Cli
                         if (0 == read)
                             break;
                         budget.AddActual (entry_bytes, read);
+                        if (null != sha256)
+                            sha256.TransformBlock (buffer, 0, read, buffer, 0);
                         output.Write (buffer, 0, read);
                         entry_bytes += read;
                     }
                     output.Flush();
+                }
+
+                string checksum = null;
+                if (null != sha256)
+                {
+                    sha256.TransformFinalBlock (new byte[0], 0, 0);
+                    checksum = Sha256Utility.ToHex (sha256.Hash);
                 }
 
                 if (File.Exists (destination))
@@ -296,10 +516,12 @@ namespace GARbro.Cli
                 {
                     File.Move (temporary, destination);
                 }
-                return entry_bytes;
+                return new FileWriteResult (entry_bytes, checksum);
             }
             finally
             {
+                if (null != sha256)
+                    sha256.Dispose();
                 if (File.Exists (temporary))
                 {
                     try { File.Delete (temporary); }
@@ -400,25 +622,48 @@ namespace GARbro.Cli
 
             public override void SetLength (long value)
             {
-                if (value > m_output.Length)
+                long old_length = m_output.Length;
+                if (value > old_length)
                 {
-                    long growth = value - m_output.Length;
+                    long growth = value - old_length;
                     if (growth > int.MaxValue)
                         throw CliException.Invalid (
                             "entry_size_limit_exceeded",
                             "Output stream requested an unsafe size increase.");
-                    m_budget.AddActual (BytesWritten, (int)growth);
-                    BytesWritten += growth;
+                    m_budget.AddActual (old_length, (int)growth);
+                    m_output.SetLength (value);
                 }
-                m_output.SetLength (value);
+                else
+                {
+                    m_output.SetLength (value);
+                }
+                BytesWritten = m_output.Length;
             }
 
             public override void Write (byte[] buffer, int offset, int count)
             {
                 CancellationState.ThrowIfRequested();
-                m_budget.AddActual (BytesWritten, count);
+                long old_length = m_output.Length;
+                long end_position;
+                try
+                {
+                    end_position = checked (m_output.Position + count);
+                }
+                catch (OverflowException)
+                {
+                    throw CliException.Invalid (
+                        "entry_size_limit_exceeded",
+                        "Output stream requested an unsafe write position.");
+                }
+                long growth = Math.Max (0, end_position - old_length);
+                if (growth > int.MaxValue)
+                    throw CliException.Invalid (
+                        "entry_size_limit_exceeded",
+                        "Output stream requested an unsafe size increase.");
+                if (growth > 0)
+                    m_budget.AddActual (old_length, (int)growth);
                 m_output.Write (buffer, offset, count);
-                BytesWritten += count;
+                BytesWritten = m_output.Length;
             }
 
             protected override void Dispose (bool disposing)

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using GameRes;
@@ -14,9 +15,57 @@ namespace GameRes.Formats.KiriKiri
 {
     public class KrkrDumpImportResult
     {
+        ICrypt m_scheme;
+        readonly Dictionary<string, string> m_artifact_sha256 =
+            new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+
         public bool Success { get; set; }
         public string SchemeName { get; set; }
         public string Message { get; set; }
+        public IList<string> LogFiles { get; private set; }
+        public string TableFile { get; set; }
+        public string OrderFile { get; set; }
+        public string NamesFile { get; set; }
+        public bool StrictDirectory { get; set; }
+
+        public KrkrDumpImportResult ()
+        {
+            LogFiles = new List<string>();
+        }
+
+        /// <summary>
+        /// Returns the imported scheme without exposing it as a serializable
+        /// property.  Scheme implementations contain secret key material and
+        /// must never be included in machine-readable command output.
+        /// </summary>
+        public ICrypt GetScheme ()
+        {
+            return m_scheme;
+        }
+
+        internal void SetScheme (ICrypt scheme)
+        {
+            m_scheme = scheme;
+        }
+
+        public string GetArtifactSha256 (string path)
+        {
+            if (string.IsNullOrWhiteSpace (path))
+                return null;
+            string value;
+            return m_artifact_sha256.TryGetValue (
+                Path.GetFullPath (path), out value) ? value : null;
+        }
+
+        internal void SetArtifactSha256 (string path, string sha256)
+        {
+            if (string.IsNullOrWhiteSpace (path)
+                || string.IsNullOrWhiteSpace (sha256))
+            {
+                return;
+            }
+            m_artifact_sha256[Path.GetFullPath (path)] = sha256;
+        }
     }
 
     public static class KrkrDumpResultImporter
@@ -24,6 +73,11 @@ namespace GameRes.Formats.KiriKiri
         internal const string LimelightLemonadeJamPresetId = "lllj";
         const string LimelightLemonadeJamExecutablePrefix = "limelight_lj";
         const string LimelightLemonadeJamNamesFile = "HxNames-LLLJ.lst";
+        const int MaxLogFiles = 128;
+        const long MaxLogFileBytes = 16L * 1024 * 1024;
+        const long MaxTotalLogBytes = 64L * 1024 * 1024;
+        const long MaxNamesFileBytes = 64L * 1024 * 1024;
+        const long MaxOrderFileBytes = 64L * 1024;
 
         static readonly byte[] Xp3Header = {
             (byte)'X', (byte)'P', (byte)'3', 0x0d, 0x0a, 0x20, 0x0a, 0x1a, 0x8b, 0x67, 0x01
@@ -63,7 +117,10 @@ namespace GameRes.Formats.KiriKiri
 
             Dictionary<string, string> names;
             string validation_error;
-            if (!TryReadNamesFile (names_file, out names, out validation_error))
+            string names_sha256;
+            if (!TryReadNamesFile (
+                names_file, out names, out validation_error,
+                out names_sha256))
                 return new KrkrDumpImportResult { Success = false, Message = validation_error };
 
             HxIndexHashSet index_hashes;
@@ -89,7 +146,7 @@ namespace GameRes.Formats.KiriKiri
                 return new KrkrDumpImportResult { Success = false, Message = Text ("HxNamesNoMatches") };
 
             names_file = Path.GetFullPath (names_file);
-            var crypt = base_crypt.CloneWithAdditionalNamesFile (names_file);
+            var crypt = base_crypt.CloneWithInlineNames (names);
             var scheme_name = string.Format ("{0}{1} / {2}", Xp3Opener.HxNamesSchemePrefix,
                                              Xp3Opener.GetSchemeDisplayName (base_scheme_name),
                                              Path.GetFileNameWithoutExtension (source_file));
@@ -101,23 +158,68 @@ namespace GameRes.Formats.KiriKiri
                 name_matches, index_hashes.NameHashes.Count, include_same_directory), "[HxNames]");
 
             var message_name = include_same_directory ? "HxNamesImportedSameDirectory" : "HxNamesImported";
-            return new KrkrDumpImportResult
+            var import = new KrkrDumpImportResult
             {
                 Success = true,
                 SchemeName = scheme_name,
+                NamesFile = names_file,
                 Message = string.Format (Text (message_name), names.Count, path_matches,
-                                         index_hashes.PathHashes.Count, name_matches, index_hashes.NameHashes.Count),
+                                          index_hashes.PathHashes.Count, name_matches, index_hashes.NameHashes.Count),
             };
+            import.SetScheme (crypt);
+            import.SetArtifactSha256 (names_file, names_sha256);
+            return import;
         }
 
         public static KrkrDumpImportResult Import (ResourceParameterCommandResult result, string source_file,
                                                     bool include_same_directory = false,
                                                     Action<ResourceProgressInfo> progress_reporter = null)
         {
+            return Import (result, source_file, include_same_directory, false, progress_reporter);
+        }
+
+        /// <summary>
+        /// Import a KrkrDump result.  When <paramref name="strict_directory"/>
+        /// is true, every consumed artifact is resolved only from the explicit
+        /// output directory; game, runtime, and log-file sibling directories
+        /// are not searched.
+        /// </summary>
+        public static KrkrDumpImportResult Import (ResourceParameterCommandResult result, string source_file,
+                                                    bool include_same_directory, bool strict_directory,
+                                                    Action<ResourceProgressInfo> progress_reporter = null)
+        {
+            return Import (result, source_file, include_same_directory,
+                           strict_directory, true, progress_reporter);
+        }
+
+        /// <summary>
+        /// Import a KrkrDump result, optionally retaining parsed names only in
+        /// the transient scheme instead of writing an HxNames cache file.
+        /// </summary>
+        public static KrkrDumpImportResult Import (ResourceParameterCommandResult result, string source_file,
+                                                    bool include_same_directory, bool strict_directory,
+                                                    bool write_names_cache,
+                                                    Action<ResourceProgressInfo> progress_reporter = null)
+        {
             if (null == result || !result.Success)
                 return new KrkrDumpImportResult { Success = false, Message = result != null ? result.Message : Text ("KrkrDumpNoResult") };
 
-            var data = ReadDumpData (result);
+            KrkrDumpData data;
+            try
+            {
+                data = ReadDumpData (result, strict_directory);
+            }
+            catch (InvalidDataException exception)
+            {
+                Trace.WriteLine (string.Format (
+                    "KrkrDump artifact limit or shape validation failed. output='{0}', error='{1}'",
+                    result.OutputDirectory, exception.Message), "[KrkrDump]");
+                return new KrkrDumpImportResult {
+                    Success = false,
+                    StrictDirectory = strict_directory,
+                    Message = exception.Message,
+                };
+            }
             if (data.LogLines.Count == 0)
             {
                 Trace.WriteLine (string.Format ("No KrkrDump log lines found. output='{0}', log='{1}'",
@@ -125,7 +227,28 @@ namespace GameRes.Formats.KiriKiri
                 return new KrkrDumpImportResult { Success = false, Message = Text ("KrkrDumpLogNotFound") };
             }
 
-            ParseLog (data);
+            try
+            {
+                ParseLog (data);
+                ValidateParsedDump (data);
+            }
+            catch (Exception exception)
+            {
+                if (!(exception is FormatException)
+                    && !(exception is OverflowException)
+                    && !(exception is ArgumentException))
+                {
+                    throw;
+                }
+                Trace.WriteLine (string.Format (
+                    "Invalid KrkrDump log value. output='{0}', error='{1}'",
+                    result.OutputDirectory, exception.Message), "[KrkrDump]");
+                return new KrkrDumpImportResult {
+                    Success = false,
+                    StrictDirectory = strict_directory,
+                    Message = "The KrkrDump log contains an invalid numeric or order value.",
+                };
+            }
             if (null == data.ControlBlock)
                 return new KrkrDumpImportResult { Success = false, Message = Text ("KrkrDumpCxTableNotFound") };
             if (null == data.EvenOrder || null == data.OddOrder || null == data.PrologOrder)
@@ -152,8 +275,10 @@ namespace GameRes.Formats.KiriKiri
             };
 
             FilterNamesToSourceArchive (source_file, data, crypt);
-            data.NamesFile = WriteNamesFile (result, data);
+            data.NamesFile = write_names_cache ? WriteNamesFile (result, data) : null;
             crypt.NamesFile = data.NamesFile;
+            if (!write_names_cache)
+                crypt.SetInlineNames (data.Names);
             if (!string.IsNullOrEmpty (data.NamesFile))
                 result.Metadata["KrkrDumpNamesFile"] = data.NamesFile;
             TraceDumpData (data);
@@ -165,9 +290,20 @@ namespace GameRes.Formats.KiriKiri
             {
                 Success = true,
                 SchemeName = scheme_name,
+                TableFile = data.ControlBlockFile,
+                OrderFile = data.OrderFile,
+                NamesFile = data.NamesFile,
+                StrictDirectory = strict_directory,
                 Message = string.Format (Text ("KrkrDumpSchemeImported"), scheme_name),
             };
+            import.SetScheme (crypt);
+            foreach (var log_file in data.LogFiles)
+                import.LogFiles.Add (log_file);
+            foreach (var artifact in data.ArtifactSha256)
+                import.SetArtifactSha256 (artifact.Key, artifact.Value);
 
+            if (strict_directory)
+                return import;
             var automatic_names_files = FindAutomaticNamesFiles (result, source_file).ToList();
             if (0 == automatic_names_files.Count)
                 return import;
@@ -308,11 +444,26 @@ namespace GameRes.Formats.KiriKiri
 
         internal static bool TryReadNamesFile (string names_file, out Dictionary<string, string> names, out string error)
         {
+            string sha256;
+            return TryReadNamesFile (
+                names_file, out names, out error, out sha256);
+        }
+
+        static bool TryReadNamesFile (
+            string names_file, out Dictionary<string, string> names,
+            out string error, out string sha256)
+        {
             names = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
             error = null;
+            sha256 = null;
             try
             {
-                using (var input = new StreamReader (names_file, Encoding.UTF8))
+                byte[] bytes = ReadBoundedFile (
+                    names_file, MaxNamesFileBytes, "HxNames file");
+                sha256 = HashBytes (bytes);
+                using (var memory = new MemoryStream (bytes, false))
+                using (var input = new StreamReader (
+                    memory, Encoding.UTF8, true))
                 {
                     string line;
                     int line_number = 0;
@@ -365,26 +516,70 @@ namespace GameRes.Formats.KiriKiri
             return string.Format ("{0}{1} / {2}", Xp3Opener.KrkrDumpSchemePrefix, exe_name, arc_name);
         }
 
-        static KrkrDumpData ReadDumpData (ResourceParameterCommandResult result)
+        static KrkrDumpData ReadDumpData (ResourceParameterCommandResult result, bool strict_directory)
         {
-            var data = new KrkrDumpData();
-            data.OutputDirectory = result.OutputDirectory;
+            var data = new KrkrDumpData { StrictDirectory = strict_directory };
+            data.OutputDirectory = GetFullPathOrNull (result.OutputDirectory);
             data.SourceArchive = GetMetadata (result, "SourceArchive");
             data.GameDirectory = GetMetadata (result, "GameDirectory");
 
             var log_files = new List<string>();
-            if (!string.IsNullOrEmpty (result.LogFileName))
-                log_files.Add (result.LogFileName);
-            AddLogs (log_files, result.OutputDirectory);
-            AddLogs (log_files, data.GameDirectory);
-            foreach (var log in log_files.Where (File.Exists).Distinct (StringComparer.OrdinalIgnoreCase))
+            if (strict_directory)
             {
+                var explicit_log = ResolveStrictArtifact (data.OutputDirectory, result.LogFileName);
+                if (!string.IsNullOrEmpty (explicit_log))
+                    log_files.Add (explicit_log);
+                AddLogs (log_files, data.OutputDirectory);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty (result.LogFileName))
+                    log_files.Add (result.LogFileName);
+                AddLogs (log_files, result.OutputDirectory);
+                AddLogs (log_files, data.GameDirectory);
+            }
+            long total_log_bytes = 0;
+            foreach (var log in log_files.Where (File.Exists)
+                                         .Select (GetFullPathOrNull)
+                                         .Where (x => !string.IsNullOrEmpty (x))
+                                         .Where (x => !strict_directory
+                                             || IsStrictArtifactPath (
+                                                 data.OutputDirectory, x))
+                                         .Distinct (StringComparer.OrdinalIgnoreCase)
+                                         .OrderBy (x => x, StringComparer.OrdinalIgnoreCase))
+            {
+                byte[] bytes = ReadBoundedFile (
+                    log, MaxLogFileBytes, "KrkrDump log");
+                if (total_log_bytes > MaxTotalLogBytes - bytes.Length)
+                {
+                    throw new InvalidDataException (
+                        "KrkrDump logs exceed the cumulative 64 MiB input limit.");
+                }
+                total_log_bytes += bytes.Length;
                 data.LogFiles.Add (log);
-                data.LogLines.AddRange (File.ReadAllLines (log, Encoding.UTF8));
+                data.ArtifactSha256[log] = HashBytes (bytes);
+                using (var memory = new MemoryStream (bytes, false))
+                using (var reader = new StreamReader (
+                    memory, Encoding.UTF8, true))
+                {
+                    string line;
+                    while (null != (line = reader.ReadLine()))
+                        data.LogLines.Add (line);
+                }
             }
 
-            data.ControlBlock = ReadControlBlock (FindResultFile (result, "CxdecTable.bin"));
-            ReadOrderFile (FindResultFile (result, "CxdecOrder.bin"), data);
+            data.ControlBlockFile = FindResultFile (result, "CxdecTable.bin", strict_directory);
+            data.ControlBlock = ReadControlBlock (
+                data.ControlBlockFile, strict_directory, data);
+            data.OrderFile = FindResultFile (result, "CxdecOrder.bin", strict_directory);
+            ReadOrderFile (data.OrderFile, data);
+            result.Metadata["KrkrDumpStrictDirectory"] = strict_directory ? "true" : "false";
+            if (data.LogFiles.Count > 0)
+                result.Metadata["KrkrDumpLogFiles"] = string.Join (";", data.LogFiles);
+            if (!string.IsNullOrEmpty (data.ControlBlockFile))
+                result.Metadata["KrkrDumpTableFile"] = data.ControlBlockFile;
+            if (!string.IsNullOrEmpty (data.OrderFile))
+                result.Metadata["KrkrDumpOrderFile"] = data.OrderFile;
             return data;
         }
 
@@ -411,11 +606,28 @@ namespace GameRes.Formats.KiriKiri
         {
             if (string.IsNullOrEmpty (directory) || !Directory.Exists (directory))
                 return;
-            logs.AddRange (Directory.GetFiles (directory, "KrkrDump-*.log"));
+            foreach (string path in Directory.EnumerateFiles (
+                directory, "KrkrDump-*.log"))
+            {
+                if (logs.Contains (path, StringComparer.OrdinalIgnoreCase))
+                    continue;
+                if (logs.Count >= MaxLogFiles)
+                {
+                    throw new InvalidDataException (
+                        "KrkrDump output contains more than 128 log files.");
+                }
+                logs.Add (path);
+            }
         }
 
-        static string FindResultFile (ResourceParameterCommandResult result, string name)
+        static string FindResultFile (ResourceParameterCommandResult result, string name,
+                                      bool strict_directory)
         {
+            if (strict_directory)
+            {
+                var path = ResolveStrictArtifact (result.OutputDirectory, name);
+                return !string.IsNullOrEmpty (path) && File.Exists (path) ? path : null;
+            }
             var candidates = new[]
             {
                 result.OutputDirectory,
@@ -429,9 +641,101 @@ namespace GameRes.Formats.KiriKiri
                     continue;
                 var path = Path.Combine (dir, name);
                 if (File.Exists (path))
-                    return path;
+                    return GetFullPathOrNull (path);
             }
             return null;
+        }
+
+        static string ResolveStrictArtifact (string directory, string path)
+        {
+            directory = GetFullPathOrNull (directory);
+            if (string.IsNullOrEmpty (directory) || string.IsNullOrWhiteSpace (path))
+                return null;
+            try
+            {
+                var candidate = Path.IsPathRooted (path)
+                    ? Path.GetFullPath (path)
+                    : Path.GetFullPath (Path.Combine (directory, path));
+                var root = directory.TrimEnd (Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                           + Path.DirectorySeparatorChar;
+                if (!candidate.StartsWith (root, StringComparison.OrdinalIgnoreCase))
+                    return null;
+                if (!IsStrictArtifactPath (directory, candidate))
+                    return null;
+                return candidate;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        static bool IsStrictArtifactPath (string directory, string candidate)
+        {
+            directory = GetFullPathOrNull (directory);
+            candidate = GetFullPathOrNull (candidate);
+            if (string.IsNullOrEmpty (directory) || string.IsNullOrEmpty (candidate))
+                return false;
+            var root = directory.TrimEnd (
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (!candidate.StartsWith (root, StringComparison.OrdinalIgnoreCase))
+                return false;
+            string ancestor = directory;
+            while (!string.IsNullOrEmpty (ancestor))
+            {
+                if ((File.Exists (ancestor) || Directory.Exists (ancestor))
+                    && 0 != (File.GetAttributes (ancestor)
+                             & FileAttributes.ReparsePoint))
+                {
+                    return false;
+                }
+                string parent = Path.GetDirectoryName (ancestor);
+                if (string.IsNullOrEmpty (parent)
+                    || string.Equals (parent, ancestor,
+                                      StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+                ancestor = parent;
+            }
+            string current = candidate;
+            for (;;)
+            {
+                if ((File.Exists (current) || Directory.Exists (current))
+                    && 0 != (File.GetAttributes (current)
+                             & FileAttributes.ReparsePoint))
+                {
+                    return false;
+                }
+                if (string.Equals (current, directory,
+                                   StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                string parent = Path.GetDirectoryName (current);
+                if (string.IsNullOrEmpty (parent)
+                    || string.Equals (parent, current,
+                                      StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+                current = parent;
+            }
+        }
+
+        static string GetFullPathOrNull (string path)
+        {
+            if (string.IsNullOrWhiteSpace (path))
+                return null;
+            try
+            {
+                return Path.GetFullPath (path);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         static string GetMetadata (ResourceParameterCommandResult result, string key)
@@ -490,8 +794,8 @@ namespace GameRes.Formats.KiriKiri
                     switch (hex_number.Groups["name"].Value)
                     {
                     case "Filter Key": data.FilterKey = value; break;
-                    case "Split Pos Mask": data.SplitPosMask = (uint)value; break;
-                    case "Split Pos": data.SplitPos = (uint)value; break;
+                    case "Split Pos Mask": data.SplitPosMask = checked ((uint)value); break;
+                    case "Split Pos": data.SplitPos = checked ((uint)value); break;
                     }
                     continue;
                 }
@@ -506,7 +810,11 @@ namespace GameRes.Formats.KiriKiri
                 var order_match = OrderRe.Match (line);
                 if (order_match.Success)
                 {
-                    var order = ParseOrder (order_match.Groups["values"].Value);
+                    int order_size = int.Parse (
+                        order_match.Groups["size"].Value,
+                        CultureInfo.InvariantCulture);
+                    var order = ParseOrder (
+                        order_match.Groups["values"].Value, order_size);
                     switch (order_match.Groups["size"].Value)
                     {
                     case "8": data.EvenOrder = order; break;
@@ -633,27 +941,75 @@ namespace GameRes.Formats.KiriKiri
             return true;
         }
 
-        static byte[] ParseOrder (string values)
+        static void ValidateParsedDump (KrkrDumpData data)
         {
-            return values.Split (new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            ValidateIndexKeyPair (
+                data.IndexKey1, data.IndexKey2, "default index key");
+            foreach (var pair in data.IndexKeys)
+            {
+                if (null == pair.Value)
+                    throw new ArgumentException (
+                        "The archive index key pair is missing: " + pair.Key);
+                ValidateIndexKeyPair (
+                    pair.Value.Key1, pair.Value.Key2,
+                    "archive index key for " + pair.Key);
+            }
+        }
+
+        static void ValidateIndexKeyPair (
+            byte[] key1, byte[] key2, string label)
+        {
+            if (null == key1 && null == key2)
+                return;
+            if (null == key1 || 32 != key1.Length
+                || null == key2 || 16 != key2.Length)
+            {
+                throw new ArgumentException (
+                    label + " must contain a 32-byte Index Key and a "
+                        + "16-byte Index Nonce.");
+            }
+        }
+
+        static byte[] ParseOrder (string values, int expected_size)
+        {
+            byte[] order = values.Split (
+                    new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select (x => byte.Parse (x.Trim(), CultureInfo.InvariantCulture)).ToArray();
+            if (order.Length != expected_size)
+                throw new ArgumentException ("The Cxdec order has an invalid length.");
+            var seen = new bool[expected_size];
+            foreach (byte value in order)
+            {
+                if (value >= expected_size || seen[value])
+                    throw new ArgumentException (
+                        "The Cxdec order must be a permutation of its indexes.");
+                seen[value] = true;
+            }
+            return order;
         }
 
         static byte[] ParseHexBytes (string hex)
         {
             hex = hex.Trim();
+            if (0 != (hex.Length & 1))
+                throw new FormatException ("A hexadecimal key has an odd length.");
             var data = new byte[hex.Length / 2];
             for (int i = 0; i < data.Length; ++i)
                 data[i] = byte.Parse (hex.Substring (i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
             return data;
         }
 
-        static uint[] ReadControlBlock (string path)
+        static uint[] ReadControlBlock (
+            string path, bool require_complete_table, KrkrDumpData data)
         {
             if (string.IsNullOrEmpty (path) || !File.Exists (path))
                 return null;
-            var bytes = File.ReadAllBytes (path);
-            if (bytes.Length < 4 || 0 != (bytes.Length & 3))
+            var bytes = ReadBoundedFile (
+                path, require_complete_table ? 0x1000 : MaxLogFileBytes,
+                "Cxdec control block");
+            data.ArtifactSha256[path] = HashBytes (bytes);
+            if (bytes.Length < 4 || 0 != (bytes.Length & 3)
+                || (require_complete_table && 0x1000 != bytes.Length))
                 return null;
             var result = new uint[bytes.Length / 4];
             for (int i = 0; i < result.Length; ++i)
@@ -665,7 +1021,9 @@ namespace GameRes.Formats.KiriKiri
         {
             if (string.IsNullOrEmpty (path) || !File.Exists (path))
                 return;
-            var order = File.ReadAllBytes (path);
+            var order = ReadBoundedFile (
+                path, MaxOrderFileBytes, "Cxdec order file");
+            data.ArtifactSha256[path] = HashBytes (order);
             if (order.Length < 0x11)
                 return;
             if (null == data.EvenOrder)
@@ -679,14 +1037,68 @@ namespace GameRes.Formats.KiriKiri
         static byte[] ConvertOrder (byte[] order, int offset, int count, byte[] mapping)
         {
             var result = new byte[count];
+            var seen = new bool[count];
             for (int i = 0; i < count; ++i)
             {
                 var src = order[offset + i];
-                if (src >= count)
+                if (src >= count || seen[src])
                     return null;
+                seen[src] = true;
                 result[src] = mapping[i];
             }
             return result;
+        }
+
+        static string HashBytes (byte[] value)
+        {
+            using (var hash = SHA256.Create())
+            {
+                byte[] digest = hash.ComputeHash (value);
+                var text = new StringBuilder (digest.Length * 2);
+                foreach (byte item in digest)
+                {
+                    text.Append (item.ToString (
+                        "x2", CultureInfo.InvariantCulture));
+                }
+                return text.ToString();
+            }
+        }
+
+        static byte[] ReadBoundedFile (
+            string path, long maximum_bytes, string label)
+        {
+            using (var input = new FileStream (
+                path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                long length = input.Length;
+                if (length < 0 || length > maximum_bytes
+                    || length > int.MaxValue)
+                {
+                    throw new InvalidDataException (string.Format (
+                        CultureInfo.InvariantCulture,
+                        "{0} exceeds its {1}-byte input limit: {2}",
+                        label, maximum_bytes, path));
+                }
+                var value = new byte[(int)length];
+                int offset = 0;
+                while (offset < value.Length)
+                {
+                    int read = input.Read (
+                        value, offset, value.Length - offset);
+                    if (0 == read)
+                    {
+                        throw new InvalidDataException (
+                            label + " changed while it was being read: " + path);
+                    }
+                    offset += read;
+                }
+                if (-1 != input.ReadByte())
+                {
+                    throw new InvalidDataException (
+                        label + " changed while it was being read: " + path);
+                }
+                return value;
+            }
         }
 
         static string WriteNamesFile (ResourceParameterCommandResult result, KrkrDumpData data)
@@ -697,7 +1109,7 @@ namespace GameRes.Formats.KiriKiri
                 return null;
             }
             Directory.CreateDirectory (result.OutputDirectory);
-            var path = Path.Combine (result.OutputDirectory, "HxNames.lst");
+            var path = Path.GetFullPath (Path.Combine (result.OutputDirectory, "HxNames.lst"));
             using (var writer = new StreamWriter (path, false, Encoding.UTF8))
             {
                 foreach (var pair in data.Names.OrderBy (x => x.Key, StringComparer.Ordinal))
@@ -705,6 +1117,8 @@ namespace GameRes.Formats.KiriKiri
             }
             Trace.WriteLine (string.Format ("Wrote KrkrDump name map. entries={0}, path='{1}'",
                                             data.Names.Count, path), "[KrkrDump]");
+            result.Metadata["KrkrDumpNamesCacheWritten"] = "true";
+            result.Metadata["KrkrDumpNamesFile"] = path;
             return path;
         }
 
@@ -713,10 +1127,14 @@ namespace GameRes.Formats.KiriKiri
             public string OutputDirectory;
             public string SourceArchive;
             public string GameDirectory;
+            public bool StrictDirectory;
             public readonly List<string> LogFiles = new List<string>();
             public readonly List<string> LogLines = new List<string>();
             public readonly Dictionary<string, string> Names = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
             public readonly Dictionary<string, HxIndexKey> IndexKeys = new Dictionary<string, HxIndexKey> (StringComparer.OrdinalIgnoreCase);
+            public readonly Dictionary<string, string> ArtifactSha256 =
+                new Dictionary<string, string> (
+                    StringComparer.OrdinalIgnoreCase);
             public int PathHashCount;
             public int NameHashCount;
             public byte[] IndexKey1;
@@ -729,6 +1147,8 @@ namespace GameRes.Formats.KiriKiri
             public byte[] EvenOrder;
             public byte[] OddOrder;
             public byte[] PrologOrder;
+            public string ControlBlockFile;
+            public string OrderFile;
             public string NamesFile;
         }
     }

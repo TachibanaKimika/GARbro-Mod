@@ -331,6 +331,16 @@ namespace GameRes
             return null;
         }
 
+        /// <summary>
+        /// Enumerate archive/executable name mappings used by <see cref="LookupGame"/>.
+        /// The returned sequence is read-only and does not expose the mutable catalog map.
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, string>> EnumerateGameMap ()
+        {
+            foreach (var entry in m_game_map)
+                yield return entry;
+        }
+
         public void DeserializeScheme (Stream input)
         {
             int version = GetSerializedSchemeVersion (input);

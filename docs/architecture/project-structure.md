@@ -71,12 +71,20 @@ Codex installation.
 
 `Cli/` builds `Onachi-GARbro.Cli.exe`, the versioned non-interactive automation
 boundary. It owns command parsing, JSON/JSONL envelopes, non-interactive
-parameter failure mapping, output path validation, extraction budgets, and
-atomic file writes. It also exposes the shared ArcFormats Hx v4 service for
-hashing, source and index-filtered name generation, clean/restore/rename tools,
-and import, plus the shared `GameRes` KrkrDump runner. It references `GameRes`;
-archive, image, audio, script, and Hx v4 format implementations remain in their
-existing MEF-discovered assemblies.
+parameter failure mapping, typed XP3 scheme/Hx/Cx composition, stable entry
+indexes, deterministic archive planning and duplicate resolution, finite
+declared/actual-byte budgets, `garbro.extraction-manifest/v1` resume
+provenance, batch image orchestration, output path validation, and atomic file
+writes. It also exposes the shared ArcFormats Hx v4 service for hashing, source
+and index-filtered name generation, structured progress/failure reporting,
+clean/restore/rename tools, and import, plus the shared `GameRes` KrkrDump
+runner. It references `GameRes`; archive, image, audio, script, and Hx v4
+format implementations remain in their existing MEF-discovered assemblies.
+
+The CLI is intentionally a decoding and safe materialization boundary. OCR,
+speech transcription, translation, semantic classification, cross-asset
+linking, and embedding/vector ingestion belong to downstream systems that
+consume the CLI's structured outputs, hashes, and manifests.
 
 `Console/` builds `Onachi-GARbro.Console.exe`, a command-line archive browser
 and extraction tool. The local README describes it as a testing playground and

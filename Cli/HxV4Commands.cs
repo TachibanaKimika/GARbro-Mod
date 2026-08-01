@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using GameRes;
@@ -124,23 +125,15 @@ namespace GARbro.Cli
                     seeds[pair.Key] = pair.Value;
             }
 
+            var progress_output = new HxProgressOutput (
+                command.CommandName, output);
             var result = HxNameGenerator.Generate (
                 archive, crypt, seeds, Path.GetFullPath (destination),
-                progress => {
-                    CancellationState.ThrowIfRequested();
-                    if (output.IsJsonLines)
-                    {
-                        output.WriteEvent (
-                            command.CommandName, "progress", "running",
-                            new Dictionary<string, object> {
-                                { "percentage", progress.Percentage },
-                                { "message", progress.Message },
-                            });
-                    }
-                });
+                progress_output.Report);
             if (!result.Success)
                 throw CliException.Invalid (
-                    "hxv4_generation_failed", result.Error ?? "Hx v4 generation failed.");
+                    "hxv4_generation_failed", result.Error ?? "Hx v4 generation failed.",
+                    HxGenerationFailureDetails (scheme_name, result));
             output.Complete (command.CommandName, "success", result);
             return ExitCode.Success;
         }
@@ -404,6 +397,122 @@ namespace GARbro.Cli
                 .Select (x => x.Key)
                 .OrderBy (x => x, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+        }
+
+        static Dictionary<string, object> HxGenerationFailureDetails (
+            string requested_scheme, HxNameGenerationResult result)
+        {
+            string reason = result.FailureReason ?? "generation_failed";
+            string[] recommended_actions;
+            switch (reason)
+            {
+            case "no_readable_index":
+                recommended_actions = new[] { "select_scheme", "run_krkrdump" };
+                break;
+            case "no_name_matches":
+                recommended_actions = new[] { "add_seed", "inspect_name_sources" };
+                break;
+            default:
+                recommended_actions = new[] { "inspect_diagnostics" };
+                break;
+            }
+            return new Dictionary<string, object> {
+                { "reasonCode", reason },
+                { "requestedScheme", requested_scheme },
+                { "schemeSelection", "explicit" },
+                { "autoDetectionScope", "hxnames-preset-only" },
+                { "indexArchivesTried", result.IndexArchivesTried },
+                { "readableIndexCount", result.ArchiveCount },
+                { "scannedEntryCount", result.ScannedEntryCount },
+                { "candidateCount", result.CandidateCount },
+                { "pathMatches", result.PathMatches },
+                { "nameMatches", result.NameMatches },
+                { "availableSchemes", AvailableHxSchemes() },
+                { "recommendedActions", recommended_actions },
+            };
+        }
+
+        sealed class HxProgressOutput
+        {
+            const long ProgressIntervalMilliseconds = 1000;
+
+            readonly string m_command;
+            readonly MachineOutput m_output;
+            readonly Stopwatch m_stopwatch = Stopwatch.StartNew();
+            string m_last_phase;
+            long m_last_emit = -ProgressIntervalMilliseconds;
+
+            public HxProgressOutput (string command, MachineOutput output)
+            {
+                m_command = command;
+                m_output = output;
+            }
+
+            public void Report (ResourceProgressInfo progress)
+            {
+                CancellationState.ThrowIfRequested();
+                if (!m_output.IsJsonLines || null == progress)
+                    return;
+
+                long elapsed = m_stopwatch.ElapsedMilliseconds;
+                bool phase_changed = !string.Equals (
+                    m_last_phase, progress.Phase, StringComparison.Ordinal);
+                bool boundary = progress.IsCompleted
+                    || IsBoundary (progress.Phase, progress.Details);
+                if (!phase_changed && !boundary
+                    && elapsed - m_last_emit < ProgressIntervalMilliseconds)
+                {
+                    return;
+                }
+
+                var data = new Dictionary<string, object>();
+                if (null != progress.Details)
+                {
+                    foreach (var pair in progress.Details)
+                        data[pair.Key] = pair.Value;
+                }
+                if (!string.IsNullOrEmpty (progress.Phase))
+                    data["phase"] = progress.Phase;
+                data["percentage"] = progress.Percentage;
+                data["message"] = progress.Message;
+                data["elapsedMs"] = elapsed;
+                m_output.WriteEvent (m_command, "progress", "running", data);
+                m_last_phase = progress.Phase;
+                m_last_emit = elapsed;
+            }
+
+            static bool IsBoundary (
+                string phase, IDictionary<string, object> details)
+            {
+                if (ValuesEqual (details, "entryIndex", "entryCount"))
+                    return true;
+                return "read_indexes" == phase
+                    && ValuesEqual (details, "archiveIndex", "archiveCount");
+            }
+
+            static bool ValuesEqual (IDictionary<string, object> details,
+                                     string current_name, string total_name)
+            {
+                if (null == details)
+                    return false;
+                object current;
+                object total;
+                if (!details.TryGetValue (current_name, out current)
+                    || !details.TryGetValue (total_name, out total))
+                {
+                    return false;
+                }
+                try
+                {
+                    long current_value = Convert.ToInt64 (current);
+                    long total_value = Convert.ToInt64 (total);
+                    return total_value > 0 && current_value == total_value;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
         }
 
         static Dictionary<string, object> DumpResultData (

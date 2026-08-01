@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using GameRes;
+using GameRes.Formats.KiriKiri;
 
 namespace GARbro.Cli
 {
@@ -38,6 +40,82 @@ namespace GARbro.Cli
                 return archive;
             ThrowRecognitionFailure (full_path);
             return null;
+        }
+
+        public ArcFile OpenArchive (string path, ArchiveSchemeResolution scheme_resolution)
+        {
+            if (null == scheme_resolution)
+                return OpenArchive (path);
+
+            string full_path = RequireFile (path);
+            var details = new Dictionary<string, object> {
+                { "path", full_path },
+                { "schemeResolution", scheme_resolution.ToDictionary() },
+            };
+            if (null == scheme_resolution.Scheme)
+            {
+                throw CliException.Invalid (
+                    "xp3_scheme_unusable",
+                    "The selected XP3 scheme cannot be used to open an archive.",
+                    details);
+            }
+
+            var opener = m_catalog.ArcFormats.OfType<Xp3Opener>().FirstOrDefault();
+            if (null == opener)
+            {
+                throw new CliException (
+                    ExitCode.InternalError, "internal_error", "xp3_opener_unavailable",
+                    "The XP3 archive handler is not available.", details);
+            }
+
+            BeginRecognition();
+            ArcView view = null;
+            try
+            {
+                view = new ArcView (full_path);
+                var archive = opener.TryOpenWithScheme (view, scheme_resolution.Scheme);
+                if (null == archive)
+                {
+                    throw CliException.Invalid (
+                        "xp3_scheme_rejected",
+                        "The input is not a valid XP3 archive for the selected scheme.",
+                        details);
+                }
+                view = null; // ownership was transferred to ArcFile
+                scheme_resolution.RefreshAfterArchiveOpen (full_path);
+                return archive;
+            }
+            catch (CliException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                if (!IsExplicitSchemeFailure (exception))
+                    throw;
+                details["exceptionType"] = exception.GetType().FullName;
+                throw new CliException (
+                    ExitCode.InvalidInput, "invalid_input", "xp3_scheme_rejected",
+                    "The input is not a valid XP3 archive for the selected scheme.",
+                    details, exception);
+            }
+            finally
+            {
+                if (null != view)
+                    view.Dispose();
+            }
+        }
+
+        static bool IsExplicitSchemeFailure (Exception exception)
+        {
+            return exception is InvalidEncryptionScheme
+                || exception is UnknownEncryptionScheme
+                || exception is InvalidFormatException
+                || exception is EndOfStreamException
+                || exception is InvalidDataException
+                || exception is ArgumentException
+                || exception is IndexOutOfRangeException
+                || exception is OverflowException;
         }
 
         public string RequireFile (string path)

@@ -49,6 +49,15 @@ low-level detail.
 The CLI has no `both` mode. To obtain filtered and raw output, invoke
 `script extract` twice with separate modes.
 
+These modes describe handler decoding and structure, not downstream semantic
+completion. GARbro does not promise OCR for text embedded in images, speech
+transcription, translation, canonical speaker/entity resolution, scene
+classification, cross-script deduplication, cross-asset links, embeddings, or
+round-trip localization. Preserve the source path, archive entry index/name,
+handler tag, selected mode, output path, and any extraction manifest hash when
+passing exports to those systems. See
+[content-semanticization.md](content-semanticization.md).
+
 ## Discover supported modes
 
 Do not assume every handler supports all four modes:

@@ -69,7 +69,9 @@ try {
         "garbro-cli/references/command-reference.md",
         "garbro-cli/references/script-text-modes.md",
         "garbro-cli/references/machine-protocol.md",
-        "garbro-cli/references/extraction-safety.md"
+        "garbro-cli/references/extraction-safety.md",
+        "garbro-cli/references/large-library-ingest.md",
+        "garbro-cli/references/content-semanticization.md"
     )
     foreach ($name in $required) {
         Assert-True ($name -in $entryNames) `
@@ -130,7 +132,9 @@ try {
         "command-reference.md",
         "script-text-modes.md",
         "machine-protocol.md",
-        "extraction-safety.md"
+        "extraction-safety.md",
+        "large-library-ingest.md",
+        "content-semanticization.md"
     )) {
         Assert-True ($skill.Contains("references/$reference")) `
             "SKILL.md should route readers to $reference."
@@ -150,6 +154,87 @@ try {
     )) {
         Assert-True ($scriptModes.Contains($term)) `
             "Script mode reference should explain: $term"
+    }
+
+    $largeLibrary = Read-ZipEntryText `
+        $archive "garbro-cli/references/large-library-ingest.md"
+    foreach ($term in @(
+        "archive schemes",
+        "archive scheme-check",
+        "--cx-dump-dir",
+        "--hx-names",
+        "not loaded automatically",
+        "do not write files back",
+        "archive plan",
+        "--entry-index",
+        "--duplicate-policy",
+        "suffix-index",
+        "--budget auto",
+        "--dry-run",
+        "--manifest",
+        "--checksum sha256",
+        "--resume verify-hash",
+        "--output jsonl",
+        "--summary-only",
+        "image convert-batch",
+        "declaredBytes",
+        "actualBytes",
+        "hxv4_generation_failed",
+        "progress",
+        "sample_magic_mixed",
+        "garbro.extraction-manifest/v1"
+    )) {
+        Assert-True ($largeLibrary.Contains($term)) `
+            "Large-library reference should explain: $term"
+    }
+
+    $semanticization = Read-ZipEntryText `
+        $archive "garbro-cli/references/content-semanticization.md"
+    foreach ($term in @(
+        "OCR",
+        "transcription",
+        "translation",
+        "classification",
+        "cross-asset",
+        "embeddings",
+        "entryIndex",
+        "declaredBytes",
+        "actualBytes",
+        "outputSha256"
+    )) {
+        Assert-True ($semanticization.Contains($term)) `
+            "Content-semanticization reference should explain: $term"
+    }
+
+    $machineProtocol = Read-ZipEntryText `
+        $archive "garbro-cli/references/machine-protocol.md"
+    foreach ($term in @(
+        "garbro.cli/v1",
+        "garbro.extraction-manifest/v1",
+        '"programVersion": "0.2.0.0"',
+        "--summary-only",
+        "progress",
+        "declaredBytes",
+        "actualBytes",
+        "error.code",
+        "error.message",
+        'subset of `written`',
+        "reasonCode"
+    )) {
+        Assert-True ($machineProtocol.Contains($term)) `
+            "Machine protocol reference should explain: $term"
+    }
+
+    $agentMetadata = Read-ZipEntryText `
+        $archive "garbro-cli/agents/openai.yaml"
+    foreach ($term in @(
+        '$garbro-cli',
+        "plan",
+        "resume",
+        "batch-convert"
+    )) {
+        Assert-True ($agentMetadata.Contains($term)) `
+            "Agent metadata should advertise the synchronized workflow: $term"
     }
 }
 finally {

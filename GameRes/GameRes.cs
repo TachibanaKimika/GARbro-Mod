@@ -184,6 +184,8 @@ namespace GameRes
         public int Percentage { get; set; }
         public string Message { get; set; }
         public bool IsCompleted { get; set; }
+        public string Phase { get; set; }
+        public IDictionary<string, object> Details { get; set; }
     }
 
     public interface IResourceParameterContextReceiver

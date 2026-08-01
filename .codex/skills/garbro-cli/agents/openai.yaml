@@ -1,4 +1,4 @@
 interface:
   display_name: "GARbro CLI"
-  short_description: "Inspect resources, export scripts, and manage Hx v4 names"
-  default_prompt: "Use $garbro-cli to inspect this visual novel resource, export only what I request, or perform the requested Hx v4 name-table workflow."
+  short_description: "Plan, extract, resume, and batch-convert GARbro resources"
+  default_prompt: "Use $garbro-cli to validate this resource, plan a safe extraction, and preserve machine-readable provenance."

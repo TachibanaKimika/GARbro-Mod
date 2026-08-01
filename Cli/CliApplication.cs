@@ -94,7 +94,7 @@ namespace GARbro.Cli
                 }
                 if (command.Help || "help" == command.Group)
                 {
-                    CompleteHelp (output);
+                    CommandHelp.Complete (command, output);
                     return (int)ExitCode.Success;
                 }
 
@@ -157,14 +157,24 @@ namespace GARbro.Cli
                 return ResourceCommands.Probe (runtime, command, output);
             case "archive.list":
                 return ArchiveCommands.List (runtime, command, output);
+            case "archive.plan":
+                return ArchiveCommands.Plan (runtime, command, output);
             case "archive.extract":
                 return ArchiveCommands.Extract (runtime, command, output);
+            case "archive.schemes":
+                return ArchiveSchemeCommands.Schemes (runtime, command, output);
+            case "archive.scheme-info":
+                return ArchiveSchemeCommands.SchemeInfo (runtime, command, output);
+            case "archive.scheme-check":
+                return ArchiveSchemeCommands.SchemeCheck (runtime, command, output);
             case "script.extract":
                 return ResourceCommands.ScriptExtract (runtime, command, output);
             case "image.info":
                 return ResourceCommands.ImageInfo (runtime, command, output);
             case "image.convert":
                 return ResourceCommands.ImageConvert (runtime, command, output);
+            case "image.convert-batch":
+                return ImageBatchCommands.ConvertBatch (runtime, command, output);
             case "hxv4.schemes":
                 return HxV4Commands.Schemes (runtime, command, output);
             case "hxv4.hash":
@@ -213,41 +223,5 @@ namespace GARbro.Cli
             return args[0].TrimStart ('-', '/').ToLowerInvariant();
         }
 
-        static void CompleteHelp (MachineOutput output)
-        {
-            const string usage =
-                "Onachi-GARbro.Cli.exe COMMAND [ACTION] [ARGUMENTS] [OPTIONS]\n"
-              + "Commands:\n"
-              + "  capabilities\n"
-              + "  formats list [--kind all|archive|image|audio|script]\n"
-              + "  probe PATH\n"
-              + "  archive list ARCHIVE\n"
-              + "  archive extract ARCHIVE --destination DIR [--entry GLOB]\n"
-              + "  script extract PATH --destination DIR [--entry ARCHIVE_ENTRY] --mode MODE\n"
-              + "  image info IMAGE\n"
-              + "  image convert IMAGE --format TAG_OR_EXTENSION --destination DIR\n"
-              + "  hxv4 schemes\n"
-              + "  hxv4 hash NAME --kind file|path\n"
-              + "  hxv4 generate --destination FILE [--source-dir DIR] [--source-file FILE] [--krkrdump-dir DIR] [--seed FILE]\n"
-              + "  hxv4 generate-archive ARCHIVE --scheme NAME --destination FILE [--seed FILE]\n"
-              + "  hxv4 clean HXNAMES --deobfuscated-dir DIR --destination FILE\n"
-              + "  hxv4 find-missing-voices --voice-dir DIR [--voice-dir DIR]\n"
-              + "  hxv4 restore-structure DIR [--recursive] [--dry-run]\n"
-              + "  hxv4 rename DIR --names HXNAMES [--dry-run]\n"
-              + "  hxv4 krkrdump ARCHIVE --game-executable EXE --destination DIR [--run-only] [--same-directory]\n"
-              + "  hxv4 krkrdump-import ARCHIVE --result-dir DIR [--game-executable EXE] [--same-directory]\n"
-              + "Global options: --output json|jsonl|text --verbose --non-interactive";
-            if (output.IsText)
-            {
-                output.WriteText (usage);
-                output.Complete ("help", "success", null);
-            }
-            else
-            {
-                output.Complete ("help", "success", new Dictionary<string, object> {
-                    { "usage", usage },
-                });
-            }
-        }
     }
 }

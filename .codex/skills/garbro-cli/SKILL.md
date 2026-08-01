@@ -1,13 +1,14 @@
 ---
 name: garbro-cli
-description: Use GARbro's versioned machine CLI to recognize, inspect, list, or safely extract visual novel archives; export supported game scripts; inspect or convert images; generate, clean, restore, or apply Hx v4 name tables; run or import KrkrDump results; and diagnose structured protocol failures. Use for GARbro automation and AI workflows that need stable JSON/JSONL results instead of legacy human-readable console output.
+description: Use GARbro's versioned machine CLI to recognize, inspect, plan, and safely extract visual novel archives; compose and validate XP3 schemes with Hx/Cx artifacts; resume large extraction jobs from checksummed manifests; export supported game scripts; inspect or batch-convert images; run Hx v4/KrkrDump workflows; and diagnose structured protocol failures. Use for GARbro automation and AI ingestion workflows that need stable JSON/JSONL, finite budgets, and provenance instead of legacy human-readable console output.
 ---
 
 # GARbro CLI
 
-Use `Onachi-GARbro.Cli.exe` as the automation boundary. Keep decoding, path
-validation, limits, and file writes inside GARbro. Use this skill to select the
-right command, mode, and safety policy.
+Use `Onachi-GARbro.Cli.exe` as the automation boundary. Keep recognition,
+decoding, scheme application, path validation, budgets, hashes, and file writes
+inside GARbro. Keep OCR, transcription, translation, classification, linking,
+and embedding in downstream tools.
 
 ## Establish the interface
 
@@ -51,58 +52,118 @@ Do not parse `Onachi-GARbro.Console.exe` or
 ## Load only the needed reference
 
 - Read [command-reference.md](references/command-reference.md) to choose command
-  syntax, discovery calls, options, or output names.
-- Read [script-text-modes.md](references/script-text-modes.md) before every
-  script export or when choosing among `filtered`, `raw`, `dump`, and `jsonl`.
+  syntax, discovery calls, typed XP3 options, or output fields.
 - Read [machine-protocol.md](references/machine-protocol.md) when consuming
-  stdout, JSONL events, statuses, errors, or exit codes.
+  stdout, JSONL events, summaries, progress, errors, exit codes, or extraction
+  manifests.
 - Read [extraction-safety.md](references/extraction-safety.md) before any
-  archive extraction or other multi-file write.
+  archive extraction, resume, batch conversion, or other broad write.
+- Read [large-library-ingest.md](references/large-library-ingest.md) before a
+  whole-game, large archive, resumable extraction, or large image-library job.
+- Read [script-text-modes.md](references/script-text-modes.md) before every
+  script export or when choosing `filtered`, `raw`, `dump`, or `jsonl`.
+- Read [content-semanticization.md](references/content-semanticization.md)
+  before claiming semantic labels, OCR/transcription, translation readiness,
+  cross-asset links, embeddings, or corpus completeness.
 - Read [command-reference.md](references/command-reference.md) before an Hx v4
-  or KrkrDump workflow; these commands have operation-specific safety and
-  runtime requirements.
+  or KrkrDump workflow; these commands have operation-specific runtime and
+  failure semantics.
 
-## Follow the workflow
+## Follow the core workflow
 
 1. Run `probe` on unknown input.
-2. Run `archive list` before selecting or writing archive entries.
-3. Match the user's requested scope exactly. Do not turn one requested entry
-   into a full-archive extraction.
-4. For script export, discover the handler's `textModes`, then select a mode
-   from the user's intended use. Never silently substitute another mode.
-5. For archive extraction, run `--dry-run` when multiple entries, globs,
-   conflicts, paths, or limits need validation.
-6. Keep `--overwrite never` unless the user explicitly authorizes `skip` or
-   `replace`.
-7. Pass user paths as separate PowerShell arguments. Never build a shell command
-   string from user input.
-8. Parse machine fields, not localized messages. Report the output destination,
-   status, counts, bytes, skips, failures, warnings, and whether the result was
-   only a dry-run.
-9. For `hxv4 restore-structure` and `hxv4 rename`, inspect a `--dry-run` first.
-   For `hxv4 krkrdump`, explain that Windows elevation and the launched game
-   are visible runtime interactions even though the CLI reads no console input.
+2. For protected XP3, discover `archive schemes`, inspect a candidate, then run
+   `archive scheme-check` with at least one base option: `--scheme` or
+   `--cx-dump-dir`. Both may be present, in which case Cx supersedes the base
+   scheme. `scheme-check` never uses parameter-free auto-detection. For
+   `probe`, `archive list`, `archive plan`, and `archive extract`, a run without
+   typed options preserves the recognition-selected scheme's reported
+   `auto_detected` identity and fingerprint. Add `--hx-names` only as an overlay
+   on an effective Hx v4/Cx-Hx scheme. A typed Cx import applies logged names in
+   memory but does not auto-load or write `HxNames.lst`; pass that file
+   explicitly when required. Checks, plans, and dry runs do not write back to
+   the Cx directory. Reuse the same semantic composition for every later
+   command.
+3. Run `archive list --output jsonl` and preserve stable `entryIndex` values.
+4. Run `archive plan --output jsonl` for multi-entry work. Review selection,
+   resolved paths, duplicate groups, conflicts, declared sizes,
+   `recommendedLimits`, `ready`, and `planFingerprint`.
+5. Match the user's scope exactly. `--entry` globs and `--entry-index` values
+   intersect. Do not turn one requested entry into a full extraction.
+6. Keep duplicate policy `error` unless the user wants every duplicate logical
+   entry. Then use `suffix-index` and report its deterministic renamed paths.
+7. Run extraction with `--budget auto --dry-run`. For long-lived jobs, add a
+   manifest and SHA-256 checksum. Remove `--dry-run` only after the plan matches.
+8. Resume only with the prior manifest and the same archive, destination,
+   selection, duplicate policy, and scheme artifacts. Prefer `verify-hash` when
+   provenance matters.
+9. Keep `--overwrite never` unless the user explicitly authorizes `skip` or
+   `replace`. A damaged resume output is repaired only with `replace`.
+10. For large results use `--output jsonl`; on commands that advertise it, add
+    `--summary-only` when per-item events are unnecessary. Wait for the terminal
+    event before reporting.
 
-## Preserve the two JSONL meanings
+Read [large-library-ingest.md](references/large-library-ingest.md) for an
+end-to-end command sequence.
 
-Never confuse these independent options:
+## Preserve data meanings
 
-- `--mode jsonl` makes the generated script file contain one structured message
-  object per line.
-- `--output jsonl` makes CLI stdout contain one machine-protocol event envelope
-  per line.
+Do not confuse these independent JSONL files and streams:
 
-A command can use either option or both. Read
-[script-text-modes.md](references/script-text-modes.md) and
-[machine-protocol.md](references/machine-protocol.md) before parsing them.
+- `--output jsonl`: CLI stdout event envelopes using `garbro.cli/v1`.
+- `--mode jsonl`: generated script message rows.
+- `--manifest FILE`: extraction provenance records using
+  `garbro.extraction-manifest/v1`.
+- `image convert-batch --manifest FILE`: an input source list, not an
+  extraction provenance manifest.
+
+Also preserve size semantics: `declaredBytes` is a plan estimate;
+`actualBytes` is measured materialized output; `observedBytes` is charged while
+streams execute. Never report a declared value as measured output.
+
+## Handle image and script jobs deliberately
+
+- Use `image convert-batch` for a directory or source manifest. Keep its
+  destination outside the source tree, skip reparse-point traversal, use a
+  finite auto budget, and choose `verify-header` or `verify-decode` for resume.
+  Planned outputs must not overlap the source tree or the input manifest.
+- For script export, discover handler `textModes` first. Select the mode from
+  the user's intended use and never silently substitute another mode.
+- Treat image conversion and script extraction as decoding/structuring, not as
+  semantic classification. Route semantic claims through
+  [content-semanticization.md](references/content-semanticization.md).
+
+## Handle Hx v4 and KrkrDump safely
+
+- Use `hxv4 schemes` before `hxv4 generate-archive`; only listed installed
+  schemes are accepted. A separate KrkrDump invocation imports a transient
+  scheme, so a Cx-dump-only workflow must use unfiltered `hxv4 generate` and
+  then typed `--cx-dump-dir` plus `--hx-names` validation.
+- Consume JSONL `progress` events for long archive scans, but wait for the
+  terminal event.
+- On `hxv4 generate-archive` error `hxv4_generation_failed`, report
+  `reasonCode`, counts, `recommendedActions`, and available schemes. Do not
+  collapse `no_readable_index` and `no_name_matches` into a generic failure.
+  Plain `hxv4 generate` can use the same error code without those archive-scan
+  details.
+- Inspect `--dry-run` before `hxv4 restore-structure` or `hxv4 rename`.
+- Explain that `hxv4 krkrdump` can show Windows elevation and launch the game
+  even though the CLI reads no console input.
 
 ## Stop on actionable failures
 
 - On `needs_input`, report the handler tag, notice, and source. Do not guess a
-  password, key, title, or game scheme.
+  password, key, title, or unsupported scheme parameter.
+- On `xp3_scheme_check_failed`, stop before broad extraction and distinguish
+  `sample_magic_mismatch` from `sample_magic_mixed`. Treat `inconclusive` as
+  insufficient evidence, not success proof.
+- On manifest source, handler, destination, plan, or entry mismatch, start a
+  new deliberate plan; do not edit the manifest to bypass provenance checks.
+- On `resume_verification_failed`, preserve the file unless explicit repair was
+  authorized.
 - On `script_mode_not_supported`, report `requestedMode` and `availableModes`.
 - On `conflict`, preserve existing files and request policy only when completion
   requires it.
-- On `partial_success`, report written, skipped, failed, and bytes; never call
-  it complete success.
+- On `partial_success`, report written, repaired, verified, skipped, failed,
+  not-attempted, actual bytes, and warnings; never call it complete success.
 - On `unrecognized`, report that no GARbro handler accepted the input.

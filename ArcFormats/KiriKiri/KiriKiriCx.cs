@@ -26,7 +26,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace GameRes.Formats.KiriKiri
@@ -64,6 +66,40 @@ namespace GameRes.Formats.KiriKiri
 
         protected uint[] ControlBlock;
         protected string TpmFileName;
+
+        public bool RequiresExternalControlBlock
+        {
+            get { return null == ControlBlock && !string.IsNullOrEmpty (TpmFileName); }
+        }
+
+        public string ExternalControlBlockFileName
+        {
+            get { return TpmFileName; }
+        }
+
+        [NonSerialized]
+        bool m_external_control_block_loaded;
+
+        public bool ExternalControlBlockLoaded
+        {
+            get { return m_external_control_block_loaded; }
+        }
+
+        [NonSerialized]
+        string m_external_control_block_path;
+
+        [NonSerialized]
+        string m_external_control_block_sha256;
+
+        public string ExternalControlBlockPath
+        {
+            get { return m_external_control_block_path; }
+        }
+
+        public string ExternalControlBlockSha256
+        {
+            get { return m_external_control_block_sha256; }
+        }
 
         [NonSerialized]
         CxProgram[] m_program_list = new CxProgram[0x80];
@@ -127,10 +163,23 @@ namespace GameRes.Formats.KiriKiri
                             }
                             if (s_ctl_block_signature.Length == i)
                             {
+                                var snapshot = new byte[0x1000];
+                                Marshal.Copy ((IntPtr)begin, snapshot, 0,
+                                              snapshot.Length);
                                 ControlBlock = new uint[0x400];
                                 uint* src = (uint*)begin;
                                 for (i = 0; i < ControlBlock.Length; ++i)
                                     ControlBlock[i] = ~src[i];
+                                using (var sha256 = SHA256.Create())
+                                {
+                                    m_external_control_block_sha256 =
+                                        BitConverter.ToString (
+                                            sha256.ComputeHash (snapshot))
+                                        .Replace ("-", string.Empty)
+                                        .ToLowerInvariant();
+                                }
+                                m_external_control_block_path = tpm_name;
+                                m_external_control_block_loaded = true;
                                 return;
                             }
                             begin += 4; // control block expected to be on a dword boundary

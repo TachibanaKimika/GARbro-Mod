@@ -210,11 +210,14 @@ By default this prepares the architecture-matched runtime, requests Windows
 elevation, launches the game, waits for it to exit, collects the log and Cxdec
 files, and imports the scheme plus directly logged names. Add `--run-only` to
 stop after collection or `--same-directory` to apply the imported scheme to
-sibling XP3 archives. Run `hxv4 generate-archive` explicitly when an
-index-filtered resource scan is wanted. `--tool-directory` selects an explicit
-runtime and `--no-elevate` is available to already elevated or specially
-prepared callers. Use a fresh destination for each run. If it already contains
-`.krkrdump`, the CLI returns a conflict and directs the caller to
+sibling XP3 archives within that process. The imported scheme is transient: a
+later `hxv4 generate-archive` process can use only an installed scheme listed by
+`hxv4 schemes`. For a Cx-dump-only name workflow, use unfiltered `hxv4 generate`
+with `--krkrdump-dir`, then validate/apply the table through `archive
+scheme-check --cx-dump-dir ... --hx-names ...`. `--tool-directory` selects an
+explicit runtime and `--no-elevate` is available to already elevated or
+specially prepared callers. Use a fresh destination for each run. If it already
+contains `.krkrdump`, the CLI returns a conflict and directs the caller to
 `krkrdump-import`, preventing stale logs or Cxdec files from being mistaken for
 the new run.
 If the game exits without producing any log or Cxdec output, the command returns
@@ -233,6 +236,90 @@ The run remains a visible runtime workflow even though the CLI reads no console
 input: Windows can show UAC and the game itself opens normally. Ctrl+C cancels
 GARbro's wait and returns `operation_canceled`; it deliberately leaves the game
 process running.
+
+### Typed XP3 scheme composition
+
+The collected directory can be used directly by the normal archive commands;
+it does not have to be installed as a persistent GUI scheme:
+
+```powershell
+& $cli archive scheme-check "C:\game\data.xp3" `
+  --cx-dump-dir "C:\work\dump\.krkrdump" `
+  --output json --non-interactive
+
+& $cli archive plan "C:\game\data.xp3" `
+  --destination "C:\work\extract" `
+  --cx-dump-dir "C:\work\dump\.krkrdump" `
+  --duplicate-policy suffix-index `
+  --output jsonl --non-interactive
+
+& $cli archive extract "C:\game\data.xp3" `
+  --destination "C:\work\extract" `
+  --cx-dump-dir "C:\work\dump\.krkrdump" `
+  --duplicate-policy suffix-index `
+  --budget auto `
+  --manifest "C:\work\extract.manifest.jsonl" `
+  --checksum sha256 `
+  --dry-run `
+  --output jsonl --non-interactive
+```
+
+`--cx-dump-dir` is an explicit, strict directory boundary. The importer does
+not recursively search arbitrary parent or sibling directories. It uses the
+relevant `KrkrDump-*.log`, `CxdecTable.bin`, and `CxdecOrder.bin`, and reports
+the consumed artifact paths and SHA-256 hashes under
+`schemeResolution.artifacts`. Logged `PathHash` and `NameHash` records are
+applied to the transient scheme in memory. The typed importer neither reads nor
+writes `HxNames.lst` in the result directory automatically; an extra table must
+be supplied explicitly with `--hx-names`. `archive scheme-check`, `archive
+plan`, and extraction `--dry-run` do not write back to the Cx result directory.
+The CLI does not accept recovered keys as raw command-line values.
+
+Strict typed import is bounded before parsing: at most 128 logs are considered,
+each log is at most 16 MiB, and all logs together are at most 64 MiB. An
+explicit Hx names file is at most 64 MiB, `CxdecOrder.bin` is at most 64 KiB,
+and the required strict `CxdecTable.bin` is exactly 4,096 bytes. A Cx directory
+or ancestor that is a reparse point fails with `xp3_cx_dump_reparse_point`.
+Oversized, malformed, incomplete, or invalid numeric/key/order Cx input fails
+with `xp3_cx_dump_invalid`. An invalid or oversized explicit Hx names file fails
+with `xp3_hx_names_invalid`. All three cases perform no cache write.
+
+For compatibility with callers that already encode an importer hint in one
+argument, `DIR|garbro-importer` is accepted and the suffix is stripped before
+directory resolution. No other modifier is accepted.
+
+The normal XP3 options compose in a fixed order:
+
+1. `--scheme NAME` selects a known scheme or builtin alias.
+2. `--cx-dump-dir DIR`, when present, supersedes that base scheme for content
+   decryption.
+3. `--hx-names FILE`, when present, is applied to the resulting Hx v4/Cx-Hx
+   scheme for name resolution. Explicit table entries win if the same hash was
+   also present in an imported Cx log.
+
+Use `archive schemes --filter TEXT --output jsonl` and `archive scheme-info`
+to discover exact names and game-title mappings. Use `archive scheme-check`
+before listing or extracting: it proves that the index opens and inspects the
+first 32 entries for recognizable header evidence. A `matched` result is
+positive evidence. `mismatch` means all recognizable evidence failed and
+`mixed` means matches and failures both occurred; both return
+`xp3_scheme_check_failed` with `sample_magic_mismatch` or
+`sample_magic_mixed`. An `inconclusive` result is not proof.
+
+Repeat the same `--scheme`, `--cx-dump-dir`, and `--hx-names` arguments for
+`probe`, `archive list`, `archive plan`, and `archive extract`. Their combined
+identity and artifact fingerprint are incorporated into the extraction plan
+and `garbro.extraction-manifest/v1` header. Resume rejects a changed dump,
+table, order, names file, or scheme instead of mixing outputs from different
+decryption contexts. Fingerprint version 2 binds the effective serialized
+scheme material and SHA-256 snapshots of the exact artifact bytes consumed;
+only hashes, never raw key material, are exposed.
+
+With no explicit typed option, an installed XP3 scheme selected by recognition
+is reported with source `auto_detected`. If it lazily consumes a TPM control
+block during archive open, the exact 4,096-byte snapshot is recorded as
+`xp3_tpm_control_block` and included in the post-initialization fingerprint, so
+a later resume cannot silently use different TPM bytes.
 
 ## Imported Data
 
@@ -259,21 +346,26 @@ The XP3 importer converts these KrkrDump outputs into an `HxCrypt` scheme:
 - `CxdecTable.bin` becomes the GARbro Cx control block after the same bitwise
   complement conversion used by `SchemeTool`.
 - `CxdecOrder.bin` or logged `Cxdec Order` lines become GARbro branch orders.
-- Logged `PathHash` and `NameHash` lines are written to `HxNames.lst` and linked
-  from the generated scheme only when the hash appears in the selected XP3's
-  Hx index. Hashes from other archives loaded by the same game process are
+- In GUI-assistant and `hxv4 krkrdump`/`krkrdump-import` flows, logged
+  `PathHash` and `NameHash` lines are written to `HxNames.lst` and linked from
+  the generated scheme only when the hash appears in the selected XP3's Hx
+  index. Hashes from other archives loaded by the same game process are
   retained as seeds for the real-time name generator but are excluded from the
-  selected-archive-only KrkrDump table.
+  selected-archive-only KrkrDump table. Strict typed `--cx-dump-dir`
+  resolution is the non-writing exception described above: it keeps the
+  selected names in memory.
 
 Imported KrkrDump schemes are not written to the user's local app-data
 `Formats.dat`, and the generated scheme name is not saved as the default XP3
 scheme or shown as a normal selectable scheme. Rerun the assistant in a later
 session if the same runtime-derived parameters are needed again.
 
-Debug GUI builds write existing `Trace` diagnostics to `bin\Debug\trace.log`.
+Debug GUI builds write existing `Trace` diagnostics to rolling files named
+`bin\Debug\trace-YYYYMMDD.log` (with numeric rollover suffixes when needed).
 For KrkrDump-assisted XP3 opens, the trace includes the imported log count,
 `PathHash`/`NameHash` counts, resource/scenario/candidate counts, matched index hashes,
-and generated `HxNames.lst` path.
+and the generated `HxNames.lst` path when the cache-writing assistant/import
+flow emitted one. Strict typed Cx resolution leaves that path empty.
 
 KrkrDump itself does not enumerate and offline-extract an arbitrary selected XP3
 the way GARbro does. For selected-archive output, use GARbro's normal extract
