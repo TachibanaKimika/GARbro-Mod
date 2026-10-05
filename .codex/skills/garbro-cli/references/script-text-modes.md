@@ -201,3 +201,9 @@ bytesWritten
 
 For dry-run, `status` is `planned` and no file is created. For a committed
 write, `status` is `written`.
+
+## 2026-10-05：既有文本内容边界
+
+文件名带 filtered 不保证正文干净；采用游戏专属语料规则，并在归并前拒绝异常 C0/C1 控制码和 U+FFFD。不得通过通删控制码来修复二进制混入。
+BGI FF+01/02 外字序列可在下游可读版标成明确外字编号；实际字形未知时不猜符号，原始导出保留。
+AGES Mk2 FPD/EPK 末块：余1～4字节原样保留；余5～7字节解密其补齐的8字节块，排除32字节尾部元数据。旧版可能损坏最后一条 DAT 记录，包括表面可打印的ASCII残片；用修正后的 GARbro 从本地完整安装重新提取，严格UTF-8读取并检查末条记录终止符。

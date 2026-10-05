@@ -3,6 +3,24 @@
 This document defines the repository convention for script text extractors that
 implement `IConfigurableScriptFormat`.
 
+## Content review of existing text
+
+A filename containing `filtered` is not proof of readable content. Reused exports
+must follow game-specific source notes and reject unexpected C0/C1 controls or
+U+FFFD replacement characters before route merging. Never clean a binary-bearing
+file by globally deleting controls; recover it from the proper script/record source.
+BGI can retain CP932 `FF 01`/`FF 02` external-glyph tokens. Downstream readable
+exports may render explicit glyph IDs while preserving the original token; the
+actual glyph must not be guessed. Raw and diagnostic streams remain unchanged.
+
+AGES Mk2 FPD EPK has a format-specific final-block boundary: 1..4 remaining bytes
+are plaintext; 5..7 remaining bytes belong to a padded encrypted Blowfish block.
+The 32-byte trailer is not plaintext or ciphertext content. Older outputs that
+fed plaintext tail bytes into the decryptor can contain printable garbage and
+replacement characters in the last DAT row. Re-extract from original FPD with
+the corrected handler; validate strict UTF-8 and the final DAT row delimiter,
+including records whose corrupt tail happened to be printable ASCII.
+
 ## Modes
 
 Use the shared mode names in `GameRes.ScriptTextMode`:

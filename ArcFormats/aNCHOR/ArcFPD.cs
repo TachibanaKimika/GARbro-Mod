@@ -114,16 +114,39 @@ namespace GameRes.Formats.Anchor {
             if (pent.Name.EndsWith(".epk")) {
                 var mem = new MemoryStream();
                 input.CopyTo(mem);
+                if (mem.Length < 0x20)
+                    throw new InvalidFormatException ("Missing EPK trailer.");
                 mem.Seek(-0x20, SeekOrigin.End);
                 var buf = new byte[4];
                 mem.Read(buf, 0, 4);
                 uint last = Binary.BigEndian(BitConverter.ToUInt32(buf, 0));
-                mem.Seek(0, SeekOrigin.Begin);
+                if (last > mem.Length - 0x20 || last > int.MaxValue)
+                    throw new InvalidFormatException ("Invalid EPK plaintext length.");
                 
                 var key = Encoding.UTF8.GetBytes(Path.GetFileNameWithoutExtension(pent.Name));
                 var encryption = new Mk2Blowfish(key, DefaultScheme.EpkContext);
-                input = new InputCryptoStream(mem, encryption.CreateDecryptor());
-                input = new LimitStream(input, last);
+                // AGES starts a Blowfish block only when more than one DWORD
+                // remains. A final 1..4 bytes is plaintext; a final 5..7 bytes
+                // occupies a padded encrypted block before the 32-byte trailer.
+                var payload = mem.ToArray();
+                int encrypted_length = (int)last & ~7;
+                int tail_length = (int)last & 7;
+                if (tail_length > 4)
+                    encrypted_length += 8;
+                if (encrypted_length > mem.Length - 0x20)
+                    throw new InvalidFormatException ("Truncated encrypted EPK block.");
+                var output = new byte[Math.Max ((int)last, encrypted_length)];
+                using (var decryptor = encryption.CreateDecryptor())
+                {
+                    if (encrypted_length != 0)
+                        decryptor.TransformBlock (payload, 0, encrypted_length, output, 0);
+                }
+                if (tail_length <= 4)
+                    Buffer.BlockCopy (payload, encrypted_length, output, encrypted_length, tail_length);
+                Array.Resize (ref output, (int)last);
+                input.Dispose();
+                mem.Dispose();
+                input = new MemoryStream (output, false);
             }
             return input;
         }
