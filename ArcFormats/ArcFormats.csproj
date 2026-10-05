@@ -1075,6 +1075,7 @@
     <Compile Include="KiriKiri\KrkrDumpResultImporter.cs" />
     <Compile Include="KiriKiri\Script.cs" />
     <Compile Include="YuRis\ArcYPF.cs" />
+    <Compile Include="ScopedArchiveParameters.cs" />
     <Compile Include="MOONSTONE\ArcPAK.cs" />
     <Compile Include="Macromedia\AudioEDIM.cs" />
     <Compile Include="Crowd\AudioEOG.cs" />

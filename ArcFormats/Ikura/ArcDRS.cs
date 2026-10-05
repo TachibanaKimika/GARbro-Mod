@@ -176,7 +176,7 @@ namespace GameRes.Formats.Ikura
             {
                 entry_size -= 0x10;
                 if (null == isf.Secret)
-                    isf.Secret = QuerySecret();
+                    isf.Secret = ReadLocalSecret (arc.File.Name) ?? QuerySecret();
                 if (null == isf.Secret || 0 == isf.Secret.Length)
                     return arc.File.CreateStream (entry.Offset, entry.Size);
             }
@@ -214,6 +214,20 @@ namespace GameRes.Formats.Ikura
         public override object GetAccessWidget ()
         {
             return new GUI.WidgetISF();
+        }
+
+        private byte[] ReadLocalSecret (string archive)
+        {
+            var local = ScopedArchiveParameters.Read ("GARBRO_ISF_PARAMETERS", archive);
+            if (local == null)
+                return null;
+            var name = (string)local["archive_name"];
+            if (!string.Equals (name, Path.GetFileName (archive), StringComparison.OrdinalIgnoreCase))
+                return null;
+            var table = (string)local["table_path"];
+            if (string.IsNullOrEmpty (table) || !Path.IsPathRooted (table) || new FileInfo (table).Length != 2048)
+                throw new InvalidDataException ("ISF table_path must identify a 2048-byte local table.");
+            return File.ReadAllBytes (table);
         }
 
         private byte[] QuerySecret ()

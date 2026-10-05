@@ -244,3 +244,7 @@ Contributors
 <a href="https://github.com/crskycode/GARbro/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=crskycode/GARbro" />
 </a>
+
+### Local archive parameters
+
+YPF and encrypted IKURA/GDL extraction can use explicitly scoped private parameter files recovered from original local executables. See [parameter format and limitations](docs/reference/local-archive-parameters.md). YPF readers preserve 64-bit entry offsets.

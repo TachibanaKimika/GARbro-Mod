@@ -159,7 +159,7 @@ namespace GameRes.Formats.YuRis
             if (null == dir || 0 == dir.Count)
                 return null;
 
-            if (scheme.ScriptKey != 0)
+            if (scheme.ScriptKey != 0 || scheme.CompressType != YpfCompression.Zlib)
                 return new YpfArchive (file, this, dir, scheme.ScriptKey, scheme.CompressType);
             else
                 return new ArcFile (file, this, dir);
@@ -233,6 +233,30 @@ namespace GameRes.Formats.YuRis
 
         YpfScheme QueryEncryptionScheme (string arc_name, uint version)
         {
+            var local = ScopedArchiveParameters.Read ("GARBRO_YPF_PARAMETERS", arc_name);
+            if (local != null)
+            {
+                if (version < 470 || version > 600)
+                    throw new InvalidDataException ("Explicit YPF parameters require version 470 through 600.");
+                var swaps = local["swap_table"] as Newtonsoft.Json.Linq.JArray;
+                if (swaps == null || swaps.Count > 256 || (swaps.Count & 1) != 0)
+                    throw new InvalidDataException ("swap_table must contain distinct byte pairs.");
+                var table = new byte[swaps.Count];
+                var used = new HashSet<byte>();
+                for (int i = 0; i < table.Length; ++i)
+                {
+                    table[i] = checked((byte)(int)swaps[i]);
+                    if (!used.Add (table[i]))
+                        throw new InvalidDataException ("Duplicate swap_table value.");
+                }
+                var compression = (string)local["compression"];
+                if (compression != "zlib" && compression != "snappy")
+                    throw new InvalidDataException ("compression must be zlib or snappy.");
+                return new YpfScheme (table, checked((byte)(int)local["name_xor"]), (uint)local["script_key"]) {
+                    ExtraHeaderSize = 4,
+                    CompressType = compression == "snappy" ? YpfCompression.Snappy : YpfCompression.Zlib,
+                };
+            }
             var title = FormatCatalog.Instance.LookupGame (arc_name);
             if (string.IsNullOrEmpty (title))
                 title = FormatCatalog.Instance.LookupGame (arc_name, @"..\*.exe");
@@ -549,9 +573,15 @@ namespace GameRes.Formats.YuRis
                     entry.IsPacked      = 0 != m_file.View.ReadByte (dir_offset+1);
                     entry.UnpackedSize  = m_file.View.ReadUInt32 (dir_offset+2);
                     entry.Size          = m_file.View.ReadUInt32 (dir_offset+6);
-                    entry.Offset        = m_file.View.ReadUInt32 (dir_offset+10) + base_offset;
-                    if (entry.CheckPlacement (m_file.MaxOffset))
-                        dir.Add (entry);
+                    long relative_offset = m_file.View.ReadUInt32 (dir_offset+10);
+                    if (m_version >= 470 && scheme.ExtraHeaderSize == 4)
+                        relative_offset |= (long)m_file.View.ReadUInt32 (dir_offset+14) << 32;
+                    if (relative_offset < 0 || relative_offset > long.MaxValue - base_offset)
+                        return null;
+                    entry.Offset = relative_offset + base_offset;
+                    if (!entry.CheckPlacement (m_file.MaxOffset))
+                        return null;
+                    dir.Add (entry);
                     dir_offset += extra_size;
                 }
                 return dir;

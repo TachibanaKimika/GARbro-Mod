@@ -51,6 +51,11 @@ Do not parse `Onachi-GARbro.Console.exe` or
 
 ## Load only the needed reference
 
+- For YPF/IKURA unknown schemes with parameters recovered from an original local
+  executable, read `references/local-archive-parameters.md`. Use explicit scoped
+  files; never guess keys or publish private tables. Do not use manifest resume
+  with these environment parameters.
+
 - Read [command-reference.md](references/command-reference.md) to choose command
   syntax, discovery calls, typed XP3 options, or output fields.
 - Read [machine-protocol.md](references/machine-protocol.md) when consuming
