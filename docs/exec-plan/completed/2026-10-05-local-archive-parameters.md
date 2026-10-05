@@ -16,8 +16,8 @@ Skills match; commit pushed; installer produced.
 - [x] Support explicit YPF and ISF parameters without publishing game secrets.
 - [x] Preserve 64-bit offsets and reject invalid directory entries.
 - [x] Build Debug and extract selected entries from four real samples.
-- [ ] Synthetic regression checks, final review, commit/push, release package.
-- [ ] Sync installed/workspace Skill copies.
+- [x] Synthetic regression checks, final review, commit/push, release package.
+- [x] Sync installed/workspace Skill copies.
 
 # Validation Checklist
 
@@ -38,4 +38,4 @@ Preserve pre-existing AssemblyInfo changes outside the feature commit.
 
 # Outcomes
 
-In progress. See docs/reference/local-archive-parameters.md.
+GO: focused diff review found no blocking issue. Debug CLI E2E passed 2,289 assertions. Debug/Release synthetic parameter tests passed. Release installer and CLI/console/image smoke passed; Skill package passed 98 assertions and contains the new reference. Code commit 9a336bea pushed to origin/master. Installer: bin/Package/Onachi-GARbro-setup.exe. Existing AssemblyInfo edits restored byte-for-byte after release stamping. No installation was performed, so active extraction processes remain undisturbed. See docs/reference/local-archive-parameters.md for the manifest-resume limitation.
